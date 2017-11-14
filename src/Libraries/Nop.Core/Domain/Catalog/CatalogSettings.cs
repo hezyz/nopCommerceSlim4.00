@@ -28,37 +28,6 @@ namespace Nop.Core.Domain.Catalog
         public bool DisplayDiscontinuedMessageForUnpublishedProducts { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether "Published" or "Disable buy/wishlist buttons" flags should be updated after order cancellation (deletion).
-        /// Of course, when qty > configured minimum stock level
-        /// </summary>
-        public bool PublishBackProductWhenCancellingOrders { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display product SKU on the product details page
-        /// </summary>
-        public bool ShowSkuOnProductDetailsPage { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display product SKU on catalog pages
-        /// </summary>
-        public bool ShowSkuOnCatalogPages { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display manufacturer part number of a product
-        /// </summary>
-        public bool ShowManufacturerPartNumber { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display GTIN of a product
-        /// </summary>
-        public bool ShowGtin { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether "Free shipping" icon should be displayed for products
-        /// </summary>
-        public bool ShowFreeShippingNotification { get; set; }
-
-        /// <summary>
         /// Gets or sets a value indicating whether product sorting is enabled
         /// </summary>
         public bool AllowProductSorting { get; set; }
@@ -119,11 +88,6 @@ namespace Nop.Core.Domain.Catalog
         public bool AllowAnonymousUsersToReviewProduct { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether product can be reviewed only by customer who have already ordered it
-        /// </summary>
-        public bool ProductReviewPossibleOnlyAfterPurchasing { get; set; }
-
-        /// <summary>
         /// Gets or sets a value indicating whether notification of a store owner about new product reviews is enabled
         /// </summary>
         public bool NotifyStoreOwnerAboutNewProductReviews { get; set; }
@@ -174,16 +138,6 @@ namespace Nop.Core.Domain.Catalog
         public bool NewProductsEnabled { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether "Compare products" feature is enabled
-        /// </summary>
-        public bool CompareProductsEnabled { get; set; }
-
-        /// <summary>
-        /// Gets or sets an allowed number of products to be compared
-        /// </summary>
-        public int CompareProductsNumber { get; set; }
-
-        /// <summary>
         /// Gets or sets a value indicating whether autocomplete is enabled
         /// </summary>
         public bool ProductSearchAutoCompleteEnabled { get; set; }
@@ -204,16 +158,6 @@ namespace Nop.Core.Domain.Catalog
         public int ProductSearchTermMinimumLength { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to show bestsellers on home page
-        /// </summary>
-        public bool ShowBestsellersOnHomepage { get; set; }
-
-        /// <summary>
-        /// Gets or sets a number of bestsellers on home page
-        /// </summary>
-        public int NumberOfBestsellersOnHomepage { get; set; }
-
-        /// <summary>
         /// Gets or sets a number of products per page on the search products page
         /// </summary>
         public int SearchPageProductsPerPage { get; set; }
@@ -227,16 +171,6 @@ namespace Nop.Core.Domain.Catalog
         /// Gets or sets the available customer selectable page size options on the search products page
         /// </summary>
         public string SearchPagePageSizeOptions { get; set; }
-
-        /// <summary>
-        /// Gets or sets "List of products purchased by other customers who purchased the above" option is enable
-        /// </summary>
-        public bool ProductsAlsoPurchasedEnabled { get; set; }
-
-        /// <summary>
-        /// Gets or sets a number of products also purchased by other customers to display
-        /// </summary>
-        public int ProductsAlsoPurchasedNumber { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether we should process attribute change using AJAX. It's used for dynamical attribute change, SKU/GTIN update of combinations, conditional attributes
@@ -264,29 +198,9 @@ namespace Nop.Core.Domain.Catalog
         public string ProductsByTagPageSizeOptions { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to include "Short description" in compare products
-        /// </summary>
-        public bool IncludeShortDescriptionInCompareProducts { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to include "Full description" in compare products
-        /// </summary>
-        public bool IncludeFullDescriptionInCompareProducts { get; set; }
-
-        /// <summary>
-        /// An option indicating whether products on category and manufacturer pages should include featured products as well
+        /// An option indicating whether products on category pages should include featured products as well
         /// </summary>
         public bool IncludeFeaturedProductsInNormalLists { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether tier prices should be displayed with applied discounts (if available)
-        /// </summary>
-        public bool DisplayTierPricesWithDiscounts { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to ignore discounts (side-wide). It can significantly improve performance when enabled.
-        /// </summary>
-        public bool IgnoreDiscounts { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to ignore featured products (side-wide). It can significantly improve performance when enabled.
@@ -304,51 +218,6 @@ namespace Nop.Core.Domain.Catalog
         public bool IgnoreStoreLimitations { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to cache product prices. It can significantly improve performance when enabled.
-        /// </summary>
-        public bool CacheProductPrices { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating maximum number of 'back in stock' subscription
-        /// </summary>
-        public int MaximumBackInStockSubscriptions { get; set; }
-
-        /// <summary>
-        /// Gets or sets the value indicating how many manufacturers to display in manufacturers block
-        /// </summary>
-        public int ManufacturersBlockItemsToDisplay { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display information about shipping and tax in the footer (used in Germany)
-        /// </summary>
-        public bool DisplayTaxShippingInfoFooter { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display information about shipping and tax on product details pages (used in Germany)
-        /// </summary>
-        public bool DisplayTaxShippingInfoProductDetailsPage { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display information about shipping and tax in product boxes (used in Germany)
-        /// </summary>
-        public bool DisplayTaxShippingInfoProductBoxes { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display information about shipping and tax on shopping cart page (used in Germany)
-        /// </summary>
-        public bool DisplayTaxShippingInfoShoppingCart { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display information about shipping and tax on wishlist page (used in Germany)
-        /// </summary>
-        public bool DisplayTaxShippingInfoWishlist { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to display information about shipping and tax on order details page (used in Germany)
-        /// </summary>
-        public bool DisplayTaxShippingInfoOrderDetailsPage { get; set; }
-
-        /// <summary>
         /// Gets or sets the default value to use for Category page size options (for new categories)
         /// </summary>
         public string DefaultCategoryPageSizeOptions { get; set; }
@@ -359,16 +228,6 @@ namespace Nop.Core.Domain.Catalog
         public int DefaultCategoryPageSize { get; set; }
 
         /// <summary>
-        /// Gets or sets the default value to use for Manufacturer page size options (for new manufacturers)
-        /// </summary>
-        public string DefaultManufacturerPageSizeOptions { get; set; }
-
-        /// <summary>
-        /// Gets or sets the default value to use for Manufacturer page size (for new manufacturers)
-        /// </summary>
-        public int DefaultManufacturerPageSize { get; set; }
-
-        /// <summary>
         /// Gets or sets a list of disabled values of ProductSortingEnum
         /// </summary>
         public List<int> ProductSortingEnumDisabled { get; set; }
@@ -377,16 +236,6 @@ namespace Nop.Core.Domain.Catalog
         /// Gets or sets a display order of ProductSortingEnum values 
         /// </summary>
         public Dictionary<int, int> ProductSortingEnumDisplayOrder { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether the products need to be exported/imported with their attributes
-        /// </summary>
-        public bool ExportImportProductAttributes { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether the products need to be exported/imported with their specification attributes
-        /// </summary>
-        public bool ExportImportProductSpecificationAttributes { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether need create dropdown list for export

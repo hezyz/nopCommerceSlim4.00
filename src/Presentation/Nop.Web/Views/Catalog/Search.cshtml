@@ -54,29 +54,6 @@
                                     <label asp-for="isc">@T("Search.IncludeSubCategories")</label>
                                 </div>
                             }
-                            @if (Model.AvailableManufacturers.Count > 0)
-                            {
-                                <div class="inputs">
-                                    <label asp-for="mid">@T("Search.Manufacturer"):</label>
-                                    <select asp-for="mid" asp-items="Model.AvailableManufacturers"></select>
-                                </div>
-                            }
-                            @if (Model.asv && Model.AvailableVendors.Count > 0)
-                            {
-                                <div class="inputs">
-                                    <label asp-for="vid">@T("Search.Vendor"):</label>
-                                    <select asp-for="vid" asp-items="Model.AvailableVendors"></select>
-                                </div>
-                            }
-                            <div class="inputs">
-                                <label>@T("Search.PriceRange"):</label>
-                                <span class="price-range">
-                                    @T("Search.PriceRange.From")
-                                    <input asp-for="pf" class="price-from"/>
-                                    @T("Search.PriceRange.To")
-                                    <input asp-for="pt" class="price-to" />
-                                </span>
-                            </div>
                             <div class="inputs reversed">
                                 <input asp-for="sid" />
                                 <label asp-for="sid">@T("Search.SearchInDescriptions")</label>

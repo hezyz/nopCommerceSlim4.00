@@ -40,7 +40,6 @@ namespace Nop.Services.Seo
         private readonly IStoreContext _storeContext;
         private readonly ICategoryService _categoryService;
         private readonly IProductService _productService;
-        private readonly IManufacturerService _manufacturerService;
         private readonly ITopicService _topicService;
         private readonly IWebHelper _webHelper;
         private readonly IUrlHelperFactory _urlHelperFactory;
@@ -62,7 +61,6 @@ namespace Nop.Services.Seo
         /// <param name="storeContext">Store context</param>
         /// <param name="categoryService">Category service</param>
         /// <param name="productService">Product service</param>
-        /// <param name="manufacturerService">Manufacturer service</param>
         /// <param name="topicService">Topic service</param>
         /// <param name="webHelper">Web helper</param>
         /// <param name="urlHelperFactory">URL g=helper factory</param>
@@ -76,7 +74,6 @@ namespace Nop.Services.Seo
         public SitemapGenerator(IStoreContext storeContext,
             ICategoryService categoryService,
             IProductService productService,
-            IManufacturerService manufacturerService,
             ITopicService topicService,
             IWebHelper webHelper,
             IUrlHelperFactory urlHelperFactory,
@@ -91,7 +88,6 @@ namespace Nop.Services.Seo
             this._storeContext = storeContext;
             this._categoryService = categoryService;
             this._productService = productService;
-            this._manufacturerService = manufacturerService;
             this._topicService = topicService;
             this._webHelper = webHelper;
             this._urlHelperFactory = urlHelperFactory;
@@ -210,10 +206,6 @@ namespace Nop.Services.Seo
             if (_commonSettings.SitemapIncludeCategories)
                 sitemapUrls.AddRange(GetCategoryUrls(0));
 
-            //manufacturers
-            if (_commonSettings.SitemapIncludeManufacturers)
-                sitemapUrls.AddRange(GetManufacturerUrls());
-
             //products
             if (_commonSettings.SitemapIncludeProducts)
                 sitemapUrls.AddRange(GetProductUrls());
@@ -250,19 +242,6 @@ namespace Nop.Services.Seo
             });
         }
 
-        /// <summary>
-        /// Get manufacturer URLs for the sitemap
-        /// </summary>
-        /// <returns>Sitemap URLs</returns>
-        protected virtual IEnumerable<SitemapUrl> GetManufacturerUrls()
-        {
-            var urlHelper = GetUrlHelper();
-            return _manufacturerService.GetAllManufacturers(storeId: _storeContext.CurrentStore.Id).Select(manufacturer =>
-            {
-                var url = urlHelper.RouteUrl("Manufacturer", new { SeName = manufacturer.GetSeName() }, GetHttpProtocol());
-                return new SitemapUrl(url, UpdateFrequency.Weekly, manufacturer.UpdatedOnUtc);
-            });
-        }
 
         /// <summary>
         /// Get product URLs for the sitemap
@@ -272,7 +251,7 @@ namespace Nop.Services.Seo
         {
             var urlHelper = GetUrlHelper();
             return _productService.SearchProducts(storeId: _storeContext.CurrentStore.Id,
-                visibleIndividuallyOnly: true, orderBy: ProductSortingEnum.CreatedOn).Select(product =>
+                 visibleIndividuallyOnly: true, orderBy: ProductSortingEnum.CreatedOn).Select(product =>
             { 
                 var url = urlHelper.RouteUrl("Product", new { SeName = product.GetSeName() }, GetHttpProtocol());
                 return new SitemapUrl(url, UpdateFrequency.Weekly, product.UpdatedOnUtc);

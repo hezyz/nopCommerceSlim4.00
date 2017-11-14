@@ -42,8 +42,6 @@ namespace Nop.Web.Components
 
             //ACL and store mapping
             products = products.Where(p => _aclService.Authorize(p) && _storeMappingService.Authorize(p)).ToList();
-            //availability dates
-            products = products.Where(p => p.IsAvailable()).ToList();
 
             if (!products.Any())
                 return Content("");
@@ -51,7 +49,6 @@ namespace Nop.Web.Components
             //prepare model
             var model = new List<ProductOverviewModel>();
             model.AddRange(_productModelFactory.PrepareProductOverviewModels(products,
-                preparePriceModel.GetValueOrDefault(),
                 preparePictureModel,
                 productThumbPictureSize));
 

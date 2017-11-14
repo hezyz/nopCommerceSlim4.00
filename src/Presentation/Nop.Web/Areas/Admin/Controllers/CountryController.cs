@@ -185,8 +185,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             PrepareStoresMappingModel(model, null, false);
             //default values
             model.Published = true;
-            model.AllowsBilling = true;
-            model.AllowsShipping = true;
             return View(model);
         }
 

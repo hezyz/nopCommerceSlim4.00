@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
 using Nop.Core;
 using Nop.Core.Caching;
 using Nop.Core.Data;
@@ -12,13 +7,16 @@ using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.News;
-using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Polls;
-using Nop.Core.Domain.Shipping;
 using Nop.Core.Extensions;
 using Nop.Data;
 using Nop.Services.Common;
 using Nop.Services.Events;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
 
 namespace Nop.Services.Customers
 {
@@ -56,7 +54,6 @@ namespace Nop.Services.Customers
         private readonly IRepository<CustomerPassword> _customerPasswordRepository;
         private readonly IRepository<CustomerRole> _customerRoleRepository;
         private readonly IRepository<GenericAttribute> _gaRepository;
-        private readonly IRepository<Order> _orderRepository;
         private readonly IRepository<ForumPost> _forumPostRepository;
         private readonly IRepository<ForumTopic> _forumTopicRepository;
         private readonly IRepository<BlogComment> _blogCommentRepository;
@@ -84,7 +81,6 @@ namespace Nop.Services.Customers
         /// <param name="customerPasswordRepository">Customer password repository</param>
         /// <param name="customerRoleRepository">Customer role repository</param>
         /// <param name="gaRepository">Generic attribute repository</param>
-        /// <param name="orderRepository">Order repository</param>
         /// <param name="forumPostRepository">Forum post repository</param>
         /// <param name="forumTopicRepository">Forum topic repository</param>
         /// <param name="blogCommentRepository">Blog comment repository</param>
@@ -103,7 +99,6 @@ namespace Nop.Services.Customers
             IRepository<CustomerPassword> customerPasswordRepository,
             IRepository<CustomerRole> customerRoleRepository,
             IRepository<GenericAttribute> gaRepository,
-            IRepository<Order> orderRepository,
             IRepository<ForumPost> forumPostRepository,
             IRepository<ForumTopic> forumTopicRepository,
             IRepository<BlogComment> blogCommentRepository,
@@ -123,7 +118,6 @@ namespace Nop.Services.Customers
             this._customerPasswordRepository = customerPasswordRepository;
             this._customerRoleRepository = customerRoleRepository;
             this._gaRepository = gaRepository;
-            this._orderRepository = orderRepository;
             this._forumPostRepository = forumPostRepository;
             this._forumTopicRepository = forumTopicRepository;
             this._blogCommentRepository = blogCommentRepository;
@@ -148,9 +142,8 @@ namespace Nop.Services.Customers
         /// </summary>
         /// <param name="createdFromUtc">Created from</param>
         /// <param name="createdToUtc">Created to</param>
-        /// <param name="onlyWithoutShoppingCart">Delete only without shopping cart</param>
         /// <returns>Number of delete customers</returns>
-        protected virtual int DeleteGuestCustomersUseLinq(DateTime? createdFromUtc, DateTime? createdToUtc, bool onlyWithoutShoppingCart)
+        protected virtual int DeleteGuestCustomersUseLinq(DateTime? createdFromUtc, DateTime? createdToUtc)
         {
             var guestRole = GetCustomerRoleBySystemName(SystemCustomerRoleNames.Guests);
             if (guestRole == null)
@@ -162,14 +155,7 @@ namespace Nop.Services.Customers
             if (createdToUtc.HasValue)
                 query = query.Where(c => createdToUtc.Value >= c.CreatedOnUtc);
             query = query.Where(c => c.CustomerRoles.Select(cr => cr.Id).Contains(guestRole.Id));
-            if (onlyWithoutShoppingCart)
-                query = query.Where(c => !c.ShoppingCartItems.Any());
-            //no orders
-            query = from c in query
-                    join o in _orderRepository.Table on c.Id equals o.CustomerId into c_o
-                    from o in c_o.DefaultIfEmpty()
-                    where !c_o.Any()
-                    select c;
+           
             //no blog comments
             query = from c in query
                     join bc in _blogCommentRepository.Table on c.Id equals bc.CustomerId into c_bc
@@ -250,21 +236,18 @@ namespace Nop.Services.Customers
         /// </summary>
         /// <param name="createdFromUtc">Created from</param>
         /// <param name="createdToUtc">Created to</param>
-        /// <param name="onlyWithoutShoppingCart">Delete only without shopping cart</param>
         /// <returns>Number of delete customers</returns>
-        protected virtual int DeleteGuestCustomersUseStoredProcedure(DateTime? createdFromUtc, DateTime? createdToUtc, bool onlyWithoutShoppingCart)
+        protected virtual int DeleteGuestCustomersUseStoredProcedure(DateTime? createdFromUtc, DateTime? createdToUtc)
         {
             //prepare parameters
-            var pOnlyWithoutShoppingCart = _dataProvider.GetBooleanParameter("OnlyWithoutShoppingCart", onlyWithoutShoppingCart);
             var pCreatedFromUtc = _dataProvider.GetDateTimeParameter("CreatedFromUtc", createdFromUtc);
             var pCreatedToUtc = _dataProvider.GetDateTimeParameter("CreatedToUtc", createdToUtc);
             var pTotalRecordsDeleted = _dataProvider.GetOutputInt32Parameter("TotalRecordsDeleted");
 
             //invoke stored procedure
             _dbContext.ExecuteSqlCommand(
-                "EXEC [DeleteGuests] @OnlyWithoutShoppingCart, @CreatedFromUtc, @CreatedToUtc, @TotalRecordsDeleted OUTPUT",
+                "EXEC [DeleteGuests]  @CreatedFromUtc, @CreatedToUtc, @TotalRecordsDeleted OUTPUT",
                 false, null,
-                pOnlyWithoutShoppingCart,
                 pCreatedFromUtc,
                 pCreatedToUtc,
                 pTotalRecordsDeleted);
@@ -284,8 +267,6 @@ namespace Nop.Services.Customers
         /// </summary>
         /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>
         /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
-        /// <param name="affiliateId">Affiliate identifier</param>
-        /// <param name="vendorId">Vendor identifier</param>
         /// <param name="customerRoleIds">A list of customer role identifiers to filter by (at least one match); pass null or empty list in order to load all customers; </param>
         /// <param name="email">Email; null to load all customers</param>
         /// <param name="username">Username; null to load all customers</param>
@@ -297,18 +278,16 @@ namespace Nop.Services.Customers
         /// <param name="phone">Phone; null to load all customers</param>
         /// <param name="zipPostalCode">Phone; null to load all customers</param>
         /// <param name="ipAddress">IP address; null to load all customers</param>
-        /// <param name="loadOnlyWithShoppingCart">Value indicating whether to load customers only with shopping cart</param>
-        /// <param name="sct">Value indicating what shopping cart type to filter; userd when 'loadOnlyWithShoppingCart' param is 'true'</param>
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
         /// <returns>Customers</returns>
         public virtual IPagedList<Customer> GetAllCustomers(DateTime? createdFromUtc = null,
-            DateTime? createdToUtc = null, int affiliateId = 0, int vendorId = 0,
+            DateTime? createdToUtc = null, 
             int[] customerRoleIds = null, string email = null, string username = null,
             string firstName = null, string lastName = null,
             int dayOfBirth = 0, int monthOfBirth = 0,
             string company = null, string phone = null, string zipPostalCode = null,
-            string ipAddress = null, bool loadOnlyWithShoppingCart = false, ShoppingCartType? sct = null,
+            string ipAddress = null,
             int pageIndex = 0, int pageSize = int.MaxValue)
         {
             var query = _customerRepository.Table;
@@ -316,10 +295,6 @@ namespace Nop.Services.Customers
                 query = query.Where(c => createdFromUtc.Value <= c.CreatedOnUtc);
             if (createdToUtc.HasValue)
                 query = query.Where(c => createdToUtc.Value >= c.CreatedOnUtc);
-            if (affiliateId > 0)
-                query = query.Where(c => affiliateId == c.AffiliateId);
-            if (vendorId > 0)
-                query = query.Where(c => vendorId == c.VendorId);
             query = query.Where(c => !c.Deleted);
             if (customerRoleIds != null && customerRoleIds.Length > 0)
                 query = query.Where(c => c.CustomerRoles.Select(cr => cr.Id).Intersect(customerRoleIds).Any());
@@ -430,17 +405,6 @@ namespace Nop.Services.Customers
                     query = query.Where(w => w.LastIpAddress == ipAddress);
             }
 
-            if (loadOnlyWithShoppingCart)
-            {
-                int? sctId = null;
-                if (sct.HasValue)
-                    sctId = (int)sct.Value;
-
-                query = sct.HasValue ?
-                    query.Where(c => c.ShoppingCartItems.Any(x => x.ShoppingCartTypeId == sctId)) :
-                    query.Where(c => c.ShoppingCartItems.Any());
-            }
-            
             query = query.OrderByDescending(c => c.CreatedOnUtc);
 
             var customers = new PagedList<Customer>(query, pageIndex, pageSize);
@@ -663,77 +627,22 @@ namespace Nop.Services.Customers
         }
 
         /// <summary>
-        /// Reset data required for checkout
-        /// </summary>
-        /// <param name="customer">Customer</param>
-        /// <param name="storeId">Store identifier</param>
-        /// <param name="clearCouponCodes">A value indicating whether to clear coupon code</param>
-        /// <param name="clearCheckoutAttributes">A value indicating whether to clear selected checkout attributes</param>
-        /// <param name="clearRewardPoints">A value indicating whether to clear "Use reward points" flag</param>
-        /// <param name="clearShippingMethod">A value indicating whether to clear selected shipping method</param>
-        /// <param name="clearPaymentMethod">A value indicating whether to clear selected payment method</param>
-        public virtual void ResetCheckoutData(Customer customer, int storeId,
-            bool clearCouponCodes = false, bool clearCheckoutAttributes = false,
-            bool clearRewardPoints = true, bool clearShippingMethod = true,
-            bool clearPaymentMethod = true)
-        {
-            if (customer == null)
-                throw new ArgumentNullException();
-            
-            //clear entered coupon codes
-            if (clearCouponCodes)
-            {
-                _genericAttributeService.SaveAttribute<string>(customer, SystemCustomerAttributeNames.DiscountCouponCode, null);
-                _genericAttributeService.SaveAttribute<string>(customer, SystemCustomerAttributeNames.GiftCardCouponCodes, null);
-            }
-
-            //clear checkout attributes
-            if (clearCheckoutAttributes)
-            {
-                _genericAttributeService.SaveAttribute<string>(customer, SystemCustomerAttributeNames.CheckoutAttributes, null, storeId);
-            }
-
-            //clear reward points flag
-            if (clearRewardPoints)
-            {
-                _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.UseRewardPointsDuringCheckout, false, storeId);
-            }
-
-            //clear selected shipping method
-            if (clearShippingMethod)
-            {
-                _genericAttributeService.SaveAttribute<ShippingOption>(customer, SystemCustomerAttributeNames.SelectedShippingOption, null, storeId);
-                _genericAttributeService.SaveAttribute<ShippingOption>(customer, SystemCustomerAttributeNames.OfferedShippingOptions, null, storeId);
-                _genericAttributeService.SaveAttribute<PickupPoint>(customer, SystemCustomerAttributeNames.SelectedPickupPoint, null, storeId);
-            }
-
-            //clear selected payment method
-            if (clearPaymentMethod)
-            {
-                _genericAttributeService.SaveAttribute<string>(customer, SystemCustomerAttributeNames.SelectedPaymentMethod, null, storeId);
-            }
-            
-            UpdateCustomer(customer);
-        }
-
-        /// <summary>
         /// Delete guest customer records
         /// </summary>
         /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>
         /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
-        /// <param name="onlyWithoutShoppingCart">A value indicating whether to delete customers only without shopping cart</param>
         /// <returns>Number of deleted customers</returns>
-        public virtual int DeleteGuestCustomers(DateTime? createdFromUtc, DateTime? createdToUtc, bool onlyWithoutShoppingCart)
+        public virtual int DeleteGuestCustomers(DateTime? createdFromUtc, DateTime? createdToUtc)
         {
             if (_commonSettings.UseStoredProceduresIfSupported && _dataProvider.StoredProceduredSupported)
             {
                 //stored procedures are enabled and supported by the database. 
                 //It's much faster than the LINQ implementation below 
-                return DeleteGuestCustomersUseStoredProcedure(createdFromUtc, createdToUtc, onlyWithoutShoppingCart);
+                return DeleteGuestCustomersUseStoredProcedure(createdFromUtc, createdToUtc);
             }
 
             //stored procedures aren't supported. Use LINQ
-            return DeleteGuestCustomersUseLinq(createdFromUtc, createdToUtc, onlyWithoutShoppingCart);
+            return DeleteGuestCustomersUseLinq(createdFromUtc, createdToUtc);
         }
 
         #endregion

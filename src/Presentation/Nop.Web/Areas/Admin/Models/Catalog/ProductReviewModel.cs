@@ -39,7 +39,5 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
         [NopResourceDisplayName("Admin.Catalog.ProductReviews.Fields.CreatedOn")]
         public DateTime CreatedOn { get; set; }
 
-        //vendor
-        public bool IsLoggedInAsVendor { get; set; }
     }
 }

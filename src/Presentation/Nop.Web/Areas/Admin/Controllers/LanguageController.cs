@@ -27,7 +27,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         private readonly ILanguageService _languageService;
         private readonly ILocalizationService _localizationService;
-        private readonly ICurrencyService _currencyService;
         private readonly IStoreService _storeService;
         private readonly IStoreMappingService _storeMappingService;
         private readonly IPermissionService _permissionService;
@@ -40,7 +39,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         public LanguageController(ILanguageService languageService,
             ILocalizationService localizationService,
-            ICurrencyService currencyService,
             IStoreService storeService,
             IStoreMappingService storeMappingService,
             IPermissionService permissionService,
@@ -49,7 +47,6 @@ namespace Nop.Web.Areas.Admin.Controllers
         {
             this._localizationService = localizationService;
             this._languageService = languageService;
-            this._currencyService = currencyService;
             this._storeService = storeService;
             this._storeMappingService = storeMappingService;
             this._permissionService = permissionService;
@@ -77,28 +74,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                     Text = store.Name,
                     Value = store.Id.ToString(),
                     Selected = model.SelectedStoreIds.Contains(store.Id)
-                });
-            }
-        }
-        
-        protected virtual void PrepareCurrenciesModel(LanguageModel model)
-        {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-
-            //templates
-            model.AvailableCurrencies.Add(new SelectListItem
-            {
-                Text = "---",
-                Value = "0"
-            });
-            var currencies = _currencyService.GetAllCurrencies(true);
-            foreach (var currency in currencies)
-            {
-                model.AvailableCurrencies.Add(new SelectListItem
-                {
-                    Text = currency.Name,
-                    Value = currency.Id.ToString()
                 });
             }
         }
@@ -168,8 +143,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             var model = new LanguageModel();
             //Stores
             PrepareStoresMappingModel(model, null, false);
-            //currencies
-            PrepareCurrenciesModel(model);
             //default values
             model.Published = true;
             return View(model);
@@ -208,8 +181,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             //Stores
             PrepareStoresMappingModel(model, null, true);
-            //currencies
-            PrepareCurrenciesModel(model);
 
             return View(model);
         }
@@ -227,8 +198,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             var model = language.ToModel();
             //Stores
             PrepareStoresMappingModel(model, language, false);
-            //currencies
-            PrepareCurrenciesModel(model);
 
             return View(model);
         }
@@ -281,8 +250,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             //Stores
             PrepareStoresMappingModel(model, language, true);
-            //currencies
-            PrepareCurrenciesModel(model);
 
             return View(model);
         }

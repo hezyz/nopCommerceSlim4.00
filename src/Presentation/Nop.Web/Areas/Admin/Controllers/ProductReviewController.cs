@@ -92,9 +92,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 }
                 model.IsApproved = productReview.IsApproved;
             }
-
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
         }
 
         #endregion
@@ -114,8 +111,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var model = new ProductReviewListModel
             {
-                //a vendor should have access only to his products
-                IsLoggedInAsVendor = _workContext.CurrentVendor != null
             };
 
             model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -140,13 +135,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductReviews))
                 return AccessDeniedKendoGridJson();
 
-            //a vendor should have access only to his products
-            var vendorId = 0;
-            if (_workContext.CurrentVendor != null)
-            {
-                vendorId = _workContext.CurrentVendor.Id;
-            }
-
             var createdOnFromValue = (model.CreatedOnFrom == null) ? null
                             : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.CreatedOnFrom.Value, _dateTimeHelper.CurrentTimeZone);
 
@@ -159,7 +147,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var productReviews = _productService.GetAllProductReviews(0, approved, 
                 createdOnFromValue, createdToFromValue, model.SearchText, 
-                model.SearchStoreId, model.SearchProductId, vendorId, 
+                model.SearchStoreId, model.SearchProductId, 
                 command.Page - 1, command.PageSize);
 
             var gridModel = new DataSourceResult
@@ -187,10 +175,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 //No product review found with the specified id
                 return RedirectToAction("List");
 
-            //a vendor should have access only to his products
-            if (_workContext.CurrentVendor != null && productReview.Product.VendorId != _workContext.CurrentVendor.Id)
-                return RedirectToAction("List");
-
             var model = new ProductReviewModel();
             PrepareProductReviewModel(model, productReview, false, false);
             return View(model);
@@ -207,22 +191,12 @@ namespace Nop.Web.Areas.Admin.Controllers
                 //No product review found with the specified id
                 return RedirectToAction("List");
 
-            //a vendor should have access only to his products
-            if (_workContext.CurrentVendor != null && productReview.Product.VendorId != _workContext.CurrentVendor.Id)
-                return RedirectToAction("List");
-
             if (ModelState.IsValid)
             {
-                var isLoggedInAsVendor = _workContext.CurrentVendor != null;
-
                 var previousIsApproved = productReview.IsApproved;
-                //vendor can edit "Reply text" only
-                if (!isLoggedInAsVendor)
-                {
                     productReview.Title = model.Title;
                     productReview.ReviewText = model.ReviewText;
                     productReview.IsApproved = model.IsApproved;
-                }
 
                 productReview.ReplyText = model.ReplyText;
                 _productService.UpdateProduct(productReview.Product);
@@ -230,17 +204,12 @@ namespace Nop.Web.Areas.Admin.Controllers
                 //activity log
                 _customerActivityService.InsertActivity("EditProductReview", _localizationService.GetResource("ActivityLog.EditProductReview"), productReview.Id);
 
-                //vendor can edit "Reply text" only
-                if (!isLoggedInAsVendor)
-                {
                     //update product totals
                     _productService.UpdateProductReviewTotals(productReview.Product);
 
                     //raise event (only if it wasn't approved before and is approved now)
                     if (!previousIsApproved && productReview.IsApproved)
                         _eventPublisher.Publish(new ProductReviewApprovedEvent(productReview));
-
-                }
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.ProductReviews.Updated"));
 
@@ -265,10 +234,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 //No product review found with the specified id
                 return RedirectToAction("List");
 
-            //a vendor does not have access to this functionality
-            if (_workContext.CurrentVendor != null)
-                return RedirectToAction("List");
-
             var product = productReview.Product;
             _productService.DeleteProductReview(productReview);
 
@@ -287,10 +252,6 @@ namespace Nop.Web.Areas.Admin.Controllers
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductReviews))
                 return AccessDeniedView();
-
-            //a vendor does not have access to this functionality
-            if (_workContext.CurrentVendor != null)
-                return RedirectToAction("List");
 
             if (selectedIds != null)
             {
@@ -318,10 +279,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductReviews))
                 return AccessDeniedView();
 
-            //a vendor does not have access to this functionality
-            if (_workContext.CurrentVendor != null)
-                return RedirectToAction("List");
-
             if (selectedIds != null)
             {
                 //filter approved reviews
@@ -344,10 +301,6 @@ namespace Nop.Web.Areas.Admin.Controllers
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductReviews))
                 return AccessDeniedView();
-
-            //a vendor does not have access to this functionality
-            if (_workContext.CurrentVendor != null)
-                return RedirectToAction("List");
 
             if (selectedIds != null)
             {
@@ -375,18 +328,10 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (string.IsNullOrWhiteSpace(term) || term.Length < searchTermMinimumLength)
                 return Content("");
 
-            //a vendor should have access only to his products
-            var vendorId = 0;
-            if (_workContext.CurrentVendor != null)
-            {
-                vendorId = _workContext.CurrentVendor.Id;
-            }
-
             //products
             const int productNumber = 15;
             var products = _productService.SearchProducts(
                 keywords: term,
-                vendorId: vendorId,
                 pageSize: productNumber,
                 showHidden: true);
 

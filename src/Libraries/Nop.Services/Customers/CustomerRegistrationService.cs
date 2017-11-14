@@ -1,14 +1,13 @@
-using System;
-using System.Linq;
 using Nop.Core;
 using Nop.Core.Domain.Customers;
 using Nop.Services.Common;
 using Nop.Services.Events;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
-using Nop.Services.Orders;
 using Nop.Services.Security;
 using Nop.Services.Stores;
+using System;
+using System.Linq;
 
 namespace Nop.Services.Customers
 {
@@ -26,12 +25,10 @@ namespace Nop.Services.Customers
         private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
         private readonly ILocalizationService _localizationService;
         private readonly IStoreService _storeService;
-        private readonly IRewardPointService _rewardPointService;
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly IWorkContext _workContext;
         private readonly IWorkflowMessageService _workflowMessageService;
         private readonly IEventPublisher _eventPublisher;
-        private readonly RewardPointsSettings _rewardPointsSettings;
         private readonly CustomerSettings _customerSettings;
 
         #endregion
@@ -46,24 +43,20 @@ namespace Nop.Services.Customers
         /// <param name="newsLetterSubscriptionService">Newsletter subscription service</param>
         /// <param name="localizationService">Localization service</param>
         /// <param name="storeService">Store service</param>
-        /// <param name="rewardPointService">Reward points service</param>
         /// <param name="genericAttributeService">Generic attribute service</param>
         /// <param name="workContext">Work context</param>
         /// <param name="workflowMessageService">Workflow message service</param>
         /// <param name="eventPublisher">Event publisher</param>
-        /// <param name="rewardPointsSettings">Reward points settings</param>
         /// <param name="customerSettings">Customer settings</param>
         public CustomerRegistrationService(ICustomerService customerService, 
             IEncryptionService encryptionService, 
             INewsLetterSubscriptionService newsLetterSubscriptionService,
             ILocalizationService localizationService,
             IStoreService storeService,
-            IRewardPointService rewardPointService,
             IWorkContext workContext,
             IGenericAttributeService genericAttributeService,
             IWorkflowMessageService workflowMessageService,
             IEventPublisher eventPublisher,
-            RewardPointsSettings rewardPointsSettings,
             CustomerSettings customerSettings)
         {
             this._customerService = customerService;
@@ -71,12 +64,10 @@ namespace Nop.Services.Customers
             this._newsLetterSubscriptionService = newsLetterSubscriptionService;
             this._localizationService = localizationService;
             this._storeService = storeService;
-            this._rewardPointService = rewardPointService;
             this._genericAttributeService = genericAttributeService;
             this._workContext = workContext;
             this._workflowMessageService = workflowMessageService;
             this._eventPublisher = eventPublisher;
-            this._rewardPointsSettings = rewardPointsSettings;
             this._customerSettings = customerSettings;
         }
 
@@ -278,16 +269,6 @@ namespace Nop.Services.Customers
             var guestRole = request.Customer.CustomerRoles.FirstOrDefault(cr => cr.SystemName == SystemCustomerRoleNames.Guests);
             if (guestRole != null)
                 request.Customer.CustomerRoles.Remove(guestRole);
-            
-            //Add reward points for customer registration (if enabled)
-            if (_rewardPointsSettings.Enabled &&
-                _rewardPointsSettings.PointsForRegistration > 0)
-            {
-                _rewardPointService.AddRewardPointsHistoryEntry(request.Customer, 
-                    _rewardPointsSettings.PointsForRegistration,
-                    request.StoreId,
-                    _localizationService.GetResource("RewardPoints.Message.EarnedForRegistration"));
-            }
 
             _customerService.UpdateCustomer(request.Customer);
 

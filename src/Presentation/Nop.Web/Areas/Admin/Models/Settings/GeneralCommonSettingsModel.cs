@@ -15,7 +15,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
             SeoSettings = new SeoSettingsModel();
             SecuritySettings = new SecuritySettingsModel();
             CaptchaSettings = new CaptchaSettingsModel();
-            PdfSettings = new PdfSettingsModel();
             LocalizationSettings = new LocalizationSettingsModel();
             FullTextSettings = new FullTextSettingsModel();
             DisplayDefaultMenuItemSettings = new DisplayDefaultMenuItemSettingsModel();
@@ -26,7 +25,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
         public SeoSettingsModel SeoSettings { get; set; }
         public SecuritySettingsModel SecuritySettings { get; set; }
         public CaptchaSettingsModel CaptchaSettings { get; set; }
-        public PdfSettingsModel PdfSettings { get; set; }
         public LocalizationSettingsModel LocalizationSettings { get; set; }
         public FullTextSettingsModel FullTextSettings { get; set; }
         public DisplayDefaultMenuItemSettingsModel DisplayDefaultMenuItemSettings { get; set; }
@@ -100,10 +98,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
             [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.SitemapIncludeCategories")]
             public bool SitemapIncludeCategories { get; set; }
             public bool SitemapIncludeCategories_OverrideForStore { get; set; }
-
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.SitemapIncludeManufacturers")]
-            public bool SitemapIncludeManufacturers { get; set; }
-            public bool SitemapIncludeManufacturers_OverrideForStore { get; set; }
 
             [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.SitemapIncludeProducts")]
             public bool SitemapIncludeProducts { get; set; }
@@ -233,10 +227,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
             public bool ShowOnContactUsPage { get; set; }
             public bool ShowOnContactUsPage_OverrideForStore { get; set; }
 
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.CaptchaShowOnEmailWishlistToFriendPage")]
-            public bool ShowOnEmailWishlistToFriendPage { get; set; }
-            public bool ShowOnEmailWishlistToFriendPage_OverrideForStore { get; set; }
-
             [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.CaptchaShowOnEmailProductToFriendPage")]
             public bool ShowOnEmailProductToFriendPage { get; set; }
             public bool ShowOnEmailProductToFriendPage_OverrideForStore { get; set; }
@@ -253,10 +243,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
             public bool ShowOnProductReviewPage { get; set; }
             public bool ShowOnProductReviewPage_OverrideForStore { get; set; }
 
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.CaptchaShowOnApplyVendorPage")]
-            public bool ShowOnApplyVendorPage { get; set; }
-            public bool ShowOnApplyVendorPage_OverrideForStore { get; set; }
-
             [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.reCaptchaPublicKey")]
             public string ReCaptchaPublicKey { get; set; }
             public bool ReCaptchaPublicKey_OverrideForStore { get; set; }
@@ -272,29 +258,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
             public IList<SelectListItem> AvailableReCaptchaVersions { get; set; }
         }
 
-        public partial class PdfSettingsModel : BaseNopModel
-        {
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.PdfLetterPageSizeEnabled")]
-            public bool LetterPageSizeEnabled { get; set; }
-            public bool LetterPageSizeEnabled_OverrideForStore { get; set; }
-
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.PdfLogo")]
-            [UIHint("Picture")]
-            public int LogoPictureId { get; set; }
-            public bool LogoPictureId_OverrideForStore { get; set; }
-
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.DisablePdfInvoicesForPendingOrders")]
-            public bool DisablePdfInvoicesForPendingOrders { get; set; }
-            public bool DisablePdfInvoicesForPendingOrders_OverrideForStore { get; set; }
-
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.InvoiceFooterTextColumn1")]
-            public string InvoiceFooterTextColumn1 { get; set; }
-            public bool InvoiceFooterTextColumn1_OverrideForStore { get; set; }
-
-            [NopResourceDisplayName("Admin.Configuration.Settings.GeneralCommon.InvoiceFooterTextColumn2")]
-            public string InvoiceFooterTextColumn2 { get; set; }
-            public bool InvoiceFooterTextColumn2_OverrideForStore { get; set; }
-        }
 
         public partial class LocalizationSettingsModel : BaseNopModel
         {

@@ -1,6 +1,5 @@
 ﻿@model FooterModel
 @using Nop.Core
-@using Nop.Core.Domain.Tax
 @inject IWorkContext workContext;
 <div class="footer">
     <div class="footer-upper">
@@ -42,10 +41,6 @@
                 {
                     <li><a href="@Url.RouteUrl("RecentlyViewedProducts")">@T("Products.RecentlyViewedProducts")</a></li>
                 }
-                @if (Model.CompareProductsEnabled)
-                {
-                    <li><a href="@Url.RouteUrl("CompareProducts")">@T("Products.Compare.List")</a></li>
-                }
                 @if (Model.NewProductsEnabled)
                 {
                     <li><a href="@Url.RouteUrl("NewProducts")">@T("Products.NewProducts")</a></li>
@@ -62,20 +57,7 @@
             </div>
             <ul class="list">
                 <li><a href="@Url.RouteUrl("CustomerInfo")">@T("Account.MyAccount")</a></li>
-                <li><a href="@Url.RouteUrl("CustomerOrders")">@T("Account.CustomerOrders")</a></li>
                 <li><a href="@Url.RouteUrl("CustomerAddresses")">@T("Account.CustomerAddresses")</a></li>
-                @if (Model.ShoppingCartEnabled)
-                {
-                    <li><a href="@Url.RouteUrl("ShoppingCart")">@T("ShoppingCart")</a></li>
-                }
-                @if (Model.WishlistEnabled)
-                {
-                    <li><a href="@Url.RouteUrl("Wishlist")">@T("Wishlist")</a></li>
-                }
-                @if (Model.AllowCustomersToApplyForVendorAccount)
-                {
-                    <li><a href="@Url.RouteUrl("ApplyVendorAccount")">@T("Vendors.ApplyAccount")</a></li>
-                }
                 @foreach (var topic in Model.Topics.Where(x => x.IncludeInFooterColumn3).ToList())
                 {
                     <li><a href="@Url.RouteUrl("Topic", new { SeName = topic.SeName })">@topic.Name</a></li>
@@ -95,13 +77,6 @@
     <div class="footer-lower">
         <div class="footer-info">
             <span class="footer-disclaimer">@T("Content.CopyrightNotice", DateTime.Now.Year, Model.StoreName)</span>
-            @if (Model.DisplayTaxShippingInfoFooter)
-            {
-                var inclTax = workContext.TaxDisplayType == TaxDisplayType.IncludingTax;
-                <span class="footer-tax-shipping">
-                    @T(inclTax ? "Footer.TaxShipping.InclTax" : "Footer.TaxShipping.ExclTax", Url.RouteUrl("Topic", new {SeName = Html.GetTopicSeName("shippinginfo")}))
-                </span>
-            }
         </div>
         @if (!Model.HidePoweredByNopCommerce)
         {

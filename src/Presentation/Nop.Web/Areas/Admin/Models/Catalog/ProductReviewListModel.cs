@@ -35,8 +35,6 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
         [NopResourceDisplayName("Admin.Catalog.ProductReviews.List.SearchApproved")]
         public int SearchApprovedId { get; set; }
 
-        //vendor
-        public bool IsLoggedInAsVendor { get; set; }
 
         public IList<SelectListItem> AvailableStores { get; set; }
         public IList<SelectListItem> AvailableApprovedOptions { get; set; }

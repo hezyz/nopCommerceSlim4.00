@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
 using Nop.Core.Data;
@@ -13,7 +10,9 @@ using Nop.Services.Events;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Messages;
-using Nop.Services.Orders;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Nop.Services.Authentication.External
 {
@@ -35,7 +34,6 @@ namespace Nop.Services.Authentication.External
         private readonly ILocalizationService _localizationService;
         private readonly IPluginFinder _pluginFinder;
         private readonly IRepository<ExternalAuthenticationRecord> _externalAuthenticationRecordRepository;
-        private readonly IShoppingCartService _shoppingCartService;
         private readonly IStoreContext _storeContext;
         private readonly IWorkContext _workContext;
         private readonly IWorkflowMessageService _workflowMessageService;
@@ -59,7 +57,6 @@ namespace Nop.Services.Authentication.External
         /// <param name="localizationService">Localization service</param>
         /// <param name="pluginFinder">Plugin finder</param>
         /// <param name="externalAuthenticationRecordRepository">External authentication record repository</param>
-        /// <param name="shoppingCartService">Shopping cart service</param>
         /// <param name="storeContext">Store context</param>
         /// <param name="workContext">Work context</param>
         /// <param name="workflowMessageService">Workflow message service</param>
@@ -75,7 +72,6 @@ namespace Nop.Services.Authentication.External
             ILocalizationService localizationService,
             IPluginFinder pluginFinder,
             IRepository<ExternalAuthenticationRecord> externalAuthenticationRecordRepository,
-            IShoppingCartService shoppingCartService,
             IStoreContext storeContext,
             IWorkContext workContext,
             IWorkflowMessageService workflowMessageService,
@@ -92,7 +88,6 @@ namespace Nop.Services.Authentication.External
             this._localizationService = localizationService;
             this._pluginFinder = pluginFinder;
             this._externalAuthenticationRecordRepository = externalAuthenticationRecordRepository;
-            this._shoppingCartService = shoppingCartService;
             this._storeContext = storeContext;
             this._workContext = workContext;
             this._workflowMessageService = workflowMessageService;
@@ -228,9 +223,6 @@ namespace Nop.Services.Authentication.External
         /// <returns>Result of an authentication</returns>
         protected virtual IActionResult LoginUser(Customer user, string returnUrl)
         {
-            //migrate shopping cart
-            _shoppingCartService.MigrateShoppingCart(_workContext.CurrentCustomer, user, true);
-
             //authenticate
             _authenticationService.SignIn(user, false);
 

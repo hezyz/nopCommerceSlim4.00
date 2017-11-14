@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using Nop.Core.Domain.Catalog;
-using Nop.Core.Domain.Vendors;
+﻿using Nop.Core.Domain.Catalog;
 using Nop.Web.Models.Catalog;
+using System.Collections.Generic;
 
 namespace Nop.Web.Factories
 {
@@ -89,62 +88,6 @@ namespace Nop.Web.Factories
         /// <returns>List of category (simple) models</returns>
         List<CategorySimpleModel> PrepareCategorySimpleModels(int rootCategoryId,
             bool loadSubCategories = true, IList<Category> allCategories = null);
-
-        #endregion
-
-        #region Manufacturers
-
-        /// <summary>
-        /// Prepare manufacturer model
-        /// </summary>
-        /// <param name="manufacturer">Manufacturer identifier</param>
-        /// <param name="command">Catalog paging filtering command</param>
-        /// <returns>Manufacturer model</returns>
-        ManufacturerModel PrepareManufacturerModel(Manufacturer manufacturer, CatalogPagingFilteringModel command);
-
-        /// <summary>
-        /// Prepare manufacturer template view path
-        /// </summary>
-        /// <param name="templateId">Template identifier</param>
-        /// <returns>Manufacturer template view path</returns>
-        string PrepareManufacturerTemplateViewPath(int templateId);
-
-        /// <summary>
-        /// Prepare manufacturer all models
-        /// </summary>
-        /// <returns>List of manufacturer models</returns>
-        List<ManufacturerModel> PrepareManufacturerAllModels();
-
-        /// <summary>
-        /// Prepare manufacturer navigation model
-        /// </summary>
-        /// <param name="currentManufacturerId">Current manufacturer identifier</param>
-        /// <returns>Manufacturer navigation model</returns>
-        ManufacturerNavigationModel PrepareManufacturerNavigationModel(int currentManufacturerId);
-
-        #endregion
-
-        #region Vendors
-
-        /// <summary>
-        /// Prepare vendor model
-        /// </summary>
-        /// <param name="vendor">Vendor</param>
-        /// <param name="command">Catalog paging filtering command</param>
-        /// <returns>Vendor model</returns>
-        VendorModel PrepareVendorModel(Vendor vendor, CatalogPagingFilteringModel command);
-
-        /// <summary>
-        /// Prepare vendor all models
-        /// </summary>
-        /// <returns>List of vendor models</returns>
-        List<VendorModel> PrepareVendorAllModels();
-
-        /// <summary>
-        /// Prepare vendor navigation model
-        /// </summary>
-        /// <returns>Vendor navigation model</returns>
-        VendorNavigationModel PrepareVendorNavigationModel();
 
         #endregion
 

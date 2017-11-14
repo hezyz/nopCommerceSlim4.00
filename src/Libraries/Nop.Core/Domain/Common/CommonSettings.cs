@@ -47,11 +47,6 @@ namespace Nop.Core.Domain.Common
         public bool SitemapIncludeCategories { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to include manufacturers to sitemap
-        /// </summary>
-        public bool SitemapIncludeManufacturers { get; set; }
-
-        /// <summary>
         /// Gets or sets a value indicating whether to include products to sitemap
         /// </summary>
         public bool SitemapIncludeProducts { get; set; }

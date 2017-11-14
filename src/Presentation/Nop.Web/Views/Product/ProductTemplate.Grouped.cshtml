@@ -74,12 +74,9 @@
                         @await Component.InvokeAsync("Widget", new { widgetZone = "productdetails_overview_top", additionalData = Model.Id })
                         <!--product reviews-->
                         @await Html.PartialAsync("_ProductReviewOverview", Model.ProductReviewOverview)
-                        <!--product manufacturers-->
-                        @await Html.PartialAsync("_ProductManufacturers", Model.ProductManufacturers)
                         <!--compare, email a friend-->
                         <div class="overview-buttons">
                             @await Component.InvokeAsync("Widget", new { widgetZone = "productdetails_inside_overview_buttons_before", additionalData = Model.Id })
-                            @await Html.PartialAsync("_CompareProductsButton", Model)
                             @await Html.PartialAsync("_ProductEmailAFriendButton", Model)
                             @await Component.InvokeAsync("Widget", new { widgetZone = "productdetails_inside_overview_buttons_after", additionalData = Model.Id })
                         </div>
@@ -120,51 +117,6 @@
                                             @Html.Raw(variant.ShortDescription)
                                         </div>
                                     }
-                                    <!--availability-->
-                                    @await Html.PartialAsync("_Availability", variant)
-                                    <!--SKU, MAN, GTIN, vendor-->
-                                    @await Html.PartialAsync("_SKU_Man_GTIN_Ven", variant)
-                                    <!--delivery-->
-                                    @await Html.PartialAsync("_DeliveryInfo", variant)
-                                    <!--sample download-->
-                                    @await Html.PartialAsync("_DownloadSample", variant)
-                                    <!--attributes-->
-                                    @{
-                                        var dataDictAttributes = new ViewDataDictionary(ViewData);
-                                        dataDictAttributes.TemplateInfo.HtmlFieldPrefix = $"attributes_{variant.Id}";
-                                        @await Html.PartialAsync("_ProductAttributes", variant.ProductAttributes, dataDictAttributes)
-                                    }
-                                    <!--gift card-->
-                                    @{
-                                        var dataDictGiftCard = new ViewDataDictionary(ViewData);
-                                        dataDictGiftCard.TemplateInfo.HtmlFieldPrefix = $"giftcard_{variant.Id}";
-                                        @await Html.PartialAsync("_GiftCardInfo", variant.GiftCard, dataDictGiftCard)
-                                    }
-                                    <!--rental info-->
-                                    @{
-                                        var dataDictRental = new ViewDataDictionary(ViewData);
-                                        dataDictRental.TemplateInfo.HtmlFieldPrefix = $"rental_{variant.Id}";
-                                        @await Html.PartialAsync("_RentalInfo", variant, dataDictRental)
-                                    }
-                                    <!--price & add to cart-->
-                                    @{
-                                        var dataDictPrice = new ViewDataDictionary(ViewData);
-                                        dataDictPrice.TemplateInfo.HtmlFieldPrefix = $"price_{variant.Id}";
-                                        @await Html.PartialAsync("_ProductPrice", variant.ProductPrice, dataDictPrice)
-                                    }
-                                    <!--price breaks-->
-                                    @await Html.PartialAsync("_ProductTierPrices", variant.TierPrices)
-                                    @{
-                                        var dataDictAddToCart = new ViewDataDictionary(ViewData);
-                                        dataDictAddToCart.TemplateInfo.HtmlFieldPrefix = $"addtocart_{variant.Id}";
-                                        @await Html.PartialAsync("_AddToCart", variant.AddToCart, dataDictAddToCart)
-                                    }
-                                    <!--wishlist-->
-                                    @{
-                                        var dataDictAddToWishlist = new ViewDataDictionary(ViewData);
-                                        dataDictAddToWishlist.TemplateInfo.HtmlFieldPrefix = $"addtocart_{variant.Id}";
-                                        @await Html.PartialAsync("_AddToWishlist", variant.AddToCart, dataDictAddToWishlist)
-                                    }
                                 </div>
                             </div>
                                         }
@@ -175,7 +127,6 @@
                             </div>
                         }
                     </div>
-                    @await Html.PartialAsync("_ProductSpecifications", Model.ProductSpecifications)
                     @await Html.PartialAsync("_ProductTags", Model.ProductTags)
                 </div>
                 @*we do not display "also purchased" for grouped products

@@ -1,8 +1,7 @@
-using System;
-using System.Collections.Generic;
 using Nop.Core;
 using Nop.Core.Domain.Customers;
-using Nop.Core.Domain.Orders;
+using System;
+using System.Collections.Generic;
 
 namespace Nop.Services.Customers
 {
@@ -18,8 +17,6 @@ namespace Nop.Services.Customers
         /// </summary>
         /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>
         /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
-        /// <param name="affiliateId">Affiliate identifier</param>
-        /// <param name="vendorId">Vendor identifier</param>
         /// <param name="customerRoleIds">A list of customer role identifiers to filter by (at least one match); pass null or empty list in order to load all customers; </param>
         /// <param name="email">Email; null to load all customers</param>
         /// <param name="username">Username; null to load all customers</param>
@@ -31,18 +28,16 @@ namespace Nop.Services.Customers
         /// <param name="phone">Phone; null to load all customers</param>
         /// <param name="zipPostalCode">Phone; null to load all customers</param>
         /// <param name="ipAddress">IP address; null to load all customers</param>
-        /// <param name="loadOnlyWithShoppingCart">Value indicating whether to load customers only with shopping cart</param>
-        /// <param name="sct">Value indicating what shopping cart type to filter; userd when 'loadOnlyWithShoppingCart' param is 'true'</param>
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
         /// <returns>Customers</returns>
         IPagedList<Customer> GetAllCustomers(DateTime? createdFromUtc = null,
-            DateTime? createdToUtc = null, int affiliateId = 0, int vendorId = 0,
+            DateTime? createdToUtc = null, 
             int[] customerRoleIds = null, string email = null, string username = null,
             string firstName = null, string lastName = null,
             int dayOfBirth = 0, int monthOfBirth = 0,
             string company = null, string phone = null, string zipPostalCode = null,
-            string ipAddress = null, bool loadOnlyWithShoppingCart = false, ShoppingCartType? sct = null,
+            string ipAddress = null,
             int pageIndex = 0, int pageSize = int.MaxValue);
 
         /// <summary>
@@ -122,29 +117,14 @@ namespace Nop.Services.Customers
         /// <param name="customer">Customer</param>
         void UpdateCustomer(Customer customer);
         
-        /// <summary>
-        /// Reset data required for checkout
-        /// </summary>
-        /// <param name="customer">Customer</param>
-        /// <param name="storeId">Store identifier</param>
-        /// <param name="clearCouponCodes">A value indicating whether to clear coupon code</param>
-        /// <param name="clearCheckoutAttributes">A value indicating whether to clear selected checkout attributes</param>
-        /// <param name="clearRewardPoints">A value indicating whether to clear "Use reward points" flag</param>
-        /// <param name="clearShippingMethod">A value indicating whether to clear selected shipping method</param>
-        /// <param name="clearPaymentMethod">A value indicating whether to clear selected payment method</param>
-        void ResetCheckoutData(Customer customer, int storeId,
-            bool clearCouponCodes = false, bool clearCheckoutAttributes = false,
-            bool clearRewardPoints = true, bool clearShippingMethod = true,
-            bool clearPaymentMethod = true);
 
         /// <summary>
         /// Delete guest customer records
         /// </summary>
         /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>
         /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
-        /// <param name="onlyWithoutShoppingCart">A value indicating whether to delete customers only without shopping cart</param>
         /// <returns>Number of deleted customers</returns>
-        int DeleteGuestCustomers(DateTime? createdFromUtc, DateTime? createdToUtc, bool onlyWithoutShoppingCart);
+        int DeleteGuestCustomers(DateTime? createdFromUtc, DateTime? createdToUtc);
 
         #endregion
 

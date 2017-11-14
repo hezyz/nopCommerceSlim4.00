@@ -143,28 +143,6 @@ namespace Nop.Services.Directory
         }
 
         /// <summary>
-        /// Gets all countries that allow billing
-        /// </summary>
-        /// <param name="languageId">Language identifier. It's used to sort countries by localized names (if specified); pass 0 to skip it</param>
-        /// <param name="showHidden">A value indicating whether to show hidden records</param>
-        /// <returns>Countries</returns>
-        public virtual IList<Country> GetAllCountriesForBilling(int languageId = 0, bool showHidden = false)
-        {
-            return GetAllCountries(languageId, showHidden).Where(c => c.AllowsBilling).ToList();
-        }
-
-        /// <summary>
-        /// Gets all countries that allow shipping
-        /// </summary>
-        /// <param name="languageId">Language identifier. It's used to sort countries by localized names (if specified); pass 0 to skip it</param>
-        /// <param name="showHidden">A value indicating whether to show hidden records</param>
-        /// <returns>Countries</returns>
-        public virtual IList<Country> GetAllCountriesForShipping(int languageId = 0, bool showHidden = false)
-        {
-            return GetAllCountries(languageId, showHidden).Where(c => c.AllowsShipping).ToList();
-        }
-
-        /// <summary>
         /// Gets a country 
         /// </summary>
         /// <param name="countryId">Country identifier</param>

@@ -1,7 +1,7 @@
 namespace Nop.Services.Common
 {
     /// <summary>
-    /// Checkout attribute helper
+    /// address attribute helper
     /// </summary>
     public partial interface IAddressAttributeFormatter
     {

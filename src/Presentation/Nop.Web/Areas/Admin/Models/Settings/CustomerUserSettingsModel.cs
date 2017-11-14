@@ -58,12 +58,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
             [NopResourceDisplayName("Admin.Configuration.Settings.CustomerUser.RequireRegistrationForDownloadableProducts")]
             public bool RequireRegistrationForDownloadableProducts { get; set; }
 
-            [NopResourceDisplayName("Admin.Configuration.Settings.CustomerUser.HideDownloadableProductsTab")]
-            public bool HideDownloadableProductsTab { get; set; }
-
-            [NopResourceDisplayName("Admin.Configuration.Settings.CustomerUser.HideBackInStockSubscriptionsTab")]
-            public bool HideBackInStockSubscriptionsTab { get; set; }
-
             [NopResourceDisplayName("Admin.Configuration.Settings.CustomerUser.CustomerNameFormat")]
             public int CustomerNameFormat { get; set; }
             

@@ -189,16 +189,6 @@
                 </script>
             </div>
         </div>
-            <div class="form-group">
-                <div class="col-md-3">
-                    <nop-label asp-for="VendorId"/>
-                </div>
-                <div class="col-md-9">
-                    <nop-select asp-for="VendorId" asp-items="Model.AvailableVendors" />
-                    <span asp-validation-for="VendorId"></span>
-                    <em>@T("Admin.Customers.Customers.VendorShouldBeInVendorsRole")</em>
-                </div>
-            </div>
             @if (Model.GenderEnabled)
             {
                 <div class="form-group">
@@ -378,15 +368,6 @@
                     <span asp-validation-for="AdminComment"></span>
                 </div>
             </div>
-            <div class="form-group">
-                <div class="col-md-3">
-                    <nop-label asp-for="IsTaxExempt"/>
-                </div>
-                <div class="col-md-9">
-                    <nop-editor asp-for="IsTaxExempt"/>
-                    <span asp-validation-for="IsTaxExempt"></span>
-                </div>
-            </div>
             @if (Model.AllowCustomersToSetTimeZone)
             {
                 <div class="form-group">
@@ -396,39 +377,6 @@
                     <div class="col-md-9">
                         <nop-select asp-for="TimeZoneId" asp-items="Model.AvailableTimeZones"/>
                         <span asp-validation-for="TimeZoneId"></span>
-                    </div>
-                </div>
-            }
-            @if (Model.AffiliateId > 0)
-            {
-                <div class="form-group">
-                    <div class="col-md-3">
-                        <nop-label asp-for="AffiliateId"/>
-                    </div>
-                    <div class="col-md-9">
-                        <a asp-controller="Affiliate" asp-action="Edit" asp-route-id="@Model.AffiliateId">@Model.AffiliateName - @T("Admin.Common.View")</a>
-                        <button type="submit" name="remove-affiliate" class="btn bg-red">
-                            @T("Admin.Customers.Customers.Fields.Affiliate.Remove")
-                        </button>
-                    </div>
-                </div>
-            }
-            @if (Model.DisplayVatNumber)
-            {
-                <div class="form-group">
-                    <div class="col-md-3">
-                        <nop-label asp-for="VatNumber"/>
-                    </div>
-                    <div class="col-md-9">
-                        <nop-editor asp-for="VatNumber"/>
-                        (@string.Format(T("Admin.Customers.Customers.Fields.VatNumberStatus").Text, Model.VatNumberStatusNote))
-                        <button type="submit" name="markVatNumberAsValid" class="btn btn-primary">
-                            @T("Admin.Customers.Customers.Fields.VatNumber.MarkAsValid")
-                        </button>
-                        <button type="submit" name="markVatNumberAsInvalid" class="btn bg-red">
-                            @T("Admin.Customers.Customers.Fields.VatNumber.MarkAsInvalid")
-                        </button>
-                        <span asp-validation-for="VatNumber"></span>
                     </div>
                 </div>
             }

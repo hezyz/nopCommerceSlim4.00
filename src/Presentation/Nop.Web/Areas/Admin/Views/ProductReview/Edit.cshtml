@@ -25,21 +25,15 @@
                 <i class="fa fa-floppy-o"></i>
                 @T("Admin.Common.SaveContinue")
             </button>
-            @if (!Model.IsLoggedInAsVendor)
-            {
-                //this button is not visible to vendors
                 <span id="productreview-delete" class="btn bg-red">
                     <i class="fa fa-trash-o"></i>
                     @T("Admin.Common.Delete")
                 </span>
-            }
             @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_review_details_buttons", additionalData = Model.Id })
         </div>
     </div>
     @await Html.PartialAsync("_CreateOrUpdate", Model)
 </form>
-@if (!Model.IsLoggedInAsVendor)
-{
-    //this button is not visible to vendors
+
     <nop-delete-confirmation asp-model-id="@Model.Id" asp-button-id="productreview-delete" />
-}
+

@@ -18,7 +18,6 @@ namespace Nop.Web.Areas.Admin.Controllers
         #region Fields
 
         private readonly ICategoryTemplateService _categoryTemplateService;
-        private readonly IManufacturerTemplateService _manufacturerTemplateService;
         private readonly IProductTemplateService _productTemplateService;
         private readonly ITopicTemplateService _topicTemplateService;
         private readonly IPermissionService _permissionService;
@@ -28,13 +27,11 @@ namespace Nop.Web.Areas.Admin.Controllers
         #region Ctor
 
         public TemplateController(ICategoryTemplateService categoryTemplateService,
-            IManufacturerTemplateService manufacturerTemplateService,
             IProductTemplateService productTemplateService,
             ITopicTemplateService topicTemplateService,
             IPermissionService permissionService)
         {
             this._categoryTemplateService = categoryTemplateService;
-            this._manufacturerTemplateService = manufacturerTemplateService;
             this._productTemplateService = productTemplateService;
             this._topicTemplateService = topicTemplateService;
             this._permissionService = permissionService;
@@ -119,89 +116,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 throw new ArgumentException("No template found with the specified id");
 
             _categoryTemplateService.DeleteCategoryTemplate(template);
-
-            return new NullJsonResult();
-        }
-
-        #endregion
-
-        #region Manufacturer templates
-
-        public virtual IActionResult ManufacturerTemplates()
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageMaintenance))
-                return AccessDeniedView();
-
-            return View();
-        }
-
-        [HttpPost]
-        public virtual IActionResult ManufacturerTemplates(DataSourceRequest command)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageMaintenance))
-                return AccessDeniedKendoGridJson();
-
-            var templatesModel = _manufacturerTemplateService.GetAllManufacturerTemplates()
-                .Select(x => x.ToModel())
-                .ToList();
-            var gridModel = new DataSourceResult
-            {
-                Data = templatesModel,
-                Total = templatesModel.Count
-            };
-
-            return Json(gridModel);
-        }
-
-        [HttpPost]
-        public virtual IActionResult ManufacturerTemplateUpdate(ManufacturerTemplateModel model)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageMaintenance))
-                return AccessDeniedView();
-
-            if (!ModelState.IsValid)
-            {
-                return Json(new DataSourceResult { Errors = ModelState.SerializeErrors() });
-            }
-
-            var template = _manufacturerTemplateService.GetManufacturerTemplateById(model.Id);
-            if (template == null)
-                throw new ArgumentException("No template found with the specified id");
-            template = model.ToEntity(template);
-            _manufacturerTemplateService.UpdateManufacturerTemplate(template);
-
-            return new NullJsonResult();
-        }
-
-        [HttpPost]
-        public virtual IActionResult ManufacturerTemplateAdd(ManufacturerTemplateModel model)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageMaintenance))
-                return AccessDeniedView();
-
-            if (!ModelState.IsValid)
-            {
-                return Json(new DataSourceResult { Errors = ModelState.SerializeErrors() });
-            }
-
-            var template = new ManufacturerTemplate();
-            template = model.ToEntity(template);
-            _manufacturerTemplateService.InsertManufacturerTemplate(template);
-
-            return new NullJsonResult();
-        }
-
-        [HttpPost]
-        public virtual IActionResult ManufacturerTemplateDelete(int id)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageMaintenance))
-                return AccessDeniedView();
-
-            var template = _manufacturerTemplateService.GetManufacturerTemplateById(id);
-            if (template == null)
-                throw new ArgumentException("No template found with the specified id");
-
-            _manufacturerTemplateService.DeleteManufacturerTemplate(template);
 
             return new NullJsonResult();
         }

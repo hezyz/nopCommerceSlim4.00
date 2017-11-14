@@ -24,9 +24,9 @@ namespace Nop.Core.Domain.Security
         /// Gets or sets the permission category
         /// </summary>
         public string Category { get; set; }
-        
+
         /// <summary>
-        /// Gets or sets discount usage history
+        /// Gets or sets CustomerRoles
         /// </summary>
         public virtual ICollection<CustomerRole> CustomerRoles
         {

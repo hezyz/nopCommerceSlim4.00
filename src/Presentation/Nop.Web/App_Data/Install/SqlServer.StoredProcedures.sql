@@ -80,25 +80,17 @@ GO
 CREATE PROCEDURE [dbo].[ProductLoadAllPaged]
 (
 	@CategoryIds		nvarchar(MAX) = null,	--a list of category IDs (comma-separated list). e.g. 1,2,3
-	@ManufacturerId		int = 0,
 	@StoreId			int = 0,
-	@VendorId			int = 0,
-	@WarehouseId		int = 0,
 	@ProductTypeId		int = null, --product type identifier, null - load all products
 	@VisibleIndividuallyOnly bit = 0, 	--0 - load all products , 1 - "visible indivially" only
 	@MarkedAsNewOnly	bit = 0, 	--0 - load all products , 1 - "marked as new" only
 	@ProductTagId		int = 0,
 	@FeaturedProducts	bit = null,	--0 featured only , 1 not featured only, null - load all products
-	@PriceMin			decimal(18, 4) = null,
-	@PriceMax			decimal(18, 4) = null,
 	@Keywords			nvarchar(4000) = null,
 	@SearchDescriptions bit = 0, --a value indicating whether to search by a specified "keyword" in product descriptions
-	@SearchManufacturerPartNumber bit = 0, -- a value indicating whether to search by a specified "keyword" in manufacturer part number
-	@SearchSku			bit = 0, --a value indicating whether to search by a specified "keyword" in product SKU
 	@SearchProductTags  bit = 0, --a value indicating whether to search by a specified "keyword" in product tags
 	@UseFullTextSearch  bit = 0,
 	@FullTextMode		int = 0, --0 - using CONTAINS with <prefix_term>, 5 - using CONTAINS and OR with <prefix_term>, 10 - using CONTAINS and AND with <prefix_term>
-	@FilteredSpecs		nvarchar(MAX) = null,	--filter by specification attribute options (comma-separated list of IDs). e.g. 14,15,16
 	@LanguageId			int = 0,
 	@OrderBy			int = 0, --0 - position, 5 - Name: A to Z, 6 - Name: Z to A, 10 - Price: Low to High, 11 - Price: High to Low, 15 - creation date
 	@AllowedCustomerRoleIds	nvarchar(MAX) = null,	--a list of customer role IDs (comma-separated list) for which a product should be shown (if a subjet to ACL)
@@ -106,8 +98,6 @@ CREATE PROCEDURE [dbo].[ProductLoadAllPaged]
 	@PageSize			int = 2147483644,
 	@ShowHidden			bit = 0,
 	@OverridePublished	bit = null, --null - process "Published" property according to "showHidden" parameter, true - load only "Published" products, false - load only "Unpublished" products
-	@LoadFilterableSpecificationAttributeOptionIds bit = 0, --a value indicating whether we should load the specification attribute option identifiers applied to loaded products (all pages)
-	@FilterableSpecificationAttributeOptionIds nvarchar(MAX) = null OUTPUT, --the specification attribute option identifiers applied to loaded products (all pages). returned as a comma separated list of identifiers
 	@TotalRecords		int = null OUTPUT
 )
 AS
@@ -290,26 +280,6 @@ BEGIN
 				SET @sql = @sql + ' AND PATINDEX(@Keywords, lp.[LocaleValue]) > 0 '
 		END
 
-		--manufacturer part number (exact match)
-		IF @SearchManufacturerPartNumber = 1
-		BEGIN
-			SET @sql = @sql + '
-			UNION
-			SELECT p.Id
-			FROM Product p with (NOLOCK)
-			WHERE p.[ManufacturerPartNumber] = @OriginalKeywords '
-		END
-
-		--SKU (exact match)
-		IF @SearchSku = 1
-		BEGIN
-			SET @sql = @sql + '
-			UNION
-			SELECT p.Id
-			FROM Product p with (NOLOCK)
-			WHERE p.[Sku] = @OriginalKeywords '
-		END
-
 		IF @SearchProductTags = 1
 		BEGIN
 			--product tags (exact match)
@@ -387,14 +357,7 @@ BEGIN
 		LEFT JOIN Product_Category_Mapping pcm with (NOLOCK)
 			ON p.Id = pcm.ProductId'
 	END
-	
-	IF @ManufacturerId > 0
-	BEGIN
-		SET @sql = @sql + '
-		LEFT JOIN Product_Manufacturer_Mapping pmm with (NOLOCK)
-			ON p.Id = pmm.ProductId'
-	END
-	
+
 	IF ISNULL(@ProductTagId, 0) != 0
 	BEGIN
 		SET @sql = @sql + '
@@ -426,44 +389,7 @@ BEGIN
 		AND pcm.IsFeaturedProduct = ' + CAST(@FeaturedProducts AS nvarchar(max))
 		END
 	END
-	
-	--filter by manufacturer
-	IF @ManufacturerId > 0
-	BEGIN
-		SET @sql = @sql + '
-		AND pmm.ManufacturerId = ' + CAST(@ManufacturerId AS nvarchar(max))
-		
-		IF @FeaturedProducts IS NOT NULL
-		BEGIN
-			SET @sql = @sql + '
-		AND pmm.IsFeaturedProduct = ' + CAST(@FeaturedProducts AS nvarchar(max))
-		END
-	END
-	
-	--filter by vendor
-	IF @VendorId > 0
-	BEGIN
-		SET @sql = @sql + '
-		AND p.VendorId = ' + CAST(@VendorId AS nvarchar(max))
-	END
-	
-	--filter by warehouse
-	IF @WarehouseId > 0
-	BEGIN
-		--we should also ensure that 'ManageInventoryMethodId' is set to 'ManageStock' (1)
-		--but we skip it in order to prevent hard-coded values (e.g. 1) and for better performance
-		SET @sql = @sql + '
-		AND  
-			(
-				(p.UseMultipleWarehouses = 0 AND
-					p.WarehouseId = ' + CAST(@WarehouseId AS nvarchar(max)) + ')
-				OR
-				(p.UseMultipleWarehouses > 0 AND
-					EXISTS (SELECT 1 FROM ProductWarehouseInventory [pwi]
-					WHERE [pwi].WarehouseId = ' + CAST(@WarehouseId AS nvarchar(max)) + ' AND [pwi].ProductId = p.Id))
-			)'
-	END
-	
+
 	--filter by product type
 	IF @ProductTypeId is not null
 	BEGIN
@@ -520,22 +446,7 @@ BEGIN
 	IF @ShowHidden = 0
 	BEGIN
 		SET @sql = @sql + '
-		AND p.Deleted = 0
-		AND (getutcdate() BETWEEN ISNULL(p.AvailableStartDateTimeUtc, ''1/1/1900'') and ISNULL(p.AvailableEndDateTimeUtc, ''1/1/2999''))'
-	END
-	
-	--min price
-	IF @PriceMin is not null
-	BEGIN
-		SET @sql = @sql + '
-		AND (p.Price >= ' + CAST(@PriceMin AS nvarchar(max)) + ')'
-	END
-	
-	--max price
-	IF @PriceMax is not null
-	BEGIN
-		SET @sql = @sql + '
-		AND (p.Price <= ' + CAST(@PriceMax AS nvarchar(max)) + ')'
+		AND p.Deleted = 0'
 	END
 	
 	--show hidden and ACL
@@ -563,98 +474,19 @@ BEGIN
 			))'
 	END
 	
-    --prepare filterable specification attribute option identifier (if requested)
-    IF @LoadFilterableSpecificationAttributeOptionIds = 1
-	BEGIN		
-		CREATE TABLE #FilterableSpecs 
-		(
-			[SpecificationAttributeOptionId] int NOT NULL
-		)
-        DECLARE @sql_filterableSpecs nvarchar(max)
-        SET @sql_filterableSpecs = '
-	        INSERT INTO #FilterableSpecs ([SpecificationAttributeOptionId])
-	        SELECT DISTINCT [psam].SpecificationAttributeOptionId
-	        FROM [Product_SpecificationAttribute_Mapping] [psam] WITH (NOLOCK)
-	            WHERE [psam].[AllowFiltering] = 1
-	            AND [psam].[ProductId] IN (' + @sql + ')'
-
-        EXEC sp_executesql @sql_filterableSpecs
-
-		--build comma separated list of filterable identifiers
-		SELECT @FilterableSpecificationAttributeOptionIds = COALESCE(@FilterableSpecificationAttributeOptionIds + ',' , '') + CAST(SpecificationAttributeOptionId as nvarchar(4000))
-		FROM #FilterableSpecs
-
-		DROP TABLE #FilterableSpecs
- 	END
-
-	--filter by specification attribution options
-	SET @FilteredSpecs = isnull(@FilteredSpecs, '')	
-	CREATE TABLE #FilteredSpecs
-	(
-		SpecificationAttributeOptionId int not null
-	)
-	INSERT INTO #FilteredSpecs (SpecificationAttributeOptionId)
-	SELECT CAST(data as int) FROM [nop_splitstring_to_table](@FilteredSpecs, ',') 
-
-    CREATE TABLE #FilteredSpecsWithAttributes
-	(
-        SpecificationAttributeId int not null,
-		SpecificationAttributeOptionId int not null
-	)
-	INSERT INTO #FilteredSpecsWithAttributes (SpecificationAttributeId, SpecificationAttributeOptionId)
-	SELECT sao.SpecificationAttributeId, fs.SpecificationAttributeOptionId
-    FROM #FilteredSpecs fs INNER JOIN SpecificationAttributeOption sao ON sao.Id = fs.SpecificationAttributeOptionId
-    ORDER BY sao.SpecificationAttributeId 
-
-    DECLARE @SpecAttributesCount int	
-	SET @SpecAttributesCount = (SELECT COUNT(1) FROM #FilteredSpecsWithAttributes)
-	IF @SpecAttributesCount > 0
-	BEGIN
-		--do it for each specified specification option
-		DECLARE @SpecificationAttributeOptionId int
-        DECLARE @SpecificationAttributeId int
-        DECLARE @LastSpecificationAttributeId int
-        SET @LastSpecificationAttributeId = 0
-		DECLARE cur_SpecificationAttributeOption CURSOR FOR
-		SELECT SpecificationAttributeId, SpecificationAttributeOptionId
-		FROM #FilteredSpecsWithAttributes
-
-		OPEN cur_SpecificationAttributeOption
-        FOREACH:
-            FETCH NEXT FROM cur_SpecificationAttributeOption INTO @SpecificationAttributeId, @SpecificationAttributeOptionId
-            IF (@LastSpecificationAttributeId <> 0 AND @SpecificationAttributeId <> @LastSpecificationAttributeId OR @@FETCH_STATUS <> 0) 
-			    SET @sql = @sql + '
-        AND p.Id in (select psam.ProductId from [Product_SpecificationAttribute_Mapping] psam with (NOLOCK) where psam.AllowFiltering = 1 and psam.SpecificationAttributeOptionId IN (SELECT SpecificationAttributeOptionId FROM #FilteredSpecsWithAttributes WHERE SpecificationAttributeId = ' + CAST(@LastSpecificationAttributeId AS nvarchar(max)) + '))'
-            SET @LastSpecificationAttributeId = @SpecificationAttributeId
-		IF @@FETCH_STATUS = 0 GOTO FOREACH
-		CLOSE cur_SpecificationAttributeOption
-		DEALLOCATE cur_SpecificationAttributeOption
-	END
-
 	--sorting
 	SET @sql_orderby = ''	
 	IF @OrderBy = 5 /* Name: A to Z */
 		SET @sql_orderby = ' p.[Name] ASC'
 	ELSE IF @OrderBy = 6 /* Name: Z to A */
 		SET @sql_orderby = ' p.[Name] DESC'
-	ELSE IF @OrderBy = 10 /* Price: Low to High */
-		SET @sql_orderby = ' p.[Price] ASC'
-	ELSE IF @OrderBy = 11 /* Price: High to Low */
-		SET @sql_orderby = ' p.[Price] DESC'
 	ELSE IF @OrderBy = 15 /* creation date */
 		SET @sql_orderby = ' p.[CreatedOnUtc] DESC'
 	ELSE /* default sorting, 0 (position) */
 	BEGIN
 		--category position (display order)
 		IF @CategoryIdsCount > 0 SET @sql_orderby = ' pcm.DisplayOrder ASC'
-		
-		--manufacturer position (display order)
-		IF @ManufacturerId > 0
-		BEGIN
-			IF LEN(@sql_orderby) > 0 SET @sql_orderby = @sql_orderby + ', '
-			SET @sql_orderby = @sql_orderby + ' pmm.DisplayOrder ASC'
-		END
-		
+	
 		--name
 		IF LEN(@sql_orderby) > 0 SET @sql_orderby = @sql_orderby + ', '
 		SET @sql_orderby = @sql_orderby + ' p.[Name] ASC'
@@ -670,8 +502,6 @@ BEGIN
 	EXEC sp_executesql @sql
 
 	DROP TABLE #FilteredCategoryIds
-	DROP TABLE #FilteredSpecs
-    DROP TABLE #FilteredSpecsWithAttributes
 	DROP TABLE #FilteredCustomerRoleIds
 	DROP TABLE #KeywordProducts
 
@@ -878,7 +708,6 @@ GO
 
 CREATE PROCEDURE [dbo].[DeleteGuests]
 (
-	@OnlyWithoutShoppingCart bit = 1,
 	@CreatedFromUtc datetime,
 	@CreatedToUtc datetime,
 	@TotalRecordsDeleted int = null OUTPUT
@@ -896,14 +725,8 @@ BEGIN
 	--created to
 	((@CreatedToUtc is null) OR (c.[CreatedOnUtc] < @CreatedToUtc))
 	AND
-	--shopping cart items
-	((@OnlyWithoutShoppingCart=0) OR (NOT EXISTS(SELECT 1 FROM [ShoppingCartItem] sci with (NOLOCK) inner join [Customer] with (NOLOCK) on sci.[CustomerId]=c.[Id])))
-	AND
 	--guests only
 	(EXISTS(SELECT 1 FROM [Customer_CustomerRole_Mapping] ccrm with (NOLOCK) inner join [Customer] with (NOLOCK) on ccrm.[Customer_Id]=c.[Id] inner join [CustomerRole] cr with (NOLOCK) on cr.[Id]=ccrm.[CustomerRole_Id] WHERE cr.[SystemName] = N'Guests'))
-	AND
-	--no orders
-	(NOT EXISTS(SELECT 1 FROM [Order] o with (NOLOCK) inner join [Customer] with (NOLOCK) on o.[CustomerId]=c.[Id]))
 	AND
 	--no blog comments
 	(NOT EXISTS(SELECT 1 FROM [BlogComment] bc with (NOLOCK) inner join [Customer] with (NOLOCK) on bc.[CustomerId]=c.[Id]))

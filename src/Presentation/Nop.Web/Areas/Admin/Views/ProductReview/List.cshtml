@@ -20,9 +20,6 @@
         @T("Admin.Catalog.ProductReviews")
     </h1>
     <div class="pull-right">
-        @if (!Model.IsLoggedInAsVendor)
-        {
-            //these buttons are not visible to vendors
             <button type="button" id="approve-selected" class="btn bg-green">
                 <i class="fa fa-check-square-o"></i>
                 @T("Admin.Catalog.ProductReviews.ApproveSelected")
@@ -35,7 +32,6 @@
                 <i class="fa fa-trash-o"></i>
                 @T("Admin.Catalog.ProductReviews.DeleteSelected")
             </button>
-        }
         @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_review_list_buttons" })
     </div>
 </div>
@@ -179,7 +175,7 @@
                                 columns: [
                                     {
                                         field: "Id",
-                                        hidden: @(Model.IsLoggedInAsVendor ? "true" : "false"),
+                                        hidden:  "false",
                                         headerTemplate: "<input id='mastercheckbox' type='checkbox'/>",
                                         headerAttributes: { style: "text-align:center" },
                                         attributes: { style: "text-align:center" },

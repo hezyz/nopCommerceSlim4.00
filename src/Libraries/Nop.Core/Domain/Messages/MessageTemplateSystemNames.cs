@@ -34,90 +34,6 @@ namespace Nop.Core.Domain.Messages
 
         #endregion
 
-        #region Order
-
-        /// <summary>
-        /// Represents system name of notification vendor about placed order
-        /// </summary>
-        public const string OrderPlacedVendorNotification = "OrderPlaced.VendorNotification";
-
-        /// <summary>
-        /// Represents system name of notification store owner about placed order
-        /// </summary>
-        public const string OrderPlacedStoreOwnerNotification = "OrderPlaced.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification store owner about paid order
-        /// </summary>
-        public const string OrderPaidStoreOwnerNotification = "OrderPaid.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about paid order
-        /// </summary>
-        public const string OrderPaidCustomerNotification = "OrderPaid.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification vendor about paid order
-        /// </summary>
-        public const string OrderPaidVendorNotification = "OrderPaid.VendorNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about placed order
-        /// </summary>
-        public const string OrderPlacedCustomerNotification = "OrderPlaced.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about sent shipment
-        /// </summary>
-        public const string ShipmentSentCustomerNotification = "ShipmentSent.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about delivered shipment
-        /// </summary>
-        public const string ShipmentDeliveredCustomerNotification = "ShipmentDelivered.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about completed order
-        /// </summary>
-        public const string OrderCompletedCustomerNotification = "OrderCompleted.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about cancelled order
-        /// </summary>
-        public const string OrderCancelledCustomerNotification = "OrderCancelled.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification store owner about refunded order
-        /// </summary>
-        public const string OrderRefundedStoreOwnerNotification = "OrderRefunded.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about refunded order
-        /// </summary>
-        public const string OrderRefundedCustomerNotification = "OrderRefunded.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about new order note
-        /// </summary>
-        public const string NewOrderNoteAddedCustomerNotification = "Customer.NewOrderNote";
-
-        /// <summary>
-        /// Represents system name of notification store owner about cancelled recurring order
-        /// </summary>
-        public const string RecurringPaymentCancelledStoreOwnerNotification = "RecurringPaymentCancelled.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about cancelled recurring order
-        /// </summary>
-        public const string RecurringPaymentCancelledCustomerNotification = "RecurringPaymentCancelled.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about failed payment for the recurring payments
-        /// </summary>
-        public const string RecurringPaymentFailedCustomerNotification = "RecurringPaymentFailed.CustomerNotification";
-
-        #endregion
-
         #region Newsletter
 
         /// <summary>
@@ -138,30 +54,6 @@ namespace Nop.Core.Domain.Messages
         /// Represents system name of 'Email a friend' message
         /// </summary>
         public const string EmailAFriendMessage = "Service.EmailAFriend";
-
-        /// <summary>
-        /// Represents system name of 'Email a friend' message with wishlist
-        /// </summary>
-        public const string WishlistToFriendMessage = "Wishlist.EmailAFriend";
-
-        #endregion
-
-        #region Return requests
-
-        /// <summary>
-        /// Represents system name of notification store owner about new return request
-        /// </summary>
-        public const string NewReturnRequestStoreOwnerNotification = "NewReturnRequest.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about new return request
-        /// </summary>
-        public const string NewReturnRequestCustomerNotification = "NewReturnRequest.CustomerNotification";
-
-        /// <summary>
-        /// Represents system name of notification customer about changing return request status
-        /// </summary>
-        public const string ReturnRequestStatusChangedCustomerNotification = "ReturnRequestStatusChanged.CustomerNotification";
 
         #endregion
 
@@ -187,39 +79,9 @@ namespace Nop.Core.Domain.Messages
         #region Misc
 
         /// <summary>
-        /// Represents system name of notification store owner about applying new vendor account
-        /// </summary>
-        public const string NewVendorAccountApplyStoreOwnerNotification = "VendorAccountApply.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification vendor about changing information
-        /// </summary>
-        public const string VendorInformationChangeNotification = "VendorInformationChange.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification about gift card
-        /// </summary>
-        public const string GiftCardNotification = "GiftCard.Notification";
-
-        /// <summary>
         /// Represents system name of notification store owner about new product review
         /// </summary>
         public const string ProductReviewNotification = "Product.ProductReview";
-
-        /// <summary>
-        /// Represents system name of notification store owner about below quantity of product
-        /// </summary>
-        public const string QuantityBelowStoreOwnerNotification = "QuantityBelow.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification store owner about below quantity of product attribute combination
-        /// </summary>
-        public const string QuantityBelowAttributeCombinationStoreOwnerNotification = "QuantityBelow.AttributeCombination.StoreOwnerNotification";
-
-        /// <summary>
-        /// Represents system name of notification store owner about submitting new VAT
-        /// </summary>
-        public const string NewVatSubmittedStoreOwnerNotification = "NewVATSubmitted.StoreOwnerNotification";
 
         /// <summary>
         /// Represents system name of notification store owner about new blog comment
@@ -232,19 +94,10 @@ namespace Nop.Core.Domain.Messages
         public const string NewsCommentNotification = "News.NewsComment";
 
         /// <summary>
-        /// Represents system name of notification customer about product receipt
-        /// </summary>
-        public const string BackInStockNotification = "Customer.BackInStock";
-
-        /// <summary>
         /// Represents system name of 'Contact us' message
         /// </summary>
         public const string ContactUsMessage = "Service.ContactUs";
-        /// <summary>
-        /// Represents system name of 'Contact vendor' message
-        /// </summary>
-        public const string ContactVendorMessage = "Service.ContactVendor";
-
+       
         #endregion
     }
 }

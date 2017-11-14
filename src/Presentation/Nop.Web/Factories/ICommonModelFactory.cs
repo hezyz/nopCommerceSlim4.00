@@ -1,5 +1,4 @@
-﻿using Nop.Core.Domain.Vendors;
-using Nop.Web.Models.Common;
+﻿using Nop.Web.Models.Common;
 
 namespace Nop.Web.Factories
 {
@@ -19,18 +18,6 @@ namespace Nop.Web.Factories
         /// </summary>
         /// <returns>Language selector model</returns>
         LanguageSelectorModel PrepareLanguageSelectorModel();
-
-        /// <summary>
-        /// Prepare the currency selector model
-        /// </summary>
-        /// <returns>Currency selector model</returns>
-        CurrencySelectorModel PrepareCurrencySelectorModel();
-
-        /// <summary>
-        /// Prepare the tax type selector model
-        /// </summary>
-        /// <returns>Tax type selector model</returns>
-        TaxTypeSelectorModel PrepareTaxTypeSelectorModel();
 
         /// <summary>
         /// Prepare the header links model
@@ -63,16 +50,6 @@ namespace Nop.Web.Factories
         /// <param name="excludeProperties">Whether to exclude populating of model properties from the entity</param>
         /// <returns>Contact us model</returns>
         ContactUsModel PrepareContactUsModel(ContactUsModel model, bool excludeProperties);
-
-        /// <summary>
-        /// Prepare the contact vendor model
-        /// </summary>
-        /// <param name="model">Contact vendor model</param>
-        /// <param name="vendor">Vendor</param>
-        /// <param name="excludeProperties">Whether to exclude populating of model properties from the entity</param>
-        /// <returns>Contact vendor model</returns>
-        ContactVendorModel PrepareContactVendorModel(ContactVendorModel model, Vendor vendor,
-            bool excludeProperties);
 
         /// <summary>
         /// Prepare the sitemap model

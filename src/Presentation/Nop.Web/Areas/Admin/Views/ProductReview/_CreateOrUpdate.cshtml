@@ -38,15 +38,8 @@
                             <nop-label asp-for="Title" />
                         </div>
                         <div class="col-md-9">
-                            @if (Model.IsLoggedInAsVendor)
-                            {
-                                <div class="form-text-row">@Model.Title</div>
-                            }
-                            else
-                            {
                                 <nop-editor asp-for="Title" asp-required="true" />
                                 <span asp-validation-for="Title"></span>
-                            }
                         </div>
                     </div>
                     <div class="form-group">
@@ -54,15 +47,8 @@
                             <nop-label asp-for="ReviewText" />
                         </div>
                         <div class="col-md-9">
-                            @if (Model.IsLoggedInAsVendor)
-                            {
-                                @Html.Raw(Nop.Core.Html.HtmlHelper.FormatText(Model.ReviewText, false, true, false, false, false, false))
-                            }
-                            else
-                            {
                                 <nop-textarea asp-for="ReviewText" asp-required="true" />
                                 <span asp-validation-for="ReviewText"></span>
-                            }
                         </div>
                     </div>
                     <div class="form-group">
@@ -87,24 +73,9 @@
                             <nop-label asp-for="IsApproved" />
                         </div>
                         <div class="col-md-9">
-                            @if (Model.IsLoggedInAsVendor)
-                            {
-                                <div class="form-text-row">
-                                    @if (Model.IsApproved)
-                                    {
-                                        <i class="fa fa-check true-icon"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="fa fa-close false-icon"></i>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
+
                                 <nop-editor asp-for="IsApproved" />
                                 <span asp-validation-for="IsApproved"></span>
-                            }
                         </div>
                     </div>
                     <div class="form-group">

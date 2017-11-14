@@ -8,12 +8,6 @@ namespace Nop.Services.ExportImport
     public partial interface IImportManager
     {
         /// <summary>
-        /// Import products from XLSX file
-        /// </summary>
-        /// <param name="stream">Stream</param>
-        void ImportProductsFromXlsx(Stream stream);
-
-        /// <summary>
         /// Import newsletter subscribers from TXT file
         /// </summary>
         /// <param name="stream">Stream</param>
@@ -26,12 +20,6 @@ namespace Nop.Services.ExportImport
         /// <param name="stream">Stream</param>
         /// <returns>Number of imported states</returns>
         int ImportStatesFromTxt(Stream stream);
-
-        /// <summary>
-        /// Import manufacturers from XLSX file
-        /// </summary>
-        /// <param name="stream">Stream</param>
-        void ImportManufacturersFromXlsx(Stream stream);
 
         /// <summary>
         /// Import categories from XLSX file

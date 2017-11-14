@@ -150,7 +150,7 @@
                     }
                 </div>
             </div>
-            @if (Model.CompanyEnabled || Model.DisplayVatNumber)
+            @if (Model.CompanyEnabled)
             {
                 <div class="fieldset">
                     <div class="title">
@@ -167,17 +167,6 @@
                                     <nop-required />
                                 }
                                 <span asp-validation-for="Company"></span>
-                            </div>
-                        }
-                        @if (Model.DisplayVatNumber)
-                        {
-                            <div class="inputs">
-                                <label asp-for="VatNumber" asp-postfix=":"></label>
-                                <input asp-for="VatNumber" />
-                                <span class="vat-status">@Model.VatNumberStatusNote</span>
-                                <span class="vat-note">
-                                    <em>@T("Account.Fields.VatNumber.Note")</em>
-                                </span>
                             </div>
                         }
                     </div>

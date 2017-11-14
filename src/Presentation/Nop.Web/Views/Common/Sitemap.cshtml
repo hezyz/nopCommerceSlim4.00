@@ -64,22 +64,6 @@
                 </div>
             </div>
         }
-        @if (Model.Manufacturers.Count > 0)
-        {
-            <div class="entity">
-                <div class="entity-title">
-                    <h2>@T("Sitemap.Manufacturers")</h2>
-                </div>
-                <div class="entity-body">
-                    <ul>
-                        @foreach (var manufacturer in Model.Manufacturers)
-                        { 
-                            <li><a href="@Url.RouteUrl("Manufacturer", new { SeName = manufacturer.SeName })">@manufacturer.Name</a></li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        }
         @if (Model.Products.Count > 0)
         {
             <div class="entity">

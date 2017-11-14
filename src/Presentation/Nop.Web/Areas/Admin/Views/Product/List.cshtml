@@ -65,14 +65,10 @@
                     </li>
                 </ul>
             </div>
-            @if (!Model.IsLoggedInAsVendor || Model.AllowVendorsToImportProducts)
-            {
-                //a vendor cannot import products
             <button type="button" name="importexcel" class="btn bg-olive" data-toggle="modal" data-target="#importexcel-window">
                 <i class="fa fa-upload"></i>
                 @T("Admin.Common.Import")
             </button>
-            }
             <button type="button" id="delete-selected" class="btn bg-red">
                 <i class="fa fa-trash-o"></i>
                 @T("Admin.Common.Delete.Selected")
@@ -112,22 +108,6 @@
                                         <nop-editor asp-for="SearchIncludeSubCategories" />
                                     </div>
                                 </div>
-                                <div class="form-group" @(Model.AvailableManufacturers.SelectionIsNotPossible() ? Html.Raw("style=\"display:none\"") : null)>
-                                    <div class="col-md-4">
-                                        <nop-label asp-for="SearchManufacturerId" />
-                                    </div>
-                                    <div class="col-md-8">
-                                        <nop-select asp-for="SearchManufacturerId" asp-items="Model.AvailableManufacturers" />
-                                    </div>
-                                </div>
-                                <div class="form-group" @(Model.AvailableVendors.SelectionIsNotPossible() || Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
-                                    <div class="col-md-4">
-                                        <nop-label asp-for="SearchVendorId" />
-                                    </div>
-                                    <div class="col-md-8">
-                                        <nop-select asp-for="SearchVendorId" asp-items="Model.AvailableVendors" />
-                                    </div>
-                                </div>
                             </div>
                             <div class="col-md-7">
                                 <div class="form-group" @(Model.AvailableStores.SelectionIsNotPossible() ? Html.Raw("style=\"display:none\"") : null)>
@@ -136,14 +116,6 @@
                                     </div>
                                     <div class="col-md-8">
                                         <nop-select asp-for="SearchStoreId" asp-items="Model.AvailableStores" />
-                                    </div>
-                                </div>
-                                <div class="form-group" @(Model.AvailableWarehouses.SelectionIsNotPossible() ? Html.Raw("style=\"display:none\"") : null)>
-                                    <div class="col-md-4">
-                                        <nop-label asp-for="SearchWarehouseId" />
-                                    </div>
-                                    <div class="col-md-8">
-                                        <nop-select asp-for="SearchWarehouseId" asp-items="Model.AvailableWarehouses" />
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -160,21 +132,6 @@
                                     </div>
                                     <div class="col-md-8">
                                         <nop-select asp-for="SearchPublishedId" asp-items="Model.AvailablePublishedOptions" />
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <div class="col-md-4">
-                                        <nop-label asp-for="GoDirectlyToSku" />
-                                    </div>
-                                    <div class="col-md-8">
-                                        <div class="input-group input-group-short">
-                                            <nop-editor asp-for="GoDirectlyToSku" />
-                                            <span class="input-group-btn">
-                                                <button type="submit" id="go-to-product-by-sku" name="go-to-product-by-sku" class="btn btn-info btn-flat">
-                                                    @T("Admin.Common.Go")
-                                                </button>
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -253,24 +210,10 @@
                                             title: "@T("Admin.Catalog.Products.Fields.Name")",
                                             width: 300
                                         }, {
-                                            field: "Sku",
-                                            title: "@T("Admin.Catalog.Products.Fields.Sku")",
-                                            width: 100
-                                        }, {
-                                            field: "Price",
-                                            title: "@T("Admin.Catalog.Products.Fields.Price")",
-                                            width: 150,
-                                            //if not a grouped product, then display
-                                            template: "# if(ProductTypeId != @((int) ProductType.GroupedProduct)) {# #:Price# #}  #"
-                                        }, {
-                                            field: "StockQuantityStr",
-                                            title: "@T("Admin.Catalog.Products.Fields.StockQuantity")",
-                                            width: 100
-                                        }, {
                                             field: "ProductTypeName",
                                             title: "@T("Admin.Catalog.Products.Fields.ProductType")",
                                             width: 100
-                                        }, {
+                                        },  {
                                             field: "Published",
                                             title: "@T("Admin.Catalog.Products.Fields.Published")",
                                             width: 100,
@@ -315,13 +258,7 @@
                     return false;
                 }
             });
-
-            $("#@Html.IdFor(model => model.GoDirectlyToSku)").keydown(function (event) {
-                if (event.keyCode === 13) {
-                    $("#go-to-product-by-sku").click();
-                    return false;
-                }
-            });
+        
             //delete selected
             $('#delete-selected').click(function(e) {
                 e.preventDefault();
@@ -381,10 +318,7 @@
                 SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
                 SearchCategoryId: $('#SearchCategoryId').val(),
                 SearchIncludeSubCategories: $('#@Html.IdFor(model => model.SearchIncludeSubCategories)').is(':checked'),
-                SearchManufacturerId: $('#SearchManufacturerId').val(),
                 SearchStoreId: $('#SearchStoreId').val(),
-                SearchWarehouseId: $('#SearchWarehouseId').val(),
-                SearchVendorId: $('#SearchVendorId').val(),
                 SearchProductTypeId: $('#SearchProductTypeId').val(),
                 SearchPublishedId: $('#SearchPublishedId').val()
             };

@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-using Nop.Core.Domain.Catalog;
+﻿using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
-using Nop.Core.Domain.Orders;
 using Nop.Web.Models.Customer;
+using System.Collections.Generic;
 
 namespace Nop.Web.Factories
 {
@@ -79,20 +78,6 @@ namespace Nop.Web.Factories
         /// </summary>
         /// <returns>Customer address list model</returns>  
         CustomerAddressListModel PrepareCustomerAddressListModel();
-
-        /// <summary>
-        /// Prepare the customer downloadable products model
-        /// </summary>
-        /// <returns>Customer downloadable products model</returns>
-        CustomerDownloadableProductsModel PrepareCustomerDownloadableProductsModel();
-
-        /// <summary>
-        /// Prepare the user agreement model
-        /// </summary>
-        /// <param name="orderItem">Order item</param>
-        /// <param name="product">Product</param>
-        /// <returns>User agreement model</returns>
-        UserAgreementModel PrepareUserAgreementModel(OrderItem orderItem, Product product);
 
         /// <summary>
         /// Prepare the change password model

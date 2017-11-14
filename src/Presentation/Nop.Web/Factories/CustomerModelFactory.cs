@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.Media;
-using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Security;
-using Nop.Core.Domain.Tax;
-using Nop.Core.Domain.Vendors;
 using Nop.Services.Authentication.External;
 using Nop.Services.Common;
 using Nop.Services.Customers;
@@ -20,12 +14,14 @@ using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Media;
 using Nop.Services.Messages;
-using Nop.Services.Orders;
 using Nop.Services.Seo;
 using Nop.Services.Stores;
 using Nop.Web.Framework.Security.Captcha;
 using Nop.Web.Models.Common;
 using Nop.Web.Models.Customer;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Nop.Web.Factories
 {
@@ -39,7 +35,6 @@ namespace Nop.Web.Factories
         private readonly IAddressModelFactory _addressModelFactory;
         private readonly IDateTimeHelper _dateTimeHelper;
         private readonly DateTimeSettings _dateTimeSettings;
-        private readonly TaxSettings _taxSettings;
         private readonly ILocalizationService _localizationService;
         private readonly IWorkContext _workContext;
         private readonly IStoreContext _storeContext;
@@ -47,28 +42,23 @@ namespace Nop.Web.Factories
         private readonly ICustomerAttributeParser _customerAttributeParser;
         private readonly ICustomerAttributeService _customerAttributeService;
         private readonly IGenericAttributeService _genericAttributeService;
-        private readonly RewardPointsSettings _rewardPointsSettings;
         private readonly CommonSettings _commonSettings;
         private readonly CustomerSettings _customerSettings;
         private readonly AddressSettings _addressSettings;
         private readonly ForumSettings _forumSettings;
-        private readonly OrderSettings _orderSettings;
         private readonly ICountryService _countryService;
         private readonly IStateProvinceService _stateProvinceService;
-        private readonly IOrderService _orderService;
         private readonly IPictureService _pictureService;
         private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
         private readonly IExternalAuthenticationService _externalAuthenticationService;
         private readonly IDownloadService _downloadService;
-        private readonly IReturnRequestService _returnRequestService;
-
+        
         private readonly MediaSettings _mediaSettings;
         private readonly CaptchaSettings _captchaSettings;
         private readonly SecuritySettings _securitySettings;
         private readonly ExternalAuthenticationSettings _externalAuthenticationSettings;
         private readonly CatalogSettings _catalogSettings;
-        private readonly VendorSettings _vendorSettings;
-
+        
         #endregion
 
         #region Ctor
@@ -76,7 +66,6 @@ namespace Nop.Web.Factories
         public CustomerModelFactory(IAddressModelFactory addressModelFactory, 
             IDateTimeHelper dateTimeHelper,
             DateTimeSettings dateTimeSettings, 
-            TaxSettings taxSettings,
             ILocalizationService localizationService,
             IWorkContext workContext,
             IStoreContext storeContext,
@@ -84,31 +73,25 @@ namespace Nop.Web.Factories
             ICustomerAttributeParser customerAttributeParser,
             ICustomerAttributeService customerAttributeService,
             IGenericAttributeService genericAttributeService,
-            RewardPointsSettings rewardPointsSettings,
             CommonSettings commonSettings,
             CustomerSettings customerSettings,
             AddressSettings addressSettings, 
             ForumSettings forumSettings,
-            OrderSettings orderSettings,
             ICountryService countryService,
             IStateProvinceService stateProvinceService,
-            IOrderService orderService,
             IPictureService pictureService, 
             INewsLetterSubscriptionService newsLetterSubscriptionService,
             IExternalAuthenticationService externalAuthenticationService,
             IDownloadService downloadService,
-            IReturnRequestService returnRequestService,
             MediaSettings mediaSettings,
             CaptchaSettings captchaSettings,
             SecuritySettings securitySettings,
             ExternalAuthenticationSettings externalAuthenticationSettings,
-            CatalogSettings catalogSettings, 
-            VendorSettings vendorSettings)
+            CatalogSettings catalogSettings)
         {
             this._addressModelFactory = addressModelFactory;
             this._dateTimeHelper = dateTimeHelper;
             this._dateTimeSettings = dateTimeSettings;
-            this._taxSettings = taxSettings;
             this._localizationService = localizationService;
             this._workContext = workContext;
             this._storeContext = storeContext;
@@ -116,26 +99,21 @@ namespace Nop.Web.Factories
             this._customerAttributeParser = customerAttributeParser;
             this._customerAttributeService = customerAttributeService;
             this._genericAttributeService = genericAttributeService;
-            this._rewardPointsSettings = rewardPointsSettings;
             this._commonSettings = commonSettings;
             this._customerSettings = customerSettings;
             this._addressSettings = addressSettings;
             this._forumSettings = forumSettings;
-            this._orderSettings = orderSettings;
             this._countryService = countryService;
             this._stateProvinceService = stateProvinceService;
-            this._orderService = orderService;
             this._pictureService = pictureService;
             this._newsLetterSubscriptionService = newsLetterSubscriptionService;
             this._externalAuthenticationService = externalAuthenticationService;
             this._downloadService = downloadService;
-            this._returnRequestService = returnRequestService;
             this._mediaSettings = mediaSettings;
             this._captchaSettings = captchaSettings;
             this._securitySettings = securitySettings;
             this._externalAuthenticationSettings = externalAuthenticationSettings;
             this._catalogSettings = catalogSettings;
-            this._vendorSettings = vendorSettings;
         }
 
         #endregion
@@ -262,7 +240,6 @@ namespace Nop.Web.Factories
 
             if (!excludeProperties)
             {
-                model.VatNumber = customer.GetAttribute<string>(SystemCustomerAttributeNames.VatNumber);
                 model.FirstName = customer.GetAttribute<string>(SystemCustomerAttributeNames.FirstName);
                 model.LastName = customer.GetAttribute<string>(SystemCustomerAttributeNames.LastName);
                 model.Gender = customer.GetAttribute<string>(SystemCustomerAttributeNames.Gender);
@@ -342,9 +319,6 @@ namespace Nop.Web.Factories
                 }
             }
 
-            model.DisplayVatNumber = _taxSettings.EuVatEnabled;
-            model.VatNumberStatusNote = ((VatNumberStatus)customer.GetAttribute<int>(SystemCustomerAttributeNames.VatNumberStatusId))
-                .GetLocalizedEnum(_localizationService, _workContext);
             model.GenderEnabled = _customerSettings.GenderEnabled;
             model.DateOfBirthEnabled = _customerSettings.DateOfBirthEnabled;
             model.DateOfBirthRequired = _customerSettings.DateOfBirthRequired;
@@ -417,7 +391,6 @@ namespace Nop.Web.Factories
             foreach (var tzi in _dateTimeHelper.GetSystemTimeZones())
                 model.AvailableTimeZones.Add(new SelectListItem { Text = tzi.DisplayName, Value = tzi.Id, Selected = (excludeProperties ? tzi.Id == model.TimeZoneId : tzi.Id == _dateTimeHelper.CurrentTimeZone.Id) });
 
-            model.DisplayVatNumber = _taxSettings.EuVatEnabled;
             //form fields
             model.GenderEnabled = _customerSettings.GenderEnabled;
             model.DateOfBirthEnabled = _customerSettings.DateOfBirthEnabled;
@@ -598,60 +571,6 @@ namespace Nop.Web.Factories
 
             model.CustomerNavigationItems.Add(new CustomerNavigationItemModel
             {
-                RouteName = "CustomerOrders",
-                Title = _localizationService.GetResource("Account.CustomerOrders"),
-                Tab = CustomerNavigationEnum.Orders,
-                ItemClass = "customer-orders"
-            });
-
-            if (_orderSettings.ReturnRequestsEnabled &&
-                _returnRequestService.SearchReturnRequests(_storeContext.CurrentStore.Id,
-                    _workContext.CurrentCustomer.Id, pageIndex: 0, pageSize: 1).Any())
-            {
-                model.CustomerNavigationItems.Add(new CustomerNavigationItemModel
-                {
-                    RouteName = "CustomerReturnRequests",
-                    Title = _localizationService.GetResource("Account.CustomerReturnRequests"),
-                    Tab = CustomerNavigationEnum.ReturnRequests,
-                    ItemClass = "return-requests"
-                });
-            }
-
-            if (!_customerSettings.HideDownloadableProductsTab)
-            {
-                model.CustomerNavigationItems.Add(new CustomerNavigationItemModel
-                {
-                    RouteName = "CustomerDownloadableProducts",
-                    Title = _localizationService.GetResource("Account.DownloadableProducts"),
-                    Tab = CustomerNavigationEnum.DownloadableProducts,
-                    ItemClass = "downloadable-products"
-                });
-            }
-
-            if (!_customerSettings.HideBackInStockSubscriptionsTab)
-            {
-                model.CustomerNavigationItems.Add(new CustomerNavigationItemModel
-                {
-                    RouteName = "CustomerBackInStockSubscriptions",
-                    Title = _localizationService.GetResource("Account.BackInStockSubscriptions"),
-                    Tab = CustomerNavigationEnum.BackInStockSubscriptions,
-                    ItemClass = "back-in-stock-subscriptions"
-                });
-            }
-
-            if (_rewardPointsSettings.Enabled)
-            {
-                model.CustomerNavigationItems.Add(new CustomerNavigationItemModel
-                {
-                    RouteName = "CustomerRewardPoints",
-                    Title = _localizationService.GetResource("Account.RewardPoints"),
-                    Tab = CustomerNavigationEnum.RewardPoints,
-                    ItemClass = "reward-points"
-                });
-            }
-
-            model.CustomerNavigationItems.Add(new CustomerNavigationItemModel
-            {
                 RouteName = "CustomerChangePassword",
                 Title = _localizationService.GetResource("Account.ChangePassword"),
                 Tab = CustomerNavigationEnum.ChangePassword,
@@ -689,17 +608,6 @@ namespace Nop.Web.Factories
                     ItemClass = "customer-reviews"
                 });
             }
-            if (_vendorSettings.AllowVendorsToEditInfo && _workContext.CurrentVendor != null)
-            {
-                model.CustomerNavigationItems.Add(new CustomerNavigationItemModel
-                {
-                    RouteName = "CustomerVendorInfo",
-                    Title = _localizationService.GetResource("Account.VendorInfo"),
-                    Tab = CustomerNavigationEnum.VendorInfo,
-                    ItemClass = "customer-vendor-info"
-                });
-            }
-
             model.SelectedTab = (CustomerNavigationEnum)selectedTabId;
 
             return model;
@@ -727,62 +635,6 @@ namespace Nop.Web.Factories
                     loadCountries: () => _countryService.GetAllCountries(_workContext.WorkingLanguage.Id));
                 model.Addresses.Add(addressModel);
             }
-            return model;
-        }
-
-        /// <summary>
-        /// Prepare the customer downloadable products model
-        /// </summary>
-        /// <returns>Customer downloadable products model</returns>
-        public virtual CustomerDownloadableProductsModel PrepareCustomerDownloadableProductsModel()
-        {
-            var model = new CustomerDownloadableProductsModel();
-            var items = _orderService.GetDownloadableOrderItems(_workContext.CurrentCustomer.Id);
-            foreach (var item in items)
-            {
-                var itemModel = new CustomerDownloadableProductsModel.DownloadableProductsModel
-                {
-                    OrderItemGuid = item.OrderItemGuid,
-                    OrderId = item.OrderId,
-                    CustomOrderNumber = item.Order.CustomOrderNumber,
-                    CreatedOn = _dateTimeHelper.ConvertToUserTime(item.Order.CreatedOnUtc, DateTimeKind.Utc),
-                    ProductName = item.Product.GetLocalized(x => x.Name),
-                    ProductSeName = item.Product.GetSeName(),
-                    ProductAttributes = item.AttributeDescription,
-                    ProductId = item.ProductId
-                };
-                model.Items.Add(itemModel);
-
-                if (_downloadService.IsDownloadAllowed(item))
-                    itemModel.DownloadId = item.Product.DownloadId;
-
-                if (_downloadService.IsLicenseDownloadAllowed(item))
-                    itemModel.LicenseId = item.LicenseDownloadId.HasValue ? item.LicenseDownloadId.Value : 0;
-            }
-
-            return model;
-        }
-
-        /// <summary>
-        /// Prepare the user agreement model
-        /// </summary>
-        /// <param name="orderItem">Order item</param>
-        /// <param name="product">Product</param>
-        /// <returns>User agreement model</returns>
-        public virtual UserAgreementModel PrepareUserAgreementModel(OrderItem orderItem,Product product)
-        {
-            if (orderItem == null)
-                throw new ArgumentNullException(nameof(orderItem));
-
-            if (product == null)
-                throw new ArgumentNullException(nameof(product));
-
-            var model = new UserAgreementModel
-            {
-                UserAgreementText = product.UserAgreementText,
-                OrderItemGuid = orderItem.OrderItemGuid
-            };
-
             return model;
         }
 

@@ -51,12 +51,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 if (errors.Any())
                     WarningNotification(_localizationService.GetResource("Admin.System.Warnings.Errors"), false);
             }
-
-            var model = new DashboardModel
-            {
-                IsLoggedInAsVendor = _workContext.CurrentVendor != null
-            };
-            return View(model);
+            return View();
         }
 
         [HttpPost]

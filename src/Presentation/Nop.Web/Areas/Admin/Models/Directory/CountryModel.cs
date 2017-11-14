@@ -22,12 +22,6 @@ namespace Nop.Web.Areas.Admin.Models.Directory
         [NopResourceDisplayName("Admin.Configuration.Countries.Fields.Name")]
         public string Name { get; set; }
 
-        [NopResourceDisplayName("Admin.Configuration.Countries.Fields.AllowsBilling")]
-        public bool AllowsBilling { get; set; }
-
-        [NopResourceDisplayName("Admin.Configuration.Countries.Fields.AllowsShipping")]
-        public bool AllowsShipping { get; set; }
-
         [NopResourceDisplayName("Admin.Configuration.Countries.Fields.TwoLetterIsoCode")]
         public string TwoLetterIsoCode { get; set; }
 
@@ -36,9 +30,6 @@ namespace Nop.Web.Areas.Admin.Models.Directory
 
         [NopResourceDisplayName("Admin.Configuration.Countries.Fields.NumericIsoCode")]
         public int NumericIsoCode { get; set; }
-
-        [NopResourceDisplayName("Admin.Configuration.Countries.Fields.SubjectToVat")]
-        public bool SubjectToVat { get; set; }
 
         [NopResourceDisplayName("Admin.Configuration.Countries.Fields.Published")]
         public bool Published { get; set; }

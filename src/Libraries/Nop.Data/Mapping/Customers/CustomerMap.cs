@@ -26,8 +26,6 @@ namespace Nop.Data.Mapping.Customers
             this.HasMany(c => c.Addresses)
                 .WithMany()
                 .Map(m => m.ToTable("CustomerAddresses"));
-            this.HasOptional(c => c.BillingAddress);
-            this.HasOptional(c => c.ShippingAddress);
         }
     }
 }

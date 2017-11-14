@@ -35,7 +35,6 @@ namespace Nop.Services.Localization
             FlagImageFileName = l.FlagImageFileName;
             Rtl = l.Rtl;
             LimitedToStores = l.LimitedToStores;
-            DefaultCurrencyId = l.DefaultCurrencyId;
             Published = l.Published;
             DisplayOrder = l.DisplayOrder;
         }

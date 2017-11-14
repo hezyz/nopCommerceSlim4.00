@@ -59,14 +59,6 @@ namespace Nop.Core.Domain.Customers
         /// </summary>
         public static string Fax { get { return "Fax"; } }
         /// <summary>
-        /// VatNumber
-        /// </summary>
-        public static string VatNumber { get { return "VatNumber"; } }
-        /// <summary>
-        /// VatNumberStatusId
-        /// </summary>
-        public static string VatNumberStatusId { get { return "VatNumberStatusId"; } }
-        /// <summary>
         /// TimeZoneId
         /// </summary>
         public static string TimeZoneId { get { return "TimeZoneId"; } }
@@ -76,14 +68,6 @@ namespace Nop.Core.Domain.Customers
         public static string CustomCustomerAttributes { get { return "CustomCustomerAttributes"; } }
 
         //Other attributes
-        /// <summary>
-        /// DiscountCouponCode
-        /// </summary>
-        public static string DiscountCouponCode { get { return "DiscountCouponCode"; } }
-        /// <summary>
-        /// GiftCardCouponCodes
-        /// </summary>
-        public static string GiftCardCouponCodes { get { return "GiftCardCouponCodes"; } }
         /// <summary>
         /// AvatarPictureId
         /// </summary>
@@ -127,10 +111,6 @@ namespace Nop.Core.Domain.Customers
 
         //depends on store
         /// <summary>
-        /// CurrencyId
-        /// </summary>
-        public static string CurrencyId { get { return "CurrencyId"; } }
-        /// <summary>
         /// LanguageId
         /// </summary>
         public static string LanguageId { get { return "LanguageId"; } }
@@ -139,30 +119,6 @@ namespace Nop.Core.Domain.Customers
         /// </summary>
         public static string LanguageAutomaticallyDetected { get { return "LanguageAutomaticallyDetected"; } }
         /// <summary>
-        /// SelectedPaymentMethod
-        /// </summary>
-        public static string SelectedPaymentMethod { get { return "SelectedPaymentMethod"; } }
-        /// <summary>
-        /// SelectedShippingOption
-        /// </summary>
-        public static string SelectedShippingOption { get { return "SelectedShippingOption"; } }
-        /// <summary>
-        /// SelectedPickupPoint
-        /// </summary>
-        public static string SelectedPickupPoint { get { return "SelectedPickupPoint"; } }
-        /// <summary>
-        /// CheckoutAttributes
-        /// </summary>
-        public static string CheckoutAttributes { get { return "CheckoutAttributes"; } }
-        /// <summary>
-        /// OfferedShippingOptions
-        /// </summary>
-        public static string OfferedShippingOptions { get { return "OfferedShippingOptions"; } }
-        /// <summary>
-        /// LastContinueShoppingPage
-        /// </summary>
-        public static string LastContinueShoppingPage { get { return "LastContinueShoppingPage"; } }
-        /// <summary>
         /// NotifiedAboutNewPrivateMessages
         /// </summary>
         public static string NotifiedAboutNewPrivateMessages { get { return "NotifiedAboutNewPrivateMessages"; } }
@@ -170,14 +126,6 @@ namespace Nop.Core.Domain.Customers
         /// WorkingThemeName
         /// </summary>
         public static string WorkingThemeName { get { return "WorkingThemeName"; } }
-        /// <summary>
-        /// TaxDisplayTypeId
-        /// </summary>
-        public static string TaxDisplayTypeId { get { return "TaxDisplayTypeId"; } }
-        /// <summary>
-        /// UseRewardPointsDuringCheckout
-        /// </summary>
-        public static string UseRewardPointsDuringCheckout { get { return "UseRewardPointsDuringCheckout"; } }
         /// <summary>
         /// EuCookieLawAccepted
         /// </summary>

@@ -16,7 +16,6 @@ namespace Nop.Web.Areas.Admin.Controllers
     [AdminAntiForgery]
     [ValidateIpAddress]
     [AuthorizeAdmin]
-    [ValidateVendor]
     public abstract partial class BaseAdminController : BaseController
     {
         /// <summary>

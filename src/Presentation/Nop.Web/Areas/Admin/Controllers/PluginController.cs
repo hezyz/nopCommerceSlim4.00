@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Core;
 using Nop.Core.Domain.Cms;
 using Nop.Core.Domain.Customers;
-using Nop.Core.Domain.Payments;
-using Nop.Core.Domain.Shipping;
-using Nop.Core.Domain.Tax;
 using Nop.Core.Plugins;
 using Nop.Services;
 using Nop.Services.Authentication.External;
@@ -19,18 +13,17 @@ using Nop.Services.Customers;
 using Nop.Services.Events;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
-using Nop.Services.Payments;
 using Nop.Services.Plugins;
 using Nop.Services.Security;
-using Nop.Services.Shipping;
-using Nop.Services.Shipping.Pickup;
 using Nop.Services.Stores;
-using Nop.Services.Tax;
 using Nop.Services.Themes;
 using Nop.Web.Areas.Admin.Extensions;
 using Nop.Web.Areas.Admin.Models.Plugins;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Kendoui;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
@@ -46,9 +39,6 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly ILanguageService _languageService;
 	    private readonly ISettingService _settingService;
 	    private readonly IStoreService _storeService;
-        private readonly PaymentSettings _paymentSettings;
-        private readonly ShippingSettings _shippingSettings;
-        private readonly TaxSettings _taxSettings;
         private readonly ExternalAuthenticationSettings _externalAuthenticationSettings;
         private readonly WidgetSettings _widgetSettings;
         private readonly ICustomerActivityService _customerActivityService;
@@ -68,9 +58,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             ILanguageService languageService,
             ISettingService settingService, 
             IStoreService storeService,
-            PaymentSettings paymentSettings,
-            ShippingSettings shippingSettings,
-            TaxSettings taxSettings, 
             ExternalAuthenticationSettings externalAuthenticationSettings, 
             WidgetSettings widgetSettings,
             ICustomerActivityService customerActivityService,
@@ -86,9 +73,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             this._languageService = languageService;
             this._settingService = settingService;
             this._storeService = storeService;
-            this._paymentSettings = paymentSettings;
-            this._shippingSettings = shippingSettings;
-            this._taxSettings = taxSettings;
             this._externalAuthenticationSettings = externalAuthenticationSettings;
             this._widgetSettings = widgetSettings;
             this._customerActivityService = customerActivityService;
@@ -154,33 +138,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 var pluginInstance = pluginDescriptor.Instance();
                 pluginModel.ConfigurationUrl = pluginInstance.GetConfigurationPageUrl();
 
-
-                //enabled/disabled (only for some plugin types)
-                if (pluginInstance is IPaymentMethod)
-                {
-                    //payment plugin
-                    pluginModel.CanChangeEnabled = true;
-                    pluginModel.IsEnabled = ((IPaymentMethod)pluginInstance).IsPaymentMethodActive(_paymentSettings);
-                }
-                else if (pluginInstance is IShippingRateComputationMethod)
-                {
-                    //shipping rate computation method
-                    pluginModel.CanChangeEnabled = true;
-                    pluginModel.IsEnabled = ((IShippingRateComputationMethod)pluginInstance).IsShippingRateComputationMethodActive(_shippingSettings);
-                }
-                else if (pluginInstance is IPickupPointProvider)
-                {
-                    //pickup point provider
-                    pluginModel.CanChangeEnabled = true;
-                    pluginModel.IsEnabled = ((IPickupPointProvider)pluginInstance).IsPickupPointProviderActive(_shippingSettings);
-                }
-                else if (pluginInstance is ITaxProvider)
-                {
-                    //tax provider
-                    pluginModel.CanChangeEnabled = true;
-                    pluginModel.IsEnabled = pluginDescriptor.SystemName.Equals(_taxSettings.ActiveTaxProviderSystemName, StringComparison.InvariantCultureIgnoreCase);
-                }
-                else if (pluginInstance is IExternalAuthenticationMethod)
+                if (pluginInstance is IExternalAuthenticationMethod)
                 {
                     //external auth method
                     pluginModel.CanChangeEnabled = true;
@@ -504,90 +462,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 if (pluginDescriptor.Installed)
                 {
                     var pluginInstance = pluginDescriptor.Instance();
-                    if (pluginInstance is IPaymentMethod)
-                    {
-                        //payment plugin
-                        var pm = (IPaymentMethod)pluginInstance;
-                        if (pm.IsPaymentMethodActive(_paymentSettings))
-                        {
-                            if (!model.IsEnabled)
-                            {
-                                //mark as disabled
-                                _paymentSettings.ActivePaymentMethodSystemNames.Remove(pm.PluginDescriptor.SystemName);
-                                _settingService.SaveSetting(_paymentSettings);
-                            }
-                        }
-                        else
-                        {
-                            if (model.IsEnabled)
-                            {
-                                //mark as active
-                                _paymentSettings.ActivePaymentMethodSystemNames.Add(pm.PluginDescriptor.SystemName);
-                                _settingService.SaveSetting(_paymentSettings);
-                            }
-                        }
-                    }
-                    else if (pluginInstance is IShippingRateComputationMethod)
-                    {
-                        //shipping rate computation method
-                        var srcm = (IShippingRateComputationMethod)pluginInstance;
-                        if (srcm.IsShippingRateComputationMethodActive(_shippingSettings))
-                        {
-                            if (!model.IsEnabled)
-                            {
-                                //mark as disabled
-                                _shippingSettings.ActiveShippingRateComputationMethodSystemNames.Remove(srcm.PluginDescriptor.SystemName);
-                                _settingService.SaveSetting(_shippingSettings);
-                            }
-                        }
-                        else
-                        {
-                            if (model.IsEnabled)
-                            {
-                                //mark as active
-                                _shippingSettings.ActiveShippingRateComputationMethodSystemNames.Add(srcm.PluginDescriptor.SystemName);
-                                _settingService.SaveSetting(_shippingSettings);
-                            }
-                        }
-                    }
-                    else if (pluginInstance is IPickupPointProvider)
-                    {
-                        //pickup point provider
-                        var pickupPointProvider = (IPickupPointProvider)pluginInstance;
-                        if (pickupPointProvider.IsPickupPointProviderActive(_shippingSettings))
-                        {
-                            if (!model.IsEnabled)
-                            {
-                                //mark as disabled
-                                _shippingSettings.ActivePickupPointProviderSystemNames.Remove(pickupPointProvider.PluginDescriptor.SystemName);
-                                _settingService.SaveSetting(_shippingSettings);
-                            }
-                        }
-                        else
-                        {
-                            if (model.IsEnabled)
-                            {
-                                //mark as active
-                                _shippingSettings.ActivePickupPointProviderSystemNames.Add(pickupPointProvider.PluginDescriptor.SystemName);
-                                _settingService.SaveSetting(_shippingSettings);
-                            }
-                        }
-                    }
-                    else if (pluginInstance is ITaxProvider)
-                    {
-                        //tax provider
-                        if (model.IsEnabled)
-                        {
-                            _taxSettings.ActiveTaxProviderSystemName = model.SystemName;
-                            _settingService.SaveSetting(_taxSettings);
-                        }
-                        else
-                        {
-                            _taxSettings.ActiveTaxProviderSystemName = "";
-                            _settingService.SaveSetting(_taxSettings);
-                        }
-                    }
-                    else if (pluginInstance is IExternalAuthenticationMethod)
+                    if (pluginInstance is IExternalAuthenticationMethod)
                     {
                         //external auth method
                         var eam = (IExternalAuthenticationMethod)pluginInstance;

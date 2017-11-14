@@ -1,11 +1,8 @@
+using Nop.Core.Data;
+using Nop.Core.Domain.Media;
+using Nop.Services.Events;
 using System;
 using System.Linq;
-using Nop.Core.Data;
-using Nop.Core.Domain.Catalog;
-using Nop.Core.Domain.Media;
-using Nop.Core.Domain.Orders;
-using Nop.Core.Domain.Payments;
-using Nop.Services.Events;
 
 namespace Nop.Services.Media
 {
@@ -110,92 +107,6 @@ namespace Nop.Services.Media
 
             _eventPubisher.EntityUpdated(download);
         }
-
-        /// <summary>
-        /// Gets a value indicating whether download is allowed
-        /// </summary>
-        /// <param name="orderItem">Order item to check</param>
-        /// <returns>True if download is allowed; otherwise, false.</returns>
-        public virtual bool IsDownloadAllowed(OrderItem orderItem)
-        {
-            if (orderItem == null)
-                return false;
-
-            var order = orderItem.Order;
-            if (order == null || order.Deleted)
-                return false;
-
-            //order status
-            if (order.OrderStatus == OrderStatus.Cancelled)
-                return false;
-
-            var product = orderItem.Product;
-            if (product == null || !product.IsDownload)
-                return false;
-
-            //payment status
-            switch (product.DownloadActivationType)
-            {
-                case DownloadActivationType.WhenOrderIsPaid:
-                    {
-                        if (order.PaymentStatus == PaymentStatus.Paid && order.PaidDateUtc.HasValue)
-                        {
-                            //expiration date
-                            if (product.DownloadExpirationDays.HasValue)
-                            {
-                                if (order.PaidDateUtc.Value.AddDays(product.DownloadExpirationDays.Value) > DateTime.UtcNow)
-                                {
-                                    return true;
-                                }
-                            }
-                            else
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                    break;
-                case DownloadActivationType.Manually:
-                    {
-                        if (orderItem.IsDownloadActivated)
-                        {
-                            //expiration date
-                            if (product.DownloadExpirationDays.HasValue)
-                            {
-                                if (order.CreatedOnUtc.AddDays(product.DownloadExpirationDays.Value) > DateTime.UtcNow)
-                                {
-                                    return true;
-                                }
-                            }
-                            else
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                    break;
-                default:
-                    break;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether license download is allowed
-        /// </summary>
-        /// <param name="orderItem">Order item to check</param>
-        /// <returns>True if license download is allowed; otherwise, false.</returns>
-        public virtual bool IsLicenseDownloadAllowed(OrderItem orderItem)
-        {
-            if (orderItem == null)
-                return false;
-
-            return IsDownloadAllowed(orderItem) &&
-                orderItem.LicenseDownloadId.HasValue &&
-                orderItem.LicenseDownloadId > 0;
-        }
-
         #endregion
     }
 }

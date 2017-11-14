@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Nop.Core.Domain.Common;
-using Nop.Core.Domain.Orders;
 
 namespace Nop.Core.Domain.Customers
 {
@@ -12,8 +11,6 @@ namespace Nop.Core.Domain.Customers
     {
         private ICollection<ExternalAuthenticationRecord> _externalAuthenticationRecords;
         private ICollection<CustomerRole> _customerRoles;
-        private ICollection<ShoppingCartItem> _shoppingCartItems;
-        private ICollection<ReturnRequest> _returnRequests;
         private ICollection<Address> _addresses;
 
         /// <summary>
@@ -48,31 +45,6 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets the admin comment
         /// </summary>
         public string AdminComment { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether the customer is tax exempt
-        /// </summary>
-        public bool IsTaxExempt { get; set; }
-
-        /// <summary>
-        /// Gets or sets the affiliate identifier
-        /// </summary>
-        public int AffiliateId { get; set; }
-
-        /// <summary>
-        /// Gets or sets the vendor identifier with which this customer is associated (maganer)
-        /// </summary>
-        public int VendorId { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this customer has some products in the shopping cart
-        /// <remarks>The same as if we run this.ShoppingCartItems.Count > 0
-        /// We use this property for performance optimization:
-        /// if this property is set to false, then we do not need to load "ShoppingCartItems" navigation property for each page load
-        /// It's used only in a couple of places in the presenation layer
-        /// </remarks>
-        /// </summary>
-        public bool HasShoppingCartItems { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the customer is required to re-login
@@ -153,34 +125,6 @@ namespace Nop.Core.Domain.Customers
             get { return _customerRoles ?? (_customerRoles = new List<CustomerRole>()); }
             protected set { _customerRoles = value; }
         }
-
-        /// <summary>
-        /// Gets or sets shopping cart items
-        /// </summary>
-        public virtual ICollection<ShoppingCartItem> ShoppingCartItems
-        {
-            get { return _shoppingCartItems ?? (_shoppingCartItems = new List<ShoppingCartItem>()); }
-            protected set { _shoppingCartItems = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets return request of this customer
-        /// </summary>
-        public virtual ICollection<ReturnRequest> ReturnRequests
-        {
-            get { return _returnRequests ?? (_returnRequests = new List<ReturnRequest>()); }
-            protected set { _returnRequests = value; }
-        }
-
-        /// <summary>
-        /// Default billing address
-        /// </summary>
-        public virtual Address BillingAddress { get; set; }
-
-        /// <summary>
-        /// Default shipping address
-        /// </summary>
-        public virtual Address ShippingAddress { get; set; }
 
         /// <summary>
         /// Gets or sets customer addresses

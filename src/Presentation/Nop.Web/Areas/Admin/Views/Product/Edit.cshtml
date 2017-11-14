@@ -44,11 +44,8 @@
 </form>
 <nop-delete-confirmation asp-model-id="@Model.Id" asp-button-id="product-delete" />
 
-@if (!Model.IsLoggedInAsVendor)
-{
-    //product editor settings modal
-    @await Html.PartialAsync("_ProductEditorSettingsModal", Model)
-}
+@await Html.PartialAsync("_ProductEditorSettingsModal", Model)
+
 
 @*copy product form*@
 <div id="copyproduct-window" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="copyproduct-window-title">

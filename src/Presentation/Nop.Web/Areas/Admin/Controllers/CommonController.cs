@@ -1,31 +1,25 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
+using Nop.Core;
+using Nop.Core.Caching;
+using Nop.Services.Common;
+using Nop.Services.Customers;
+using Nop.Services.Helpers;
+using Nop.Services.Localization;
+using Nop.Services.Security;
+using Nop.Services.Seo;
+using Nop.Web.Areas.Admin.Helpers;
+using Nop.Web.Areas.Admin.Models.Common;
+using Nop.Web.Framework;
+using Nop.Web.Framework.Controllers;
+using Nop.Web.Framework.Kendoui;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
-using Nop.Web.Areas.Admin.Models.Common;
-using Nop.Core;
-using Nop.Core.Caching;
-using Nop.Core.Domain.Catalog;
-using Nop.Core.Domain.Directory;
-using Nop.Services.Common;
-using Nop.Services.Customers;
-using Nop.Services.Directory;
-using Nop.Services.Helpers;
-using Nop.Services.Localization;
-using Nop.Services.Orders;
-using Nop.Services.Payments;
-using Nop.Services.Security;
-using Nop.Services.Seo;
-using Nop.Services.Stores;
-using Nop.Web.Areas.Admin.Helpers;
-using Nop.Web.Framework.Controllers;
-using Nop.Web.Framework.Kendoui;
-using Nop.Web.Framework;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
@@ -33,7 +27,6 @@ namespace Nop.Web.Areas.Admin.Controllers
     {
         #region Fields
 
-        private readonly IShoppingCartService _shoppingCartService;
         private readonly ICustomerService _customerService;
         private readonly IUrlRecordService _urlRecordService;
         private readonly IWebHelper _webHelper;
@@ -51,7 +44,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         #region Ctor
 
-        public CommonController(IShoppingCartService shoppingCartService,
+        public CommonController(
             ICustomerService customerService,
             IUrlRecordService urlRecordService,
             IWebHelper webHelper,
@@ -65,7 +58,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             IHostingEnvironment hostingEnvironment,
             IStaticCacheManager cacheManager)
         {
-            this._shoppingCartService = shoppingCartService;
             this._customerService = customerService;
             this._urlRecordService = urlRecordService;
             this._webHelper = webHelper;
@@ -182,8 +174,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var model = new MaintenanceModel();
             model.DeleteGuests.EndDate = DateTime.UtcNow.AddDays(-7);
-            model.DeleteGuests.OnlyWithoutShoppingCart = true;
-            model.DeleteAbandonedCarts.OlderThan = DateTime.UtcNow.AddDays(-182);
             return View(model);
         }
 
@@ -200,21 +190,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             var endDateValue = (model.DeleteGuests.EndDate == null) ? null
                             : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.DeleteGuests.EndDate.Value, _dateTimeHelper.CurrentTimeZone).AddDays(1);
 
-            model.DeleteGuests.NumberOfDeletedCustomers = _customerService.DeleteGuestCustomers(startDateValue, endDateValue, model.DeleteGuests.OnlyWithoutShoppingCart);
+            model.DeleteGuests.NumberOfDeletedCustomers = _customerService.DeleteGuestCustomers(startDateValue, endDateValue);
 
-            return View(model);
-        }
-
-        [HttpPost, ActionName("Maintenance")]
-        [FormValueRequired("delete-abondoned-carts")]
-        public virtual IActionResult MaintenanceDeleteAbandonedCarts(MaintenanceModel model)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageMaintenance))
-                return AccessDeniedView();
-
-            var olderThanDateValue = _dateTimeHelper.ConvertToUtcTime(model.DeleteAbandonedCarts.OlderThan, _dateTimeHelper.CurrentTimeZone);
-
-            model.DeleteAbandonedCarts.NumberOfDeletedItems = _shoppingCartService.DeleteExpiredShoppingCartItems(olderThanDateValue);
             return View(model);
         }
 
@@ -431,9 +408,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                         case "category":
                             detailsUrl = Url.Action("Edit", "Category", new { id = x.EntityId });
                             break;
-                        case "manufacturer":
-                            detailsUrl = Url.Action("Edit", "Manufacturer", new { id = x.EntityId });
-                            break;
                         case "product":
                             detailsUrl = Url.Action("Edit", "Product", new { id = x.EntityId });
                             break;
@@ -442,9 +416,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                             break;
                         case "topic":
                             detailsUrl = Url.Action("Edit", "Topic", new { id = x.EntityId });
-                            break;
-                        case "vendor":
-                            detailsUrl = Url.Action("Edit", "Vendor", new { id = x.EntityId });
                             break;
                         default:
                             break;

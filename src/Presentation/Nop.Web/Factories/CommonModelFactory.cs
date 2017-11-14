@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Nop.Core;
 using Nop.Core.Caching;
 using Nop.Core.Domain;
@@ -14,16 +9,12 @@ using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.News;
-using Nop.Core.Domain.Orders;
-using Nop.Core.Domain.Vendors;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
-using Nop.Services.Directory;
 using Nop.Services.Forums;
 using Nop.Services.Localization;
 using Nop.Services.Media;
-using Nop.Services.Orders;
 using Nop.Services.Security;
 using Nop.Services.Seo;
 using Nop.Services.Themes;
@@ -35,6 +26,11 @@ using Nop.Web.Infrastructure.Cache;
 using Nop.Web.Models.Catalog;
 using Nop.Web.Models.Common;
 using Nop.Web.Models.Topics;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
 
 namespace Nop.Web.Factories
 {
@@ -47,10 +43,8 @@ namespace Nop.Web.Factories
 
         private readonly ICategoryService _categoryService;
         private readonly IProductService _productService;
-        private readonly IManufacturerService _manufacturerService;
         private readonly ITopicService _topicService;
         private readonly ILanguageService _languageService;
-        private readonly ICurrencyService _currencyService;
         private readonly ILocalizationService _localizationService;
         private readonly IWorkContext _workContext;
         private readonly IStoreContext _storeContext;
@@ -75,18 +69,15 @@ namespace Nop.Web.Factories
         private readonly ForumSettings _forumSettings;
         private readonly LocalizationSettings _localizationSettings;
         private readonly CaptchaSettings _captchaSettings;
-        private readonly VendorSettings _vendorSettings;
-
+        
         #endregion
 
         #region Ctor
 
         public CommonModelFactory(ICategoryService categoryService,
             IProductService productService,
-            IManufacturerService manufacturerService,
             ITopicService topicService,
             ILanguageService languageService,
-            ICurrencyService currencyService,
             ILocalizationService localizationService,
             IWorkContext workContext,
             IStoreContext storeContext,
@@ -109,15 +100,12 @@ namespace Nop.Web.Factories
             ForumSettings forumSettings,
             LocalizationSettings localizationSettings,
             CaptchaSettings captchaSettings,
-            VendorSettings vendorSettings,
             IProductTagService productTagService)
         {
             this._categoryService = categoryService;
             this._productService = productService;
-            this._manufacturerService = manufacturerService;
             this._topicService = topicService;
             this._languageService = languageService;
-            this._currencyService = currencyService;
             this._localizationService = localizationService;
             this._workContext = workContext;
             this._storeContext = storeContext;
@@ -140,7 +128,6 @@ namespace Nop.Web.Factories
             this._forumSettings = forumSettings;
             this._localizationSettings = localizationSettings;
             this._captchaSettings = captchaSettings;
-            this._vendorSettings = vendorSettings;
             this._productTagService = productTagService;
         }
 
@@ -236,60 +223,6 @@ namespace Nop.Web.Factories
         }
 
         /// <summary>
-        /// Prepare the currency selector model
-        /// </summary>
-        /// <returns>Currency selector model</returns>
-        public virtual CurrencySelectorModel PrepareCurrencySelectorModel()
-        {
-            var availableCurrencies = _cacheManager.Get(string.Format(ModelCacheEventConsumer.AVAILABLE_CURRENCIES_MODEL_KEY, _workContext.WorkingLanguage.Id, _storeContext.CurrentStore.Id), () =>
-            {
-                var result = _currencyService
-                    .GetAllCurrencies(storeId: _storeContext.CurrentStore.Id)
-                    .Select(x =>
-                    {
-                        //currency char
-                        var currencySymbol = "";
-                        if (!string.IsNullOrEmpty(x.DisplayLocale))
-                            currencySymbol = new RegionInfo(x.DisplayLocale).CurrencySymbol;
-                        else
-                            currencySymbol = x.CurrencyCode;
-                        //model
-                        var currencyModel = new CurrencyModel
-                        {
-                            Id = x.Id,
-                            Name = x.GetLocalized(y => y.Name),
-                            CurrencySymbol = currencySymbol
-                        };
-                        return currencyModel;
-                    })
-                    .ToList();
-                return result;
-            });
-
-            var model = new CurrencySelectorModel
-            {
-                CurrentCurrencyId = _workContext.WorkingCurrency.Id,
-                AvailableCurrencies = availableCurrencies
-            };
-
-            return model;
-        }
-
-        /// <summary>
-        /// Prepare the tax type selector model
-        /// </summary>
-        /// <returns>Tax type selector model</returns>
-        public virtual TaxTypeSelectorModel PrepareTaxTypeSelectorModel()
-        {
-            var model = new TaxTypeSelectorModel
-            {
-                CurrentTaxType = _workContext.TaxDisplayType
-            };
-
-            return model;
-        }
-
-        /// <summary>
         /// Prepare the header links model
         /// </summary>
         /// <returns>Header links model</returns>
@@ -317,26 +250,10 @@ namespace Nop.Web.Factories
             {
                 IsAuthenticated = customer.IsRegistered(),
                 CustomerName = customer.IsRegistered() ? customer.FormatUserName() : "",
-                ShoppingCartEnabled = _permissionService.Authorize(StandardPermissionProvider.EnableShoppingCart),
-                WishlistEnabled = _permissionService.Authorize(StandardPermissionProvider.EnableWishlist),
                 AllowPrivateMessages = customer.IsRegistered() && _forumSettings.AllowPrivateMessages,
                 UnreadPrivateMessages = unreadMessage,
                 AlertMessage = alertMessage,
             };
-            //performance optimization (use "HasShoppingCartItems" property)
-            if (customer.HasShoppingCartItems)
-            {
-                model.ShoppingCartItems = customer.ShoppingCartItems
-                    .Where(sci => sci.ShoppingCartType == ShoppingCartType.ShoppingCart)
-                    .LimitPerStore(_storeContext.CurrentStore.Id)
-                    .ToList()
-                    .GetTotalProducts();
-                model.WishlistItems = customer.ShoppingCartItems
-                    .Where(sci => sci.ShoppingCartType == ShoppingCartType.Wishlist)
-                    .LimitPerStore(_storeContext.CurrentStore.Id)
-                    .ToList()
-                    .GetTotalProducts();
-            }
 
             return model;
         }
@@ -409,19 +326,14 @@ namespace Nop.Web.Factories
             var model = new FooterModel
             {
                 StoreName = _storeContext.CurrentStore.GetLocalized(x => x.Name),
-                WishlistEnabled = _permissionService.Authorize(StandardPermissionProvider.EnableWishlist),
-                ShoppingCartEnabled = _permissionService.Authorize(StandardPermissionProvider.EnableShoppingCart),
                 SitemapEnabled = _commonSettings.SitemapEnabled,
                 WorkingLanguageId = _workContext.WorkingLanguage.Id,
                 BlogEnabled = _blogSettings.Enabled,
-                CompareProductsEnabled = _catalogSettings.CompareProductsEnabled,
                 ForumEnabled = _forumSettings.ForumsEnabled,
                 NewsEnabled = _newsSettings.Enabled,
                 RecentlyViewedProductsEnabled = _catalogSettings.RecentlyViewedProductsEnabled,
                 NewProductsEnabled = _catalogSettings.NewProductsEnabled,
-                DisplayTaxShippingInfoFooter = _catalogSettings.DisplayTaxShippingInfoFooter,
                 HidePoweredByNopCommerce = _storeInformationSettings.HidePoweredByNopCommerce,
-                AllowCustomersToApplyForVendorAccount = _vendorSettings.AllowCustomersToApplyForVendorAccount,
                 Topics = cachedTopicModel
             };
 
@@ -451,35 +363,6 @@ namespace Nop.Web.Factories
         }
 
         /// <summary>
-        /// Prepare the contact vendor model
-        /// </summary>
-        /// <param name="model">Contact vendor model</param>
-        /// <param name="vendor">Vendor</param>
-        /// <param name="excludeProperties">Whether to exclude populating of model properties from the entity</param>
-        /// <returns>Contact vendor model</returns>
-        public virtual ContactVendorModel PrepareContactVendorModel(ContactVendorModel model, Vendor vendor, bool excludeProperties)
-        {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-
-            if (vendor == null)
-                throw new ArgumentNullException(nameof(vendor));
-
-            if (!excludeProperties)
-            {
-                model.Email = _workContext.CurrentCustomer.Email;
-                model.FullName = _workContext.CurrentCustomer.GetFullName();
-            }
-
-            model.SubjectEnabled = _commonSettings.SubjectFieldOnContactUsForm;
-            model.DisplayCaptcha = _captchaSettings.Enabled && _captchaSettings.ShowOnContactUsPage;
-            model.VendorId = vendor.Id;
-            model.VendorName = vendor.GetLocalized(x => x.Name);
-            
-            return model;
-        }
-
-        /// <summary>
         /// Prepare the sitemap model
         /// </summary>
         /// <returns>Sitemap model</returns>
@@ -502,17 +385,6 @@ namespace Nop.Web.Factories
                 {
                     var categories = _categoryService.GetAllCategories(storeId: _storeContext.CurrentStore.Id);
                     model.Categories = categories.Select(category => new CategorySimpleModel
-                    {
-                        Id = category.Id,
-                        Name = category.GetLocalized(x => x.Name),
-                        SeName = category.GetSeName(),
-                    }).ToList();
-                }
-                //manufacturers
-                if (_commonSettings.SitemapIncludeManufacturers)
-                {
-                    var manufacturers = _manufacturerService.GetAllManufacturers(storeId: _storeContext.CurrentStore.Id);
-                    model.Manufacturers = manufacturers.Select(category => new ManufacturerBriefInfoModel
                     {
                         Id = category.Id,
                         Name = category.GetLocalized(x => x.Name),
@@ -663,9 +535,6 @@ namespace Nop.Web.Factories
                 };
                 var localizableDisallowPaths = new List<string>
                 {
-                    "/addproducttocart/catalog/",
-                    "/addproducttocart/details/",
-                    "/backinstocksubscriptions/manage",
                     "/boards/forumsubscriptions",
                     "/boards/forumwatch",
                     "/boards/postedit",
@@ -676,49 +545,25 @@ namespace Nop.Web.Factories
                     "/boards/topiccreate",
                     "/boards/topicmove",
                     "/boards/topicwatch",
-                    "/cart",
-                    "/checkout",
-                    "/checkout/billingaddress",
-                    "/checkout/completed",
-                    "/checkout/confirm",
-                    "/checkout/shippingaddress",
-                    "/checkout/shippingmethod",
-                    "/checkout/paymentinfo",
-                    "/checkout/paymentmethod",
-                    "/clearcomparelist",
-                    "/compareproducts",
-                    "/compareproducts/add/*",
                     "/customer/avatar",
                     "/customer/activation",
                     "/customer/addresses",
                     "/customer/changepassword",
                     "/customer/checkusernameavailability",
-                    "/customer/downloadableproducts",
                     "/customer/info",
                     "/deletepm",
-                    "/emailwishlist",
                     "/inboxupdate",
                     "/newsletter/subscriptionactivation",
-                    "/onepagecheckout",
-                    "/order/history",
-                    "/orderdetails",
                     "/passwordrecovery/confirm",
                     "/poll/vote",
                     "/privatemessages",
-                    "/returnrequest",
-                    "/returnrequest/history",
-                    "/rewardpoints/history",
                     "/sendpm",
                     "/sentupdate",
-                    "/shoppingcart/*",
                     "/storeclosed",
                     "/subscribenewsletter",
                     "/topic/authenticate",
                     "/viewpm",
-                    "/uploadfilecheckoutattribute",
                     "/uploadfileproductattribute",
-                    "/uploadfilereturnrequest",
-                    "/wishlist",
                 };
 
                 const string newLine = "\r\n"; //Environment.NewLine

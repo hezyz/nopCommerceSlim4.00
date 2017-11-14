@@ -1,23 +1,18 @@
-﻿using System;
-using System.Linq;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 using Nop.Core;
 using Nop.Core.Domain.Customers;
-using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Localization;
-using Nop.Core.Domain.Tax;
-using Nop.Core.Domain.Vendors;
 using Nop.Services.Authentication;
 using Nop.Services.Common;
 using Nop.Services.Customers;
-using Nop.Services.Directory;
 using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Stores;
 using Nop.Services.Tasks;
-using Nop.Services.Vendors;
 using Nop.Web.Framework.Localization;
+using System;
+using System.Linq;
 
 namespace Nop.Web.Framework
 {
@@ -35,26 +30,19 @@ namespace Nop.Web.Framework
         #region Fields
 
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly CurrencySettings _currencySettings;
         private readonly IAuthenticationService _authenticationService;
-        private readonly ICurrencyService _currencyService;
         private readonly ICustomerService _customerService;
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly ILanguageService _languageService;
         private readonly IStoreContext _storeContext;
         private readonly IStoreMappingService _storeMappingService;
         private readonly IUserAgentHelper _userAgentHelper;
-        private readonly IVendorService _vendorService;
         private readonly LocalizationSettings _localizationSettings;
-        private readonly TaxSettings _taxSettings;
-
+        
         private Customer _cachedCustomer;
         private Customer _originalCustomerIfImpersonated;
-        private Vendor _cachedVendor;
         private Language _cachedLanguage;
-        private Currency _cachedCurrency;
-        private TaxDisplayType? _cachedTaxDisplayType;
-
+        
         #endregion
 
         #region Ctor
@@ -63,45 +51,33 @@ namespace Nop.Web.Framework
         /// Ctor
         /// </summary>
         /// <param name="httpContextAccessor">HTTP context accessor</param>
-        /// <param name="currencySettings">Currency settings</param>
         /// <param name="authenticationService">Authentication service</param>
-        /// <param name="currencyService">Currency service</param>
         /// <param name="customerService">Customer service</param>
         /// <param name="genericAttributeService">Generic attribute service</param>
         /// <param name="languageService">Language service</param>
         /// <param name="storeContext">Store context</param>
         /// <param name="storeMappingService">Store mapping service</param>
         /// <param name="userAgentHelper">User gent helper</param>
-        /// <param name="vendorService">Vendor service</param>
         /// <param name="localizationSettings">Localization settings</param>
-        /// <param name="taxSettings">Tax settings</param>
         public WebWorkContext(IHttpContextAccessor httpContextAccessor, 
-            CurrencySettings currencySettings,
             IAuthenticationService authenticationService,
-            ICurrencyService currencyService,
             ICustomerService customerService,
             IGenericAttributeService genericAttributeService,
             ILanguageService languageService,
             IStoreContext storeContext,
             IStoreMappingService storeMappingService,
             IUserAgentHelper userAgentHelper,
-            IVendorService vendorService,
-            LocalizationSettings localizationSettings,
-            TaxSettings taxSettings)
+            LocalizationSettings localizationSettings)
         {
             this._httpContextAccessor = httpContextAccessor;
-            this._currencySettings = currencySettings;
             this._authenticationService = authenticationService;
-            this._currencyService = currencyService;
             this._customerService = customerService;
             this._genericAttributeService = genericAttributeService;
             this._languageService = languageService;
             this._storeContext = storeContext;
             this._storeMappingService = storeMappingService;
             this._userAgentHelper = userAgentHelper;
-            this._vendorService = vendorService;
             this._localizationSettings = localizationSettings;
-            this._taxSettings = taxSettings;
         }
 
         #endregion
@@ -295,34 +271,6 @@ namespace Nop.Web.Framework
         }
 
         /// <summary>
-        /// Gets the current vendor (logged-in manager)
-        /// </summary>
-        public virtual Vendor CurrentVendor
-        {
-            get
-            {
-                //whether there is a cached value
-                if (_cachedVendor != null)
-                    return _cachedVendor;
-
-                if (this.CurrentCustomer == null)
-                    return null;
-
-                //try to get vendor
-                var vendor = _vendorService.GetVendorById(this.CurrentCustomer.VendorId);
-
-                //check vendor availability
-                if (vendor == null || vendor.Deleted || !vendor.Active)
-                    return null;
-
-                //cache the found vendor
-                _cachedVendor = vendor;
-
-                return _cachedVendor;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets current user working language
         /// </summary>
         public virtual Language WorkingLanguage
@@ -412,138 +360,6 @@ namespace Nop.Web.Framework
 
                 //then reset the cached value
                 _cachedLanguage = null;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets current user working currency
-        /// </summary>
-        public virtual Currency WorkingCurrency
-        {
-            get
-            {
-                //whether there is a cached value
-                if (_cachedCurrency != null)
-                    return _cachedCurrency;
-                
-                //return primary store currency when we're in admin area/mode
-                if (this.IsAdmin)
-                {
-                    var primaryStoreCurrency =  _currencyService.GetCurrencyById(_currencySettings.PrimaryStoreCurrencyId);
-                    if (primaryStoreCurrency != null)
-                    {
-                        _cachedCurrency = primaryStoreCurrency;
-                        return primaryStoreCurrency;
-                    }
-                }
-
-                //find a currency previously selected by a customer
-                var customerCurrencyId = this.CurrentCustomer.GetAttribute<int>(SystemCustomerAttributeNames.CurrencyId,
-                    _genericAttributeService, _storeContext.CurrentStore.Id);
-
-                var allStoreCurrencies = _currencyService.GetAllCurrencies(storeId: _storeContext.CurrentStore.Id);
-
-                //check customer currency availability
-                var customerCurrency = allStoreCurrencies.FirstOrDefault(currency => currency.Id == customerCurrencyId);
-                if (customerCurrency == null)
-                {
-                    //it not found, then try to get the default currency for the current language (if specified)
-                    customerCurrency = allStoreCurrencies.FirstOrDefault(currency => currency.Id == this.WorkingLanguage.DefaultCurrencyId);
-                }
-
-                //if the default currency for the current store not found, then try to get the first one
-                if (customerCurrency == null)
-                    customerCurrency = allStoreCurrencies.FirstOrDefault();
-
-                //if there are no currencies for the current store try to get the first one regardless of the store
-                if (customerCurrency == null)
-                    customerCurrency = _currencyService.GetAllCurrencies().FirstOrDefault();
-
-                //cache the found currency
-                _cachedCurrency = customerCurrency;
-
-                return _cachedCurrency;
-            }
-            set
-            {
-                //get passed currency identifier
-                var currencyId = value?.Id ?? 0;
-
-                //and save it
-                _genericAttributeService.SaveAttribute(this.CurrentCustomer, 
-                    SystemCustomerAttributeNames.CurrencyId, currencyId, _storeContext.CurrentStore.Id);
-
-                //then reset the cached value
-                _cachedCurrency = null;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets current tax display type
-        /// </summary>
-        public virtual TaxDisplayType TaxDisplayType
-        {
-            get
-            {
-                //whether there is a cached value
-                if (_cachedTaxDisplayType.HasValue)
-                    return _cachedTaxDisplayType.Value;
-
-                var taxDisplayType = TaxDisplayType.IncludingTax;
-
-                //whether customers are allowed to select tax display type
-                if (_taxSettings.AllowCustomersToSelectTaxDisplayType && this.CurrentCustomer != null)
-                {
-                    //try to get previously saved tax display type
-                    var taxDisplayTypeId = this.CurrentCustomer.GetAttribute<int?>(SystemCustomerAttributeNames.TaxDisplayTypeId, 
-                        _genericAttributeService, _storeContext.CurrentStore.Id);
-                    if (taxDisplayTypeId.HasValue)
-                    {
-                        taxDisplayType = (TaxDisplayType)taxDisplayTypeId.Value;
-                    }
-                    else
-                    {
-                        //default tax type by customer roles
-                        var defaultRoleTaxDisplayType = this.CurrentCustomer.GetDefaultTaxDisplayType();
-                        if (defaultRoleTaxDisplayType != null)
-                        {
-                            taxDisplayType = defaultRoleTaxDisplayType.Value;
-                        }
-                    }
-                }
-                else
-                {
-                    //default tax type by customer roles
-                    var defaultRoleTaxDisplayType = this.CurrentCustomer.GetDefaultTaxDisplayType();
-                    if (defaultRoleTaxDisplayType != null)
-                    {
-                        taxDisplayType = defaultRoleTaxDisplayType.Value;
-                    }
-                    else
-                    {
-                        //or get the default tax display type
-                        taxDisplayType = _taxSettings.TaxDisplayType;
-                    }
-                }
-
-                //cache the value
-                _cachedTaxDisplayType = taxDisplayType;
-
-                return _cachedTaxDisplayType.Value;
-
-            }
-            set
-            {
-                //whether customers are allowed to select tax display type
-                if (!_taxSettings.AllowCustomersToSelectTaxDisplayType)
-                    return;
-
-                //save passed value
-                _genericAttributeService.SaveAttribute(this.CurrentCustomer, 
-                    SystemCustomerAttributeNames.TaxDisplayTypeId, (int)value, _storeContext.CurrentStore.Id);
-
-                //then reset the cached value
-                _cachedTaxDisplayType = null;
             }
         }
 

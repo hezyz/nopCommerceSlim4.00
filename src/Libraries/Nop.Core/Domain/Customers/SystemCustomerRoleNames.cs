@@ -24,10 +24,5 @@ namespace Nop.Core.Domain.Customers
         /// Guests
         /// </summary>
         public static string Guests { get { return "Guests"; } }
-
-        /// <summary>
-        /// Vendors
-        /// </summary>
-        public static string Vendors { get { return "Vendors"; } }
     }
 }

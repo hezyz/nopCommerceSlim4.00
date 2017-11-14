@@ -11,32 +11,6 @@ namespace Nop.Services.Catalog
     public static class RoundingHelper
     {
         /// <summary>
-        /// Round a product or order total
-        /// </summary>
-        /// <param name="value">Value to round</param>
-        /// <returns>Rounded value</returns>
-        public static decimal RoundPrice(decimal value)
-        {
-            //we use this method because some currencies (e.g. Gungarian Forint or Swiss Franc) use non-standard rules for rounding
-            //you can implement any rounding logic here
-
-            var workContext = EngineContext.Current.Resolve<IWorkContext>();
-
-            return value.Round(workContext.WorkingCurrency.RoundingType);
-        }
-
-        /// <summary>
-        /// Round a product or order total for the currency
-        /// </summary>
-        /// <param name="value">Value to round</param>
-        /// <param name="currency">Currency</param>
-        /// <returns>Rounded value</returns>
-        public static decimal RoundPrice(decimal value, Currency currency)
-        {
-            return value.Round(currency.RoundingType);
-        }
-
-        /// <summary>
         /// Round
         /// </summary>
         /// <param name="value">Value to round</param>

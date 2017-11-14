@@ -1,14 +1,11 @@
-﻿using System.Collections.Generic;
-using Nop.Core.Domain.Blogs;
+﻿using Nop.Core.Domain.Blogs;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.Messages;
 using Nop.Core.Domain.News;
-using Nop.Core.Domain.Orders;
-using Nop.Core.Domain.Shipping;
 using Nop.Core.Domain.Stores;
-using Nop.Core.Domain.Vendors;
+using System.Collections.Generic;
 
 namespace Nop.Services.Messages
 {
@@ -26,72 +23,11 @@ namespace Nop.Services.Messages
         void AddStoreTokens(IList<Token> tokens, Store store, EmailAccount emailAccount);
 
         /// <summary>
-        /// Add order tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="order"></param>
-        /// <param name="languageId">Language identifier</param>
-        /// <param name="vendorId">Vendor identifier</param>
-        void AddOrderTokens(IList<Token> tokens, Order order, int languageId, int vendorId = 0);
-
-        /// <summary>
-        /// Add refunded order tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="order">Order</param>
-        /// <param name="refundedAmount">Refunded amount of order</param>
-        void AddOrderRefundedTokens(IList<Token> tokens, Order order, decimal refundedAmount);
-
-        /// <summary>
-        /// Add shipment tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="shipment">Shipment item</param>
-        /// <param name="languageId">Language identifier</param>
-        void AddShipmentTokens(IList<Token> tokens, Shipment shipment, int languageId);
-
-        /// <summary>
-        /// Add order note tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="orderNote">Order note</param>
-        void AddOrderNoteTokens(IList<Token> tokens, OrderNote orderNote);
-
-        /// <summary>
-        /// Add recurring payment tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="recurringPayment">Recurring payment</param>
-        void AddRecurringPaymentTokens(IList<Token> tokens, RecurringPayment recurringPayment);
-
-        /// <summary>
-        /// Add return request tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="returnRequest">Return request</param>
-        /// <param name="orderItem">Order item</param>
-        void AddReturnRequestTokens(IList<Token> tokens, ReturnRequest returnRequest, OrderItem orderItem);
-
-        /// <summary>
-        /// Add gift card tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="giftCard">Gift card</param>
-        void AddGiftCardTokens(IList<Token> tokens, GiftCard giftCard);
-
-        /// <summary>
         /// Add customer tokens
         /// </summary>
         /// <param name="tokens">List of already added tokens</param>
         /// <param name="customer">Customer</param>
         void AddCustomerTokens(IList<Token> tokens, Customer customer);
-
-        /// <summary>
-        /// Add vendor tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="vendor">Vendor</param>
-        void AddVendorTokens(IList<Token> tokens, Vendor vendor);
 
         /// <summary>
         /// Add newsletter subscription tokens
@@ -130,14 +66,6 @@ namespace Nop.Services.Messages
         void AddProductTokens(IList<Token> tokens, Product product, int languageId);
 
         /// <summary>
-        /// Add product attribute combination tokens
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="combination">Product attribute combination</param>
-        /// <param name="languageId">Language identifier</param>
-        void AddAttributeCombinationTokens(IList<Token> tokens, ProductAttributeCombination combination, int languageId);
-
-        /// <summary>
         /// Add forum tokens
         /// </summary>
         /// <param name="tokens">List of already added tokens</param>
@@ -167,13 +95,6 @@ namespace Nop.Services.Messages
         /// <param name="tokens">List of already added tokens</param>
         /// <param name="privateMessage">Private message</param>
         void AddPrivateMessageTokens(IList<Token> tokens, PrivateMessage privateMessage);
-
-        /// <summary>
-        /// Add tokens of BackInStock subscription
-        /// </summary>
-        /// <param name="tokens">List of already added tokens</param>
-        /// <param name="subscription">BackInStock subscription</param>
-        void AddBackInStockTokens(IList<Token> tokens, BackInStockSubscription subscription);
 
         /// <summary>
         /// Get collection of allowed (supported) message tokens for campaigns

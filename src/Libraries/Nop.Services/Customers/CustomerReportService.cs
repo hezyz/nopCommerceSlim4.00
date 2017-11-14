@@ -1,12 +1,9 @@
-using System;
-using System.Linq;
 using Nop.Core;
 using Nop.Core.Data;
 using Nop.Core.Domain.Customers;
-using Nop.Core.Domain.Orders;
-using Nop.Core.Domain.Payments;
-using Nop.Core.Domain.Shipping;
 using Nop.Services.Helpers;
+using System;
+using System.Linq;
 
 namespace Nop.Services.Customers
 {
@@ -18,7 +15,6 @@ namespace Nop.Services.Customers
         #region Fields
 
         private readonly IRepository<Customer> _customerRepository;
-        private readonly IRepository<Order> _orderRepository;
         private readonly ICustomerService _customerService;
         private readonly IDateTimeHelper _dateTimeHelper;
         
@@ -34,11 +30,10 @@ namespace Nop.Services.Customers
         /// <param name="customerService">Customer service</param>
         /// <param name="dateTimeHelper">Date time helper</param>
         public CustomerReportService(IRepository<Customer> customerRepository,
-            IRepository<Order> orderRepository, ICustomerService customerService,
+            ICustomerService customerService,
             IDateTimeHelper dateTimeHelper)
         {
             this._customerRepository = customerRepository;
-            this._orderRepository = orderRepository;
             this._customerService = customerService;
             this._dateTimeHelper = dateTimeHelper;
         }
@@ -46,78 +41,6 @@ namespace Nop.Services.Customers
         #endregion
 
         #region Methods
-
-        /// <summary>
-        /// Get best customers
-        /// </summary>
-        /// <param name="createdFromUtc">Order created date from (UTC); null to load all records</param>
-        /// <param name="createdToUtc">Order created date to (UTC); null to load all records</param>
-        /// <param name="os">Order status; null to load all records</param>
-        /// <param name="ps">Order payment status; null to load all records</param>
-        /// <param name="ss">Order shipment status; null to load all records</param>
-        /// <param name="orderBy">1 - order by order total, 2 - order by number of orders</param>
-        /// <param name="pageIndex">Page index</param>
-        /// <param name="pageSize">Page size</param>
-        /// <returns>Report</returns>
-        public virtual IPagedList<BestCustomerReportLine> GetBestCustomersReport(DateTime? createdFromUtc,
-            DateTime? createdToUtc, OrderStatus? os, PaymentStatus? ps, ShippingStatus? ss, int orderBy,
-            int pageIndex = 0, int pageSize = 214748364)
-        {
-            int? orderStatusId = null;
-            if (os.HasValue)
-                orderStatusId = (int)os.Value;
-
-            int? paymentStatusId = null;
-            if (ps.HasValue)
-                paymentStatusId = (int)ps.Value;
-
-            int? shippingStatusId = null;
-            if (ss.HasValue)
-                shippingStatusId = (int)ss.Value;
-            var query1 = from c in _customerRepository.Table
-                         join o in _orderRepository.Table on c.Id equals o.CustomerId
-                         where (!createdFromUtc.HasValue || createdFromUtc.Value <= o.CreatedOnUtc) &&
-                         (!createdToUtc.HasValue || createdToUtc.Value >= o.CreatedOnUtc) &&
-                         (!orderStatusId.HasValue || orderStatusId == o.OrderStatusId) &&
-                         (!paymentStatusId.HasValue || paymentStatusId == o.PaymentStatusId) &&
-                         (!shippingStatusId.HasValue || shippingStatusId == o.ShippingStatusId) &&
-                         (!o.Deleted) &&
-                         (!c.Deleted)
-                         select new { c, o };
-
-            var query2 = from co in query1
-                         group co by co.c.Id into g
-                         select new
-                         {
-                             CustomerId = g.Key,
-                             OrderTotal = g.Sum(x => x.o.OrderTotal),
-                             OrderCount = g.Count()
-                         };
-            switch (orderBy)
-            {
-                case 1:
-                    {
-                        query2 = query2.OrderByDescending(x => x.OrderTotal);
-                    }
-                    break;
-                case 2:
-                    {
-                        query2 = query2.OrderByDescending(x => x.OrderCount);
-                    }
-                    break;
-                default:
-                    throw new ArgumentException("Wrong orderBy parameter", "orderBy");
-            }
-
-            var tmp = new PagedList<dynamic>(query2, pageIndex, pageSize);
-            return new PagedList<BestCustomerReportLine>(tmp.Select(x => new BestCustomerReportLine
-                {
-                    CustomerId = x.CustomerId,
-                    OrderTotal = x.OrderTotal,
-                    OrderCount = x.OrderCount
-                }),
-                tmp.PageIndex, tmp.PageSize, tmp.TotalCount);
-        }
 
         /// <summary>
         /// Gets a report of customers registered in the last days

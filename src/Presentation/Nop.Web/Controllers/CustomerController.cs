@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Nop.Core;
@@ -13,7 +10,6 @@ using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.Media;
 using Nop.Core.Domain.Messages;
-using Nop.Core.Domain.Tax;
 using Nop.Services.Authentication;
 using Nop.Services.Authentication.External;
 using Nop.Services.Common;
@@ -25,8 +21,6 @@ using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Media;
 using Nop.Services.Messages;
-using Nop.Services.Orders;
-using Nop.Services.Tax;
 using Nop.Web.Extensions;
 using Nop.Web.Factories;
 using Nop.Web.Framework;
@@ -35,6 +29,9 @@ using Nop.Web.Framework.Mvc.Filters;
 using Nop.Web.Framework.Security;
 using Nop.Web.Framework.Security.Captcha;
 using Nop.Web.Models.Customer;
+using System;
+using System.Linq;
+using System.Net;
 
 namespace Nop.Web.Controllers
 {
@@ -46,7 +43,6 @@ namespace Nop.Web.Controllers
         private readonly ICustomerModelFactory _customerModelFactory;
         private readonly IAuthenticationService _authenticationService;
         private readonly DateTimeSettings _dateTimeSettings;
-        private readonly TaxSettings _taxSettings;
         private readonly ILocalizationService _localizationService;
         private readonly IWorkContext _workContext;
         private readonly IStoreContext _storeContext;
@@ -55,16 +51,13 @@ namespace Nop.Web.Controllers
         private readonly ICustomerAttributeService _customerAttributeService;
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly ICustomerRegistrationService _customerRegistrationService;
-        private readonly ITaxService _taxService;
         private readonly CustomerSettings _customerSettings;
         private readonly AddressSettings _addressSettings;
         private readonly ForumSettings _forumSettings;
         private readonly IAddressService _addressService;
         private readonly ICountryService _countryService;
-        private readonly IOrderService _orderService;
         private readonly IPictureService _pictureService;
         private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
-        private readonly IShoppingCartService _shoppingCartService;
         private readonly IExternalAuthenticationService _externalAuthenticationService;
         private readonly IWebHelper _webHelper;
         private readonly ICustomerActivityService _customerActivityService;
@@ -86,7 +79,6 @@ namespace Nop.Web.Controllers
             ICustomerModelFactory customerModelFactory,
             IAuthenticationService authenticationService,
             DateTimeSettings dateTimeSettings,
-            TaxSettings taxSettings,
             ILocalizationService localizationService,
             IWorkContext workContext,
             IStoreContext storeContext,
@@ -95,16 +87,13 @@ namespace Nop.Web.Controllers
             ICustomerAttributeService customerAttributeService,
             IGenericAttributeService genericAttributeService,
             ICustomerRegistrationService customerRegistrationService,
-            ITaxService taxService,
             CustomerSettings customerSettings,
             AddressSettings addressSettings,
             ForumSettings forumSettings,
             IAddressService addressService,
             ICountryService countryService,
-            IOrderService orderService,
             IPictureService pictureService,
             INewsLetterSubscriptionService newsLetterSubscriptionService,
-            IShoppingCartService shoppingCartService,
             IExternalAuthenticationService externalAuthenticationService,
             IWebHelper webHelper,
             ICustomerActivityService customerActivityService,
@@ -121,7 +110,6 @@ namespace Nop.Web.Controllers
             this._customerModelFactory = customerModelFactory;
             this._authenticationService = authenticationService;
             this._dateTimeSettings = dateTimeSettings;
-            this._taxSettings = taxSettings;
             this._localizationService = localizationService;
             this._workContext = workContext;
             this._storeContext = storeContext;
@@ -130,16 +118,13 @@ namespace Nop.Web.Controllers
             this._customerAttributeService = customerAttributeService;
             this._genericAttributeService = genericAttributeService;
             this._customerRegistrationService = customerRegistrationService;
-            this._taxService = taxService;
             this._customerSettings = customerSettings;
             this._addressSettings = addressSettings;
             this._forumSettings = forumSettings;
             this._addressService = addressService;
             this._countryService = countryService;
-            this._orderService = orderService;
             this._pictureService = pictureService;
             this._newsLetterSubscriptionService = newsLetterSubscriptionService;
-            this._shoppingCartService = shoppingCartService;
             this._externalAuthenticationService = externalAuthenticationService;
             this._webHelper = webHelper;
             this._customerActivityService = customerActivityService;
@@ -282,9 +267,6 @@ namespace Nop.Web.Controllers
                             var customer = _customerSettings.UsernamesEnabled
                                 ? _customerService.GetCustomerByUsername(model.Username)
                                 : _customerService.GetCustomerByEmail(model.Email);
-
-                            //migrate shopping cart
-                            _shoppingCartService.MigrateShoppingCart(_workContext.CurrentCustomer, customer, true);
 
                             //sign in new customer
                             _authenticationService.SignIn(customer, model.RememberMe);
@@ -598,17 +580,6 @@ namespace Nop.Web.Controllers
                     {
                         _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.TimeZoneId, model.TimeZoneId);
                     }
-                    //VAT number
-                    if (_taxSettings.EuVatEnabled)
-                    {
-                        _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.VatNumber, model.VatNumber);
-
-                        var vatNumberStatus = _taxService.GetVatNumberStatus(model.VatNumber, out string _, out string vatAddress);
-                        _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.VatNumberStatusId, (int)vatNumberStatus);
-                        //send VAT number admin notification
-                        if (!string.IsNullOrEmpty(model.VatNumber) && _taxSettings.EuVatEmailAdminWhenNewVatSubmitted)
-                            _workflowMessageService.SendNewVatSubmittedStoreOwnerNotification(customer, model.VatNumber, vatAddress, _localizationSettings.DefaultAdminLanguageId);
-                    }
 
                     //form fields
                     if (_customerSettings.GenderEnabled)
@@ -711,8 +682,6 @@ namespace Nop.Web.Controllers
                             defaultAddress.StateProvinceId = null;
                         //set default address
                         customer.Addresses.Add(defaultAddress);
-                        customer.BillingAddress = defaultAddress;
-                        customer.ShippingAddress = defaultAddress;
                         _customerService.UpdateCustomer(customer);
                     }
 
@@ -925,23 +894,6 @@ namespace Nop.Web.Controllers
                     {
                         _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.TimeZoneId,
                             model.TimeZoneId);
-                    }
-                    //VAT number
-                    if (_taxSettings.EuVatEnabled)
-                    {
-                        var prevVatNumber = customer.GetAttribute<string>(SystemCustomerAttributeNames.VatNumber);
-
-                        _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.VatNumber,
-                            model.VatNumber);
-                        if (prevVatNumber != model.VatNumber)
-                        {
-                            var vatNumberStatus = _taxService.GetVatNumberStatus(model.VatNumber, out string _, out string vatAddress);
-                            _genericAttributeService.SaveAttribute(customer, SystemCustomerAttributeNames.VatNumberStatusId, (int)vatNumberStatus);
-                            //send VAT number admin notification
-                            if (!string.IsNullOrEmpty(model.VatNumber) && _taxSettings.EuVatEmailAdminWhenNewVatSubmitted)
-                                _workflowMessageService.SendNewVatSubmittedStoreOwnerNotification(customer,
-                                    model.VatNumber, vatAddress, _localizationSettings.DefaultAdminLanguageId);
-                        }
                     }
 
                     //form fields
@@ -1267,37 +1219,6 @@ namespace Nop.Web.Controllers
                 addressSettings: _addressSettings,
                 loadCountries: () => _countryService.GetAllCountries(_workContext.WorkingLanguage.Id),
                 overrideAttributesXml: customAttributes);
-            return View(model);
-        }
-
-        #endregion
-
-        #region My account / Downloadable products
-
-        [HttpsRequirement(SslRequirement.Yes)]
-        public virtual IActionResult DownloadableProducts()
-        {
-            if (!_workContext.CurrentCustomer.IsRegistered())
-                return Challenge();
-
-            if (_customerSettings.HideDownloadableProductsTab)
-                return RedirectToRoute("CustomerInfo");
-
-            var model = _customerModelFactory.PrepareCustomerDownloadableProductsModel();
-            return View(model);
-        }
-
-        public virtual IActionResult UserAgreement(Guid orderItemId)
-        {
-            var orderItem = _orderService.GetOrderItemByGuid(orderItemId);
-            if (orderItem == null)
-                return RedirectToRoute("HomePage");
-
-            var product = orderItem.Product;
-            if (product == null || !product.HasUserAgreement)
-                return RedirectToRoute("HomePage");
-
-            var model = _customerModelFactory.PrepareUserAgreementModel(orderItem, product);
             return View(model);
         }
 

@@ -21,8 +21,6 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
             Locales = new List<CategoryLocalizedModel>();
             AvailableCategoryTemplates = new List<SelectListItem>();
             AvailableCategories = new List<SelectListItem>();
-            AvailableDiscounts = new List<SelectListItem>();
-            SelectedDiscountIds = new List<int>();
 
             SelectedCustomerRoleIds = new List<int>();
             AvailableCustomerRoles = new List<SelectListItem>();
@@ -69,9 +67,6 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
         [NopResourceDisplayName("Admin.Catalog.Categories.Fields.PageSizeOptions")]
         public string PageSizeOptions { get; set; }
 
-        [NopResourceDisplayName("Admin.Catalog.Categories.Fields.PriceRanges")]
-        public string PriceRanges { get; set; }
-
         [NopResourceDisplayName("Admin.Catalog.Categories.Fields.ShowOnHomePage")]
         public bool ShowOnHomePage { get; set; }
 
@@ -103,10 +98,6 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
 
         public IList<SelectListItem> AvailableCategories { get; set; }
 
-        //discounts
-        [NopResourceDisplayName("Admin.Catalog.Categories.Fields.Discounts")]
-        public IList<int> SelectedDiscountIds { get; set; }
-        public IList<SelectListItem> AvailableDiscounts { get; set; }
 
         #region Nested classes
 
@@ -131,9 +122,7 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
             public AddCategoryProductModel()
             {
                 AvailableCategories = new List<SelectListItem>();
-                AvailableManufacturers = new List<SelectListItem>();
                 AvailableStores = new List<SelectListItem>();
-                AvailableVendors = new List<SelectListItem>();
                 AvailableProductTypes = new List<SelectListItem>();
             }
 
@@ -141,19 +130,13 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
             public string SearchProductName { get; set; }
             [NopResourceDisplayName("Admin.Catalog.Products.List.SearchCategory")]
             public int SearchCategoryId { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchManufacturer")]
-            public int SearchManufacturerId { get; set; }
             [NopResourceDisplayName("Admin.Catalog.Products.List.SearchStore")]
             public int SearchStoreId { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchVendor")]
-            public int SearchVendorId { get; set; }
             [NopResourceDisplayName("Admin.Catalog.Products.List.SearchProductType")]
             public int SearchProductTypeId { get; set; }
 
             public IList<SelectListItem> AvailableCategories { get; set; }
-            public IList<SelectListItem> AvailableManufacturers { get; set; }
             public IList<SelectListItem> AvailableStores { get; set; }
-            public IList<SelectListItem> AvailableVendors { get; set; }
             public IList<SelectListItem> AvailableProductTypes { get; set; }
 
             public int CategoryId { get; set; }

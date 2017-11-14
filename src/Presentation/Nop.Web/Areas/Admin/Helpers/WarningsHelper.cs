@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Principal;
-using Nop.Core;
+﻿using Nop.Core;
 using Nop.Core.Domain.Catalog;
-using Nop.Core.Domain.Directory;
 using Nop.Core.Infrastructure;
 using Nop.Core.Plugins;
-using Nop.Services.Directory;
 using Nop.Services.Localization;
-using Nop.Services.Payments;
 using Nop.Services.Stores;
 using Nop.Web.Areas.Admin.Models.Common;
 using Nop.Web.Framework.Security;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Principal;
 
 namespace Nop.Web.Areas.Admin.Helpers
 {
@@ -24,12 +21,7 @@ namespace Nop.Web.Areas.Admin.Helpers
         public static List<SystemWarningModel> GetWarnings()
         {
             var catalogSettings = EngineContext.Current.Resolve<CatalogSettings>();
-            var currencySettings = EngineContext.Current.Resolve<CurrencySettings>();
-            var measureSettings = EngineContext.Current.Resolve<MeasureSettings>();
-            var currencyService = EngineContext.Current.Resolve<ICurrencyService>();
             var localizationService = EngineContext.Current.Resolve<ILocalizationService>();
-            var measureService = EngineContext.Current.Resolve<IMeasureService>();
-            var paymentService = EngineContext.Current.Resolve<IPaymentService>();
             var storeContext = EngineContext.Current.Resolve<IStoreContext>();
             var storeService = EngineContext.Current.Resolve<IStoreService>();
             var webHelper = EngineContext.Current.Resolve<IWebHelper>();
@@ -55,122 +47,7 @@ namespace Nop.Web.Areas.Admin.Helpers
                     Text = string.Format(localizationService.GetResource("Admin.System.Warnings.URL.NoMatch"), currentStoreUrl, webHelper.GetStoreLocation(false))
                 });
 
-            //primary exchange rate currency
-            var perCurrency = currencyService.GetCurrencyById(currencySettings.PrimaryExchangeRateCurrencyId);
-            if (perCurrency != null)
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Pass,
-                    Text = localizationService.GetResource("Admin.System.Warnings.ExchangeCurrency.Set"),
-                });
-                if (perCurrency.Rate != 1)
-                {
-                    model.Add(new SystemWarningModel
-                    {
-                        Level = SystemWarningLevel.Fail,
-                        Text = localizationService.GetResource("Admin.System.Warnings.ExchangeCurrency.Rate1")
-                    });
-                }
-            }
-            else
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Fail,
-                    Text = localizationService.GetResource("Admin.System.Warnings.ExchangeCurrency.NotSet")
-                });
-            }
-
-            //primary store currency
-            var pscCurrency = currencyService.GetCurrencyById(currencySettings.PrimaryStoreCurrencyId);
-            if (pscCurrency != null)
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Pass,
-                    Text = localizationService.GetResource("Admin.System.Warnings.PrimaryCurrency.Set"),
-                });
-            }
-            else
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Fail,
-                    Text = localizationService.GetResource("Admin.System.Warnings.PrimaryCurrency.NotSet")
-                });
-            }
-
-            //base measure weight
-            var bWeight = measureService.GetMeasureWeightById(measureSettings.BaseWeightId);
-            if (bWeight != null)
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Pass,
-                    Text = localizationService.GetResource("Admin.System.Warnings.DefaultWeight.Set"),
-                });
-
-                if (bWeight.Ratio != 1)
-                {
-                    model.Add(new SystemWarningModel
-                    {
-                        Level = SystemWarningLevel.Fail,
-                        Text = localizationService.GetResource("Admin.System.Warnings.DefaultWeight.Ratio1")
-                    });
-                }
-            }
-            else
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Fail,
-                    Text = localizationService.GetResource("Admin.System.Warnings.DefaultWeight.NotSet")
-                });
-            }
-
-            //base dimension weight
-            var bDimension = measureService.GetMeasureDimensionById(measureSettings.BaseDimensionId);
-            if (bDimension != null)
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Pass,
-                    Text = localizationService.GetResource("Admin.System.Warnings.DefaultDimension.Set"),
-                });
-
-                if (bDimension.Ratio != 1)
-                {
-                    model.Add(new SystemWarningModel
-                    {
-                        Level = SystemWarningLevel.Fail,
-                        Text = localizationService.GetResource("Admin.System.Warnings.DefaultDimension.Ratio1")
-                    });
-                }
-            }
-            else
-            {
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Fail,
-                    Text = localizationService.GetResource("Admin.System.Warnings.DefaultDimension.NotSet")
-                });
-            }
-
-            //payment methods
-            if (paymentService.LoadActivePaymentMethods().Any())
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Pass,
-                    Text = localizationService.GetResource("Admin.System.Warnings.PaymentMethods.OK")
-                });
-            else
-                model.Add(new SystemWarningModel
-                {
-                    Level = SystemWarningLevel.Fail,
-                    Text = localizationService.GetResource("Admin.System.Warnings.PaymentMethods.NoActive")
-                });
-
+            
             //incompatible plugins
             if (PluginManager.IncompatiblePlugins != null)
                 foreach (var pluginName in PluginManager.IncompatiblePlugins)
