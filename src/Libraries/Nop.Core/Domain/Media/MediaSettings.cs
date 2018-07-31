@@ -38,6 +38,11 @@ namespace Nop.Core.Domain.Media
         public int CategoryThumbPictureSize { get; set; }
 
         /// <summary>
+        /// Picture size of vendor pictures
+        /// </summary>
+        public int VendorThumbPictureSize { get; set; }
+
+        /// <summary>
         /// Picture size of product pictures for autocomplete search box
         /// </summary>
         public int AutoCompleteSearchThumbPictureSize { get; set; }

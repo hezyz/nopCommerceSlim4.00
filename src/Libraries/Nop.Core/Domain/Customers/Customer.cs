@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Nop.Core.Domain.Common;
 
 namespace Nop.Core.Domain.Customers
@@ -10,12 +11,10 @@ namespace Nop.Core.Domain.Customers
     public partial class Customer : BaseEntity
     {
         private ICollection<ExternalAuthenticationRecord> _externalAuthenticationRecords;
-        private ICollection<CustomerRole> _customerRoles;
-        private ICollection<Address> _addresses;
+        private ICollection<CustomerCustomerRoleMapping> _customerCustomerRoleMappings;
+        protected ICollection<CustomerAddressMapping> _customerAddressMappings;
+        private IList<CustomerRole> _customerRoles;
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
         public Customer()
         {
             this.CustomerGuid = Guid.NewGuid();
@@ -45,6 +44,11 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets the admin comment
         /// </summary>
         public string AdminComment { get; set; }
+
+        /// <summary>
+        /// Gets or sets the vendor identifier with which this customer is associated (maganer)
+        /// </summary>
+        public int VendorId { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the customer is required to re-login
@@ -113,26 +117,39 @@ namespace Nop.Core.Domain.Customers
         /// </summary>
         public virtual ICollection<ExternalAuthenticationRecord> ExternalAuthenticationRecords
         {
-            get { return _externalAuthenticationRecords ?? (_externalAuthenticationRecords = new List<ExternalAuthenticationRecord>()); }
-            protected set { _externalAuthenticationRecords = value; }
+            get => _externalAuthenticationRecords ?? (_externalAuthenticationRecords = new List<ExternalAuthenticationRecord>());
+            protected set => _externalAuthenticationRecords = value;
         }
 
         /// <summary>
-        /// Gets or sets the customer roles
+        /// Gets or sets customer roles
         /// </summary>
-        public virtual ICollection<CustomerRole> CustomerRoles
+        public virtual IList<CustomerRole> CustomerRoles
         {
-            get { return _customerRoles ?? (_customerRoles = new List<CustomerRole>()); }
-            protected set { _customerRoles = value; }
+            get => _customerRoles ?? (_customerRoles = CustomerCustomerRoleMappings.Select(mapping => mapping.CustomerRole).ToList());
+        }
+
+        /// <summary>
+        /// Gets or sets customer-customer role mappings
+        /// </summary>
+        public virtual ICollection<CustomerCustomerRoleMapping> CustomerCustomerRoleMappings
+        {
+            get => _customerCustomerRoleMappings ?? (_customerCustomerRoleMappings = new List<CustomerCustomerRoleMapping>());
+            protected set => _customerCustomerRoleMappings = value;
         }
 
         /// <summary>
         /// Gets or sets customer addresses
         /// </summary>
-        public virtual ICollection<Address> Addresses
+        public IList<Address> Addresses => CustomerAddressMappings.Select(mapping => mapping.Address).ToList();
+
+        /// <summary>
+        /// Gets or sets customer-address mappings
+        /// </summary>
+        public virtual ICollection<CustomerAddressMapping> CustomerAddressMappings
         {
-            get { return _addresses ?? (_addresses = new List<Address>()); }
-            protected set { _addresses = value; }
+            get => _customerAddressMappings ?? (_customerAddressMappings = new List<CustomerAddressMapping>());
+            protected set => _customerAddressMappings = value;
         }
 
         #endregion

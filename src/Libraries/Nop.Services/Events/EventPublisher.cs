@@ -7,23 +7,29 @@ using Nop.Services.Logging;
 namespace Nop.Services.Events
 {
     /// <summary>
-    /// Evnt publisher
+    /// Event publisher
     /// </summary>
     public class EventPublisher : IEventPublisher
     {
+        #region Fields
+
         private readonly ISubscriptionService _subscriptionService;
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="subscriptionService"></param>
+        #endregion
+
+        #region Ctor
+
         public EventPublisher(ISubscriptionService subscriptionService)
         {
             _subscriptionService = subscriptionService;
         }
 
+        #endregion
+
+        #region Utilities
+
         /// <summary>
-        /// Publish to cunsumer
+        /// Publish to consumer
         /// </summary>
         /// <typeparam name="T">Type</typeparam>
         /// <param name="x">Event consumer</param>
@@ -50,6 +56,10 @@ namespace Nop.Services.Events
             }
         }
 
+        #endregion
+
+        #region Methods
+
         /// <summary>
         /// Publish event
         /// </summary>
@@ -64,5 +74,7 @@ namespace Nop.Services.Events
             //publish event to subscribers
             subscribers.ForEach(subscriber => PublishToConsumer(subscriber, eventMessage));
         }
+
+        #endregion
     }
 }

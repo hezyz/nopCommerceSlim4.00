@@ -14,47 +14,26 @@ namespace Nop.Services.Directory
     /// </summary>
     public partial class StateProvinceService : IStateProvinceService
     {
-        #region Constants
-
-        /// <summary>
-        /// Key for caching
-        /// </summary>
-        /// <remarks>
-        /// {0} : country ID
-        /// {1} : language ID
-        /// {2} : show hidden records?
-        /// </remarks>
-        private const string STATEPROVINCES_ALL_KEY = "Nop.stateprovince.all-{0}-{1}-{2}";
-        /// <summary>
-        /// Key pattern to clear cache
-        /// </summary>
-        private const string STATEPROVINCES_PATTERN_KEY = "Nop.stateprovince.";
-
-        #endregion
-
         #region Fields
 
-        private readonly IRepository<StateProvince> _stateProvinceRepository;
-        private readonly IEventPublisher _eventPublisher;
         private readonly ICacheManager _cacheManager;
+        private readonly IEventPublisher _eventPublisher;
+        private readonly ILocalizationService _localizationService;
+        private readonly IRepository<StateProvince> _stateProvinceRepository;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="cacheManager">Cache manager</param>
-        /// <param name="stateProvinceRepository">State/province repository</param>
-        /// <param name="eventPublisher">Event published</param>
         public StateProvinceService(ICacheManager cacheManager,
-            IRepository<StateProvince> stateProvinceRepository,
-            IEventPublisher eventPublisher)
+            IEventPublisher eventPublisher,
+            ILocalizationService localizationService,
+            IRepository<StateProvince> stateProvinceRepository)
         {
-            _cacheManager = cacheManager;
-            _stateProvinceRepository = stateProvinceRepository;
-            _eventPublisher = eventPublisher;
+            this._cacheManager = cacheManager;
+            this._eventPublisher = eventPublisher;
+            this._localizationService = localizationService;
+            this._stateProvinceRepository = stateProvinceRepository;
         }
 
         #endregion
@@ -68,10 +47,10 @@ namespace Nop.Services.Directory
         {
             if (stateProvince == null)
                 throw new ArgumentNullException(nameof(stateProvince));
-            
+
             _stateProvinceRepository.Delete(stateProvince);
 
-            _cacheManager.RemoveByPattern(STATEPROVINCES_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopDirectoryDefaults.StateProvincesPatternCacheKey);
 
             //event notification
             _eventPublisher.EntityDeleted(stateProvince);
@@ -110,7 +89,7 @@ namespace Nop.Services.Directory
             var stateProvince = query.FirstOrDefault();
             return stateProvince;
         }
-        
+
         /// <summary>
         /// Gets a state/province collection by country identifier
         /// </summary>
@@ -120,7 +99,7 @@ namespace Nop.Services.Directory
         /// <returns>States</returns>
         public virtual IList<StateProvince> GetStateProvincesByCountryId(int countryId, int languageId = 0, bool showHidden = false)
         {
-            var key = string.Format(STATEPROVINCES_ALL_KEY, countryId, languageId, showHidden);
+            var key = string.Format(NopDirectoryDefaults.StateProvincesAllCacheKey, countryId, languageId, showHidden);
             return _cacheManager.Get(key, () =>
             {
                 var query = from sp in _stateProvinceRepository.Table
@@ -135,9 +114,10 @@ namespace Nop.Services.Directory
                     //we should sort states by localized names when they have the same display order
                     stateProvinces = stateProvinces
                         .OrderBy(c => c.DisplayOrder)
-                        .ThenBy(c => c.GetLocalized(x => x.Name, languageId))
+                        .ThenBy(c => _localizationService.GetLocalized(c, x => x.Name, languageId))
                         .ToList();
                 }
+
                 return stateProvinces;
             });
         }
@@ -151,8 +131,8 @@ namespace Nop.Services.Directory
         {
             var query = from sp in _stateProvinceRepository.Table
                         orderby sp.CountryId, sp.DisplayOrder, sp.Name
-                where showHidden || sp.Published
-                select sp;
+                        where showHidden || sp.Published
+                        select sp;
             var stateProvinces = query.ToList();
             return stateProvinces;
         }
@@ -168,7 +148,7 @@ namespace Nop.Services.Directory
 
             _stateProvinceRepository.Insert(stateProvince);
 
-            _cacheManager.RemoveByPattern(STATEPROVINCES_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopDirectoryDefaults.StateProvincesPatternCacheKey);
 
             //event notification
             _eventPublisher.EntityInserted(stateProvince);
@@ -185,7 +165,7 @@ namespace Nop.Services.Directory
 
             _stateProvinceRepository.Update(stateProvince);
 
-            _cacheManager.RemoveByPattern(STATEPROVINCES_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopDirectoryDefaults.StateProvincesPatternCacheKey);
 
             //event notification
             _eventPublisher.EntityUpdated(stateProvince);

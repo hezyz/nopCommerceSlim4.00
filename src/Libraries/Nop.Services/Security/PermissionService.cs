@@ -16,58 +16,35 @@ namespace Nop.Services.Security
     /// </summary>
     public partial class PermissionService : IPermissionService
     {
-        #region Constants
-
-        /// <summary>
-        /// Key for caching
-        /// </summary>
-        /// <remarks>
-        /// {0} : customer role ID
-        /// {1} : permission system name
-        /// </remarks>
-        private const string PERMISSIONS_ALLOWED_KEY = "Nop.permission.allowed-{0}-{1}";
-        /// <summary>
-        /// Key pattern to clear cache
-        /// </summary>
-        private const string PERMISSIONS_PATTERN_KEY = "Nop.permission.";
-
-        #endregion
-
         #region Fields
 
-        private readonly IRepository<PermissionRecord> _permissionRecordRepository;
+        private readonly ICacheManager _cacheManager;
         private readonly ICustomerService _customerService;
-        private readonly IWorkContext _workContext;
         private readonly ILocalizationService _localizationService;
-        private readonly ILanguageService _languageService;
-        private readonly IStaticCacheManager _cacheManager;
+        private readonly IRepository<PermissionRecord> _permissionRecordRepository;
+        private readonly IRepository<PermissionRecordCustomerRoleMapping> _permissionRecordCustomerRoleMappingRepository;
+        private readonly IStaticCacheManager _staticCacheManager;
+        private readonly IWorkContext _workContext;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="permissionRecordRepository">Permission repository</param>
-        /// <param name="customerService">Customer service</param>
-        /// <param name="workContext">Work context</param>
-        /// <param name="localizationService">Localization service</param>
-        /// <param name="languageService">Language service</param>
-        /// <param name="cacheManager">Static cache manager</param>
-        public PermissionService(IRepository<PermissionRecord> permissionRecordRepository,
+        public PermissionService(ICacheManager cacheManager,
             ICustomerService customerService,
-            IWorkContext workContext,
             ILocalizationService localizationService,
-            ILanguageService languageService,
-            IStaticCacheManager cacheManager)
+            IRepository<PermissionRecord> permissionRecordRepository,
+            IRepository<PermissionRecordCustomerRoleMapping> permissionRecordCustomerRoleMappingRepository,
+            IStaticCacheManager staticCacheManager,
+            IWorkContext workContext)
         {
-            this._permissionRecordRepository = permissionRecordRepository;
-            this._customerService = customerService;
-            this._workContext = workContext;
-            this._localizationService = localizationService;
-            this._languageService = languageService;
             this._cacheManager = cacheManager;
+            this._customerService = customerService;
+            this._localizationService = localizationService;
+            this._permissionRecordRepository = permissionRecordRepository;
+            this._permissionRecordCustomerRoleMappingRepository = permissionRecordCustomerRoleMappingRepository;
+            this._staticCacheManager = staticCacheManager;
+            this._workContext = workContext;
         }
 
         #endregion
@@ -75,20 +52,41 @@ namespace Nop.Services.Security
         #region Utilities
 
         /// <summary>
+        /// Get permission records by customer role identifier
+        /// </summary>
+        /// <param name="customerRoleId">Customer role identifier</param>
+        /// <returns>Permissions</returns>
+        protected virtual IList<PermissionRecord> GetPermissionRecordsByCustomerRoleId(int customerRoleId)
+        {
+            var key = string.Format(NopSecurityDefaults.PermissionsAllByCustomerRoleIdCacheKey, customerRoleId);
+            return _cacheManager.Get(key, () =>
+            {
+                var query = from pr in _permissionRecordRepository.Table
+                            join prcrm in _permissionRecordCustomerRoleMappingRepository.Table on pr.Id equals prcrm.PermissionRecordId
+                            where prcrm.CustomerRoleId == customerRoleId
+                            orderby pr.Id
+                            select pr;
+
+                return query.ToList();
+            });
+        }
+
+        /// <summary>
         /// Authorize permission
         /// </summary>
         /// <param name="permissionRecordSystemName">Permission record system name</param>
-        /// <param name="customerRole">Customer role</param>
+        /// <param name="customerRoleId">Customer role identifier</param>
         /// <returns>true - authorized; otherwise, false</returns>
-        protected virtual bool Authorize(string permissionRecordSystemName, CustomerRole customerRole)
+        protected virtual bool Authorize(string permissionRecordSystemName, int customerRoleId)
         {
             if (string.IsNullOrEmpty(permissionRecordSystemName))
                 return false;
-            
-            var key = string.Format(PERMISSIONS_ALLOWED_KEY, customerRole.Id, permissionRecordSystemName);
-            return _cacheManager.Get(key, () =>
+
+            var key = string.Format(NopSecurityDefaults.PermissionsAllowedCacheKey, customerRoleId, permissionRecordSystemName);
+            return _staticCacheManager.Get(key, () =>
             {
-                foreach (var permission1 in customerRole.PermissionRecords)
+                var permissions = GetPermissionRecordsByCustomerRoleId(customerRoleId);
+                foreach (var permission1 in permissions)
                     if (permission1.SystemName.Equals(permissionRecordSystemName, StringComparison.InvariantCultureIgnoreCase))
                         return true;
 
@@ -111,7 +109,8 @@ namespace Nop.Services.Security
 
             _permissionRecordRepository.Delete(permission);
 
-            _cacheManager.RemoveByPattern(PERMISSIONS_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopSecurityDefaults.PermissionsPatternCacheKey);
+            _staticCacheManager.RemoveByPattern(NopSecurityDefaults.PermissionsPatternCacheKey);
         }
 
         /// <summary>
@@ -138,7 +137,7 @@ namespace Nop.Services.Security
                 return null;
 
             var query = from pr in _permissionRecordRepository.Table
-                        where  pr.SystemName == systemName
+                        where pr.SystemName == systemName
                         orderby pr.Id
                         select pr;
 
@@ -170,7 +169,8 @@ namespace Nop.Services.Security
 
             _permissionRecordRepository.Insert(permission);
 
-            _cacheManager.RemoveByPattern(PERMISSIONS_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopSecurityDefaults.PermissionsPatternCacheKey);
+            _staticCacheManager.RemoveByPattern(NopSecurityDefaults.PermissionsPatternCacheKey);
         }
 
         /// <summary>
@@ -184,7 +184,8 @@ namespace Nop.Services.Security
 
             _permissionRecordRepository.Update(permission);
 
-            _cacheManager.RemoveByPattern(PERMISSIONS_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopSecurityDefaults.PermissionsPatternCacheKey);
+            _staticCacheManager.RemoveByPattern(NopSecurityDefaults.PermissionsPatternCacheKey);
         }
 
         /// <summary>
@@ -209,9 +210,9 @@ namespace Nop.Services.Security
                 {
                     Name = permission.Name,
                     SystemName = permission.SystemName,
-                    Category = permission.Category,
+                    Category = permission.Category
                 };
-                    
+
                 foreach (var defaultPermission in defaultPermissions)
                 {
                     var customerRole = _customerService.GetCustomerRoleBySystemName(defaultPermission.CustomerRoleSystemName);
@@ -228,14 +229,15 @@ namespace Nop.Services.Security
                     }
 
                     var defaultMappingProvided = (from p in defaultPermission.PermissionRecords
-                        where p.SystemName == permission1.SystemName
-                        select p).Any();
-                    var mappingExists = (from p in customerRole.PermissionRecords
-                        where p.SystemName == permission1.SystemName
-                        select p).Any();
+                                                  where p.SystemName == permission1.SystemName
+                                                  select p).Any();
+                    var mappingExists = (from mapping in customerRole.PermissionRecordCustomerRoleMappings
+                                         where mapping.PermissionRecord.SystemName == permission1.SystemName
+                                         select mapping.PermissionRecord).Any();
                     if (defaultMappingProvided && !mappingExists)
                     {
-                        permission1.CustomerRoles.Add(customerRole);
+                        //permission1.CustomerRoles.Add(customerRole);
+                        permission1.PermissionRecordCustomerRoleMappings.Add(new PermissionRecordCustomerRoleMapping { CustomerRole = customerRole });
                     }
                 }
 
@@ -243,7 +245,7 @@ namespace Nop.Services.Security
                 InsertPermissionRecord(permission1);
 
                 //save localization
-                permission1.SaveLocalizedPermissionName(_localizationService, _languageService);
+                _localizationService.SaveLocalizedPermissionName(permission1);
             }
         }
 
@@ -257,16 +259,16 @@ namespace Nop.Services.Security
             foreach (var permission in permissions)
             {
                 var permission1 = GetPermissionRecordBySystemName(permission.SystemName);
-                if (permission1 != null)
-                {
-                    DeletePermissionRecord(permission1);
+                if (permission1 == null) 
+                    continue;
 
-                    //delete permission locales
-                    permission1.DeleteLocalizedPermissionName(_localizationService, _languageService);
-                }
+                DeletePermissionRecord(permission1);
+
+                //delete permission locales
+                _localizationService.DeleteLocalizedPermissionName(permission1);
             }
         }
-        
+
         /// <summary>
         /// Authorize permission
         /// </summary>
@@ -326,10 +328,10 @@ namespace Nop.Services.Security
 
             var customerRoles = customer.CustomerRoles.Where(cr => cr.Active);
             foreach (var role in customerRoles)
-                if (Authorize(permissionRecordSystemName, role))
+                if (Authorize(permissionRecordSystemName, role.Id))
                     //yes, we have such permission
                     return true;
-            
+
             //no permission found
             return false;
         }

@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
-using Nop.Core;
+﻿using Nop.Core;
 using Nop.Core.Caching;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Media;
+using Nop.Core.Domain.Security;
 using Nop.Core.Domain.Seo;
+using Nop.Core.Domain.Vendors;
 using Nop.Services.Catalog;
 using Nop.Services.Customers;
 using Nop.Services.Helpers;
@@ -12,17 +13,14 @@ using Nop.Services.Localization;
 using Nop.Services.Media;
 using Nop.Services.Security;
 using Nop.Services.Seo;
-using Nop.Services.Stores;
-using Nop.Web.Framework.Security.Captcha;
+using Nop.Services.Vendors;
 using Nop.Web.Infrastructure.Cache;
 using Nop.Web.Models.Catalog;
 using Nop.Web.Models.Common;
 using Nop.Web.Models.Media;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Net;
 
 namespace Nop.Web.Factories
 {
@@ -32,74 +30,82 @@ namespace Nop.Web.Factories
     public partial class ProductModelFactory : IProductModelFactory
     {
         #region Fields
-        
-        private readonly ICategoryService _categoryService;
-        private readonly IProductService _productService;
-        private readonly IProductTemplateService _productTemplateService;
-        private readonly IWorkContext _workContext;
-        private readonly IStoreContext _storeContext;
-        private readonly IPictureService _pictureService;
-        private readonly ILocalizationService _localizationService;
-        private readonly IWebHelper _webHelper;
-        private readonly IDateTimeHelper _dateTimeHelper;
-        private readonly IProductTagService _productTagService;
-        private readonly IAclService _aclService;
-        private readonly IStoreMappingService _storeMappingService;
-        private readonly IPermissionService _permissionService;
-        private readonly IDownloadService _downloadService;
-        private readonly MediaSettings _mediaSettings;
+
+        private readonly CaptchaSettings _captchaSettings;
         private readonly CatalogSettings _catalogSettings;
         private readonly CustomerSettings _customerSettings;
-        private readonly CaptchaSettings _captchaSettings;
-        private readonly SeoSettings _seoSettings;
+        private readonly ICategoryService _categoryService;
+        private readonly ICustomerService _customerService;
+        private readonly IDateTimeHelper _dateTimeHelper;
+        private readonly IDownloadService _downloadService;
+        private readonly ILocalizationService _localizationService;
+        private readonly IPermissionService _permissionService;
+        private readonly IPictureService _pictureService;
+        private readonly IProductService _productService;
+        private readonly IProductTagService _productTagService;
+        private readonly IProductTemplateService _productTemplateService;
+        private readonly IReviewTypeService _reviewTypeService;
         private readonly IStaticCacheManager _cacheManager;
+        private readonly IStoreContext _storeContext;
+        private readonly IUrlRecordService _urlRecordService;
+        private readonly IVendorService _vendorService;
+        private readonly IWebHelper _webHelper;
+        private readonly IWorkContext _workContext;
+        private readonly MediaSettings _mediaSettings;
+        private readonly SeoSettings _seoSettings;
+        private readonly VendorSettings _vendorSettings;
 
         #endregion
 
         #region Ctor
 
-        public ProductModelFactory(
-            ICategoryService categoryService,
-            IProductService productService,
-            IProductTemplateService productTemplateService,
-            IWorkContext workContext,
-            IStoreContext storeContext,
-            IPictureService pictureService,
-            ILocalizationService localizationService,
-            IWebHelper webHelper,
-            IDateTimeHelper dateTimeHelper,
-            IProductTagService productTagService,
-            IAclService aclService,
-            IStoreMappingService storeMappingService,
-            IPermissionService permissionService,
-            IDownloadService downloadService,
-            MediaSettings mediaSettings,
+        public ProductModelFactory(CaptchaSettings captchaSettings,
             CatalogSettings catalogSettings,
             CustomerSettings customerSettings,
-            CaptchaSettings captchaSettings,
+            ICategoryService categoryService,
+            ICustomerService customerService,
+            IDateTimeHelper dateTimeHelper,
+            IDownloadService downloadService,
+            ILocalizationService localizationService,
+            IPermissionService permissionService,
+            IPictureService pictureService,
+            IProductService productService,
+            IProductTagService productTagService,
+            IProductTemplateService productTemplateService,
+            IReviewTypeService reviewTypeService,
+            IStaticCacheManager cacheManager,
+            IStoreContext storeContext,
+            IUrlRecordService urlRecordService,
+            IVendorService vendorService,
+            IWebHelper webHelper,
+            IWorkContext workContext,
+            MediaSettings mediaSettings,
             SeoSettings seoSettings,
-            IStaticCacheManager cacheManager)
+            VendorSettings vendorSettings)
         {
-            this._categoryService = categoryService;
-            this._productService = productService;
-            this._productTemplateService = productTemplateService;
-            this._workContext = workContext;
-            this._storeContext = storeContext;
-            this._pictureService = pictureService;
-            this._localizationService = localizationService;
-            this._webHelper = webHelper;
-            this._dateTimeHelper = dateTimeHelper;
-            this._productTagService = productTagService;
-            this._aclService = aclService;
-            this._storeMappingService = storeMappingService;
-            this._permissionService = permissionService;
-            this._downloadService = downloadService;
-            this._mediaSettings = mediaSettings;
+            this._captchaSettings = captchaSettings;
             this._catalogSettings = catalogSettings;
             this._customerSettings = customerSettings;
-            this._captchaSettings = captchaSettings;
-            this._seoSettings = seoSettings;
+            this._categoryService = categoryService;
+            this._customerService = customerService;
+            this._dateTimeHelper = dateTimeHelper;
+            this._downloadService = downloadService;
+            this._localizationService = localizationService;
+            this._permissionService = permissionService;
+            this._pictureService = pictureService;
+            this._productService = productService;
+            this._productTagService = productTagService;
+            this._productTemplateService = productTemplateService;
+            this._reviewTypeService = reviewTypeService;
             this._cacheManager = cacheManager;
+            this._storeContext = storeContext;
+            this._urlRecordService = urlRecordService;
+            this._vendorService = vendorService;
+            this._webHelper = webHelper;
+            this._workContext = workContext;
+            this._mediaSettings = mediaSettings;
+            this._seoSettings = seoSettings;
+            this._vendorSettings = vendorSettings;
         }
 
         #endregion
@@ -140,11 +146,13 @@ namespace Nop.Web.Factories
                     TotalReviews = product.ApprovedTotalReviews
                 };
             }
+
             if (productReview != null)
             {
                 productReview.ProductId = product.Id;
                 productReview.AllowCustomerReviews = product.AllowCustomerReviews;
             }
+
             return productReview;
         }
 
@@ -159,7 +167,7 @@ namespace Nop.Web.Factories
             if (product == null)
                 throw new ArgumentNullException(nameof(product));
 
-            var productName = product.GetLocalized(x => x.Name);
+            var productName = _localizationService.GetLocalized(product, x => x.Name);
             //If a size has been set in the view, we use it in priority
             var pictureSize = productThumbPictureSize ?? _mediaSettings.ProductThumbPictureSize;
 
@@ -214,8 +222,8 @@ namespace Nop.Web.Factories
                 {
                     Enabled = _catalogSettings.CategoryBreadcrumbEnabled,
                     ProductId = product.Id,
-                    ProductName = product.GetLocalized(x => x.Name),
-                    ProductSeName = product.GetSeName()
+                    ProductName = _localizationService.GetLocalized(product, x => x.Name),
+                    ProductSeName = _urlRecordService.GetSeName(product)
                 };
                 var productCategories = _categoryService.GetProductCategoriesByProductId(product.Id);
                 if (!productCategories.Any())
@@ -225,13 +233,13 @@ namespace Nop.Web.Factories
                 if (category == null)
                     return breadcrumbModel;
 
-                foreach (var catBr in category.GetCategoryBreadCrumb(_categoryService, _aclService, _storeMappingService))
+                foreach (var catBr in _categoryService.GetCategoryBreadCrumb(category))
                 {
                     breadcrumbModel.CategoryBreadcrumb.Add(new CategorySimpleModel
                     {
                         Id = catBr.Id,
-                        Name = catBr.GetLocalized(x => x.Name),
-                        SeName = catBr.GetSeName(),
+                        Name = _localizationService.GetLocalized(catBr, x => x.Name),
+                        SeName = _urlRecordService.GetSeName(catBr),
                         IncludeInTopMenu = catBr.IncludeInTopMenu
                     });
                 }
@@ -253,14 +261,14 @@ namespace Nop.Web.Factories
 
             var productTagsCacheKey = string.Format(ModelCacheEventConsumer.PRODUCTTAG_BY_PRODUCT_MODEL_KEY, product.Id, _workContext.WorkingLanguage.Id, _storeContext.CurrentStore.Id);
             var model = _cacheManager.Get(productTagsCacheKey, () =>
-                product.ProductTags
+                _productTagService.GetAllProductTagsByProductId(product.Id)
                 //filter by store
                 .Where(x => _productTagService.GetProductCount(x.Id, _storeContext.CurrentStore.Id) > 0)
                 .Select(x => new ProductTagModel
                 {
                     Id = x.Id,
-                    Name = x.GetLocalized(y => y.Name),
-                    SeName = x.GetSeName(),
+                    Name = _localizationService.GetLocalized(x, y => y.Name),
+                    SeName = _urlRecordService.GetSeName(x),
                     ProductCount = _productTagService.GetProductCount(x.Id, _storeContext.CurrentStore.Id)
                 })
                 .ToList());
@@ -289,7 +297,7 @@ namespace Nop.Web.Factories
             var productPicturesCacheKey = string.Format(ModelCacheEventConsumer.PRODUCT_DETAILS_PICTURES_MODEL_KEY, product.Id, defaultPictureSize, isAssociatedProduct, _workContext.WorkingLanguage.Id, _webHelper.IsCurrentConnectionSecured(), _storeContext.CurrentStore.Id);
             var cachedPictures = _cacheManager.Get(productPicturesCacheKey, () =>
             {
-                var productName = product.GetLocalized(x => x.Name);
+                var productName = _localizationService.GetLocalized(product, x => x.Name);
 
                 var pictures = _pictureService.GetPicturesByProductId(product.Id);
                 var defaultPicture = pictures.FirstOrDefault();
@@ -313,7 +321,7 @@ namespace Nop.Web.Factories
                 {
                     var pictureModel = new PictureModel
                     {
-                        ImageUrl = _pictureService.GetPictureUrl(picture, defaultPictureSize),
+                        ImageUrl = _pictureService.GetPictureUrl(picture, defaultPictureSize, !isAssociatedProduct),
                         ThumbImageUrl = _pictureService.GetPictureUrl(picture, _mediaSettings.ProductThumbPictureSizeOnProductDetailsPage),
                         FullSizeImageUrl = _pictureService.GetPictureUrl(picture),
                         Title = string.Format(_localizationService.GetResource("Media.Product.ImageLinkTitleFormat.Details"), productName),
@@ -386,16 +394,15 @@ namespace Nop.Web.Factories
                 var model = new ProductOverviewModel
                 {
                     Id = product.Id,
-                    Name = product.GetLocalized(x => x.Name),
-                    ShortDescription = product.GetLocalized(x => x.ShortDescription),
-                    FullDescription = product.GetLocalized(x => x.FullDescription),
-                    SeName = product.GetSeName(),
+                    Name = _localizationService.GetLocalized(product, x => x.Name),
+                    ShortDescription = _localizationService.GetLocalized(product, x => x.ShortDescription),
+                    FullDescription = _localizationService.GetLocalized(product, x => x.FullDescription),
+                    SeName = _urlRecordService.GetSeName(product),
                     ProductType = product.ProductType,
                     MarkAsNew = product.MarkAsNew &&
                         (!product.MarkAsNewStartDateTimeUtc.HasValue || product.MarkAsNewStartDateTimeUtc.Value < DateTime.UtcNow) &&
                         (!product.MarkAsNewEndDateTimeUtc.HasValue || product.MarkAsNewEndDateTimeUtc.Value > DateTime.UtcNow)
                 };
-
 
                 //picture
                 if (preparePictureModel)
@@ -417,7 +424,8 @@ namespace Nop.Web.Factories
         /// <param name="product">Product</param>
         /// <param name="isAssociatedProduct">Whether the product is associated</param>
         /// <returns>Product details model</returns>
-        public virtual ProductDetailsModel PrepareProductDetailsModel(Product product, bool isAssociatedProduct = false)
+        public virtual ProductDetailsModel PrepareProductDetailsModel(Product product,
+             bool isAssociatedProduct = false)
         {
             if (product == null)
                 throw new ArgumentNullException(nameof(product));
@@ -426,14 +434,14 @@ namespace Nop.Web.Factories
             var model = new ProductDetailsModel
             {
                 Id = product.Id,
-                Name = product.GetLocalized(x => x.Name),
-                ShortDescription = product.GetLocalized(x => x.ShortDescription),
-                FullDescription = product.GetLocalized(x => x.FullDescription),
-                MetaKeywords = product.GetLocalized(x => x.MetaKeywords),
-                MetaDescription = product.GetLocalized(x => x.MetaDescription),
-                MetaTitle = product.GetLocalized(x => x.MetaTitle),
+                Name = _localizationService.GetLocalized(product, x => x.Name),
+                ShortDescription = _localizationService.GetLocalized(product, x => x.ShortDescription),
+                FullDescription = _localizationService.GetLocalized(product, x => x.FullDescription),
+                MetaKeywords = _localizationService.GetLocalized(product, x => x.MetaKeywords),
+                MetaDescription = _localizationService.GetLocalized(product, x => x.MetaDescription),
+                MetaTitle = _localizationService.GetLocalized(product, x => x.MetaTitle),
+                SeName = _urlRecordService.GetSeName(product),
                 ProductType = product.ProductType,
-                SeName = product.GetSeName(),
                 DisplayDiscontinuedMessage = !product.Published && _catalogSettings.DisplayDiscontinuedMessageForUnpublishedProducts
             };
 
@@ -447,7 +455,24 @@ namespace Nop.Web.Factories
             //email a friend
             model.EmailAFriendEnabled = _catalogSettings.EmailAFriendEnabled;
             //store name
-            model.CurrentStoreName = _storeContext.CurrentStore.GetLocalized(x => x.Name);
+            model.CurrentStoreName = _localizationService.GetLocalized(_storeContext.CurrentStore, x => x.Name);
+
+            //vendor details
+            if (_vendorSettings.ShowVendorOnProductDetailsPage)
+            {
+                var vendor = _vendorService.GetVendorById(product.VendorId);
+                if (vendor != null && !vendor.Deleted && vendor.Active)
+                {
+                    model.ShowVendor = true;
+
+                    model.VendorModel = new VendorBriefInfoModel
+                    {
+                        Id = vendor.Id,
+                        Name = _localizationService.GetLocalized(vendor, x => x.Name),
+                        SeName = _urlRecordService.GetSeName(vendor),
+                    };
+                }
+            }
 
             //page sharing
             if (_catalogSettings.ShowShareButton && !string.IsNullOrEmpty(_catalogSettings.PageShareCode))
@@ -455,7 +480,7 @@ namespace Nop.Web.Factories
                 var shareCode = _catalogSettings.PageShareCode;
                 if (_webHelper.IsCurrentConnectionSecured())
                 {
-                    //need to change the addthis link to be https linked when the page is, so that the page doesnt ask about mixed mode when viewed in https...
+                    //need to change the add this link to be https linked when the page is, so that the page doesn't ask about mixed mode when viewed in https...
                     shareCode = shareCode.Replace("http://", "https://");
                 }
                 model.PageShareCode = shareCode;
@@ -469,6 +494,7 @@ namespace Nop.Web.Factories
             }
 
             //product tags
+            //do not prepare this model for the associated products. anyway it's not used
             if (!isAssociatedProduct)
             {
                 model.ProductTags = PrepareProductTagModels(product);
@@ -479,6 +505,7 @@ namespace Nop.Web.Factories
             model.DefaultPictureModel = PrepareProductDetailsPictureModel(product, isAssociatedProduct, out IList<PictureModel> allPictureModels);
             model.PictureModels = allPictureModels;
 
+           
             //product review overview
             model.ProductReviewOverview = PrepareProductReviewOverviewModel(product);
 
@@ -493,6 +520,7 @@ namespace Nop.Web.Factories
                         model.AssociatedProducts.Add(PrepareProductDetailsModel(associatedProduct, true));
                 }
             }
+
             return model;
         }
 
@@ -511,20 +539,40 @@ namespace Nop.Web.Factories
                 throw new ArgumentNullException(nameof(product));
 
             model.ProductId = product.Id;
-            model.ProductName = product.GetLocalized(x => x.Name);
-            model.ProductSeName = product.GetSeName();
+            model.ProductName = _localizationService.GetLocalized(product, x => x.Name);
+            model.ProductSeName = _urlRecordService.GetSeName(product);
 
             var productReviews = _catalogSettings.ShowProductReviewsPerStore
-                ? product.ProductReviews.Where(pr => pr.IsApproved && pr.StoreId == _storeContext.CurrentStore.Id).OrderBy(pr => pr.CreatedOnUtc)
-                : product.ProductReviews.Where(pr => pr.IsApproved).OrderBy(pr => pr.CreatedOnUtc);
+                ? product.ProductReviews.Where(pr => pr.IsApproved && pr.StoreId == _storeContext.CurrentStore.Id)
+                : product.ProductReviews.Where(pr => pr.IsApproved);
+
+            productReviews = _catalogSettings.ProductReviewsSortByCreatedDateAscending
+                ? productReviews.OrderBy(pr => pr.CreatedOnUtc)
+                : productReviews.OrderByDescending(pr => pr.CreatedOnUtc);
+
+            //get all review types
+            foreach (var reviewType in _reviewTypeService.GetAllReviewTypes())
+            {
+                model.ReviewTypeList.Add(new ReviewTypeModel
+                {
+                    Id = reviewType.Id,
+                    Name = _localizationService.GetLocalized(reviewType, entity => entity.Name),
+                    Description = _localizationService.GetLocalized(reviewType, entity => entity.Description),
+                    VisibleToAllCustomers = reviewType.VisibleToAllCustomers,
+                    DisplayOrder = reviewType.DisplayOrder,
+                    IsRequired = reviewType.IsRequired,
+                });
+            }
+
+            //filling data from db
             foreach (var pr in productReviews)
             {
                 var customer = pr.Customer;
-                model.Items.Add(new ProductReviewModel
+                var productReviewModel = new ProductReviewModel
                 {
                     Id = pr.Id,
                     CustomerId = pr.CustomerId,
-                    CustomerName = customer.FormatUserName(),
+                    CustomerName = _customerService.FormatUserName(customer),
                     AllowViewingProfiles = _customerSettings.AllowViewingProfiles && customer != null && !customer.IsGuest(),
                     Title = pr.Title,
                     ReviewText = pr.ReviewText,
@@ -537,7 +585,54 @@ namespace Nop.Web.Factories
                         HelpfulNoTotal = pr.HelpfulNoTotal,
                     },
                     WrittenOnStr = _dateTimeHelper.ConvertToUserTime(pr.CreatedOnUtc, DateTimeKind.Utc).ToString("g"),
-                });
+                };
+
+                foreach (var q in _reviewTypeService.GetProductReviewReviewTypeMappingsByProductReviewId(pr.Id))
+                {
+                    productReviewModel.AdditionalProductReviewList.Add(new ProductReviewReviewTypeMappingModel
+                    {
+                        ReviewTypeId = q.ReviewTypeId,
+                        ProductReviewId = pr.Id,
+                        Rating = q.Rating,
+                        Name = _localizationService.GetLocalized(q.ReviewType, x => x.Name),
+                        VisibleToAllCustomers = q.ReviewType.VisibleToAllCustomers || _workContext.CurrentCustomer.Id == pr.CustomerId,
+                    });
+                }
+
+                model.Items.Add(productReviewModel);
+            }
+
+            foreach (var rt in model.ReviewTypeList)
+            {
+                if (model.ReviewTypeList.Count <= model.AddAdditionalProductReviewList.Count) continue;
+                var reviewType = _reviewTypeService.GetReviewTypeById(rt.Id);
+                var reviewTypeMappingModel = new AddProductReviewReviewTypeMappingModel
+                {
+                    ReviewTypeId = rt.Id,
+                    Name = _localizationService.GetLocalized(reviewType, entity => entity.Name),
+                    Description = _localizationService.GetLocalized(reviewType, entity => entity.Description),
+                    DisplayOrder = rt.DisplayOrder,
+                    IsRequired = rt.IsRequired,
+                };
+
+                model.AddAdditionalProductReviewList.Add(reviewTypeMappingModel);
+            }
+
+            //Average rating
+            foreach (var rtm in model.ReviewTypeList)
+            {
+                var totalRating = 0;
+                var totalCount = 0;
+                foreach (var item in model.Items)
+                {
+                    foreach (var q in item.AdditionalProductReviewList.Where(w => w.ReviewTypeId == rtm.Id))
+                    {
+                        totalRating += q.Rating;
+                        totalCount = ++totalCount;
+                    }
+                }
+
+                rtm.AverageRating = (double)totalRating / (totalCount > 0 ? totalCount : 1);
             }
 
             model.AddProductReview.CanCurrentCustomerLeaveReview = _catalogSettings.AllowAnonymousUsersToReviewProduct || !_workContext.CurrentCustomer.IsGuest();
@@ -561,9 +656,10 @@ namespace Nop.Web.Factories
                 pageIndex = page.Value - 1;
             }
 
-            var list = _productService.GetAllProductReviews(customerId: _workContext.CurrentCustomer.Id, 
-                approved: null, 
-                pageIndex: pageIndex, 
+            var list = _productService.GetAllProductReviews(customerId: _workContext.CurrentCustomer.Id,
+                approved: null,
+                storeId: _storeContext.CurrentStore.Id,
+                pageIndex: pageIndex,
                 pageSize: pageSize);
 
             var productReviews = new List<CustomerProductReviewModel>();
@@ -575,12 +671,12 @@ namespace Nop.Web.Factories
                 {
                     Title = review.Title,
                     ProductId = product.Id,
-                    ProductName = product.GetLocalized(p => p.Name),
-                    ProductSeName = product.GetSeName(),
+                    ProductName = _localizationService.GetLocalized(product, p => p.Name),
+                    ProductSeName = _urlRecordService.GetSeName(product),
                     Rating = review.Rating,
                     ReviewText = review.ReviewText,
                     ReplyText = review.ReplyText,
-                    WrittenOnStr = _dateTimeHelper.ConvertToUserTime(product.CreatedOnUtc, DateTimeKind.Utc).ToString("g")
+                    WrittenOnStr = _dateTimeHelper.ConvertToUserTime(review.CreatedOnUtc, DateTimeKind.Utc).ToString("g")
                 };
 
                 if (_catalogSettings.ProductReviewsMustBeApproved)
@@ -589,6 +685,18 @@ namespace Nop.Web.Factories
                         ? _localizationService.GetResource("Account.CustomerProductReviews.ApprovalStatus.Approved")
                         : _localizationService.GetResource("Account.CustomerProductReviews.ApprovalStatus.Pending");
                 }
+
+                foreach (var q in _reviewTypeService.GetProductReviewReviewTypeMappingsByProductReviewId(review.Id))
+                {
+                    productReviewModel.AdditionalProductReviewList.Add(new ProductReviewReviewTypeMappingModel
+                    {
+                        ReviewTypeId = q.ReviewTypeId,
+                        ProductReviewId = review.Id,
+                        Rating = q.Rating,
+                        Name = _localizationService.GetLocalized(q.ReviewType, x => x.Name),
+                    });
+                }
+
                 productReviews.Add(productReviewModel);
             }
 
@@ -628,8 +736,8 @@ namespace Nop.Web.Factories
                 throw new ArgumentNullException(nameof(product));
 
             model.ProductId = product.Id;
-            model.ProductName = product.GetLocalized(x => x.Name);
-            model.ProductSeName = product.GetSeName();
+            model.ProductName = _localizationService.GetLocalized(product, x => x.Name);
+            model.ProductSeName = _urlRecordService.GetSeName(product);
             model.DisplayCaptcha = _captchaSettings.Enabled && _captchaSettings.ShowOnEmailProductToFriendPage;
             if (!excludeProperties)
             {
@@ -638,6 +746,7 @@ namespace Nop.Web.Factories
 
             return model;
         }
+
 
         #endregion
     }

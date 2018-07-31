@@ -4,6 +4,7 @@ using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.Messages;
 using Nop.Core.Domain.News;
+using Nop.Core.Domain.Vendors;
 using System.Collections.Generic;
 
 namespace Nop.Services.Messages
@@ -21,7 +22,7 @@ namespace Nop.Services.Messages
         /// <param name="customer">Customer instance</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendCustomerRegisteredNotificationMessage(Customer customer, int languageId);
+        IList<int> SendCustomerRegisteredNotificationMessage(Customer customer, int languageId);
 
         /// <summary>
         /// Sends a welcome message to a customer
@@ -29,7 +30,7 @@ namespace Nop.Services.Messages
         /// <param name="customer">Customer instance</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendCustomerWelcomeMessage(Customer customer, int languageId);
+        IList<int> SendCustomerWelcomeMessage(Customer customer, int languageId);
 
         /// <summary>
         /// Sends an email validation message to a customer
@@ -37,15 +38,15 @@ namespace Nop.Services.Messages
         /// <param name="customer">Customer instance</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendCustomerEmailValidationMessage(Customer customer, int languageId);
-        
+        IList<int> SendCustomerEmailValidationMessage(Customer customer, int languageId);
+
         /// <summary>
         /// Sends an email re-validation message to a customer
         /// </summary>
         /// <param name="customer">Customer instance</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendCustomerEmailRevalidationMessage(Customer customer, int languageId);
+        IList<int> SendCustomerEmailRevalidationMessage(Customer customer, int languageId);
 
         /// <summary>
         /// Sends password recovery message to a customer
@@ -53,8 +54,8 @@ namespace Nop.Services.Messages
         /// <param name="customer">Customer instance</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendCustomerPasswordRecoveryMessage(Customer customer, int languageId);
-        
+        IList<int> SendCustomerPasswordRecoveryMessage(Customer customer, int languageId);
+
         #endregion
 
         #region Newsletter workflow
@@ -65,8 +66,7 @@ namespace Nop.Services.Messages
         /// <param name="subscription">Newsletter subscription</param>
         /// <param name="languageId">Language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendNewsLetterSubscriptionActivationMessage(NewsLetterSubscription subscription,
-            int languageId);
+        IList<int> SendNewsLetterSubscriptionActivationMessage(NewsLetterSubscription subscription, int languageId);
 
         /// <summary>
         /// Sends a newsletter subscription deactivation message
@@ -74,8 +74,7 @@ namespace Nop.Services.Messages
         /// <param name="subscription">Newsletter subscription</param>
         /// <param name="languageId">Language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendNewsLetterSubscriptionDeactivationMessage(NewsLetterSubscription subscription,
-            int languageId);
+        IList<int> SendNewsLetterSubscriptionDeactivationMessage(NewsLetterSubscription subscription, int languageId);
 
         #endregion
 
@@ -91,8 +90,20 @@ namespace Nop.Services.Messages
         /// <param name="friendsEmail">Friend's email</param>
         /// <param name="personalMessage">Personal message</param>
         /// <returns>Queued email identifier</returns>
-        int SendProductEmailAFriendMessage(Customer customer, int languageId,
+        IList<int> SendProductEmailAFriendMessage(Customer customer, int languageId, 
             Product product, string customerEmail, string friendsEmail, string personalMessage);
+
+        /// <summary>
+        /// Sends wishlist "email a friend" message
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <param name="languageId">Message language identifier</param>
+        /// <param name="customerEmail">Customer's email</param>
+        /// <param name="friendsEmail">Friend's email</param>
+        /// <param name="personalMessage">Personal message</param>
+        /// <returns>Queued email identifier</returns>
+        IList<int> SendWishlistEmailAFriendMessage(Customer customer, int languageId, 
+            string customerEmail, string friendsEmail, string personalMessage);
 
         #endregion
 
@@ -106,8 +117,7 @@ namespace Nop.Services.Messages
         /// <param name="forum">Forum</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendNewForumTopicMessage(Customer customer,
-            ForumTopic forumTopic, Forum forum, int languageId);
+        IList<int> SendNewForumTopicMessage(Customer customer, ForumTopic forumTopic, Forum forum, int languageId);
 
         /// <summary>
         /// Sends a forum subscription message to a customer
@@ -119,10 +129,8 @@ namespace Nop.Services.Messages
         /// <param name="friendlyForumTopicPageIndex">Friendly (starts with 1) forum topic page to use for URL generation</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendNewForumPostMessage(Customer customer,
-            ForumPost forumPost, ForumTopic forumTopic,
-            Forum forum, int friendlyForumTopicPageIndex, 
-            int languageId);
+        IList<int> SendNewForumPostMessage(Customer customer, ForumPost forumPost, 
+            ForumTopic forumTopic, Forum forum, int friendlyForumTopicPageIndex, int languageId);
 
         /// <summary>
         /// Sends a private message notification
@@ -130,11 +138,28 @@ namespace Nop.Services.Messages
         /// <param name="privateMessage">Private message</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendPrivateMessageNotification(PrivateMessage privateMessage, int languageId);
+        IList<int> SendPrivateMessageNotification(PrivateMessage privateMessage, int languageId);
 
         #endregion
-        
+
         #region Misc
+
+        /// <summary>
+        /// Sends 'New vendor account submitted' message to a store owner
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <param name="vendor">Vendor</param>
+        /// <param name="languageId">Message language identifier</param>
+        /// <returns>Queued email identifier</returns>
+        IList<int> SendNewVendorAccountApplyStoreOwnerNotification(Customer customer, Vendor vendor, int languageId);
+
+        /// <summary>
+        /// Sends 'Vendor information change' message to a store owner
+        /// </summary>
+        /// <param name="vendor">Vendor</param>
+        /// <param name="languageId">Message language identifier</param>
+        /// <returns>Queued email identifier</returns>
+        IList<int> SendVendorInformationChangeNotification(Vendor vendor, int languageId);
 
         /// <summary>
         /// Sends a product review notification message to a store owner
@@ -142,8 +167,15 @@ namespace Nop.Services.Messages
         /// <param name="productReview">Product review</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendProductReviewNotificationMessage(ProductReview productReview,
-            int languageId);
+        IList<int> SendProductReviewNotificationMessage(ProductReview productReview, int languageId);
+
+        /// <summary>
+        /// Sends a product review reply notification message to a customer
+        /// </summary>
+        /// <param name="productReview">Product review</param>
+        /// <param name="languageId">Message language identifier</param>
+        /// <returns>Queued email identifier</returns>
+        IList<int> SendProductReviewReplyCustomerNotificationMessage(ProductReview productReview, int languageId);
 
         /// <summary>
         /// Sends a blog comment notification message to a store owner
@@ -151,7 +183,7 @@ namespace Nop.Services.Messages
         /// <param name="blogComment">Blog comment</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendBlogCommentNotificationMessage(BlogComment blogComment, int languageId);
+        IList<int> SendBlogCommentNotificationMessage(BlogComment blogComment, int languageId);
 
         /// <summary>
         /// Sends a news comment notification message to a store owner
@@ -159,7 +191,7 @@ namespace Nop.Services.Messages
         /// <param name="newsComment">News comment</param>
         /// <param name="languageId">Message language identifier</param>
         /// <returns>Queued email identifier</returns>
-        int SendNewsCommentNotificationMessage(NewsComment newsComment, int languageId);
+        IList<int> SendNewsCommentNotificationMessage(NewsComment newsComment, int languageId);
 
         /// <summary>
         /// Sends "contact us" message
@@ -170,9 +202,20 @@ namespace Nop.Services.Messages
         /// <param name="subject">Email subject. Pass null if you want a message template subject to be used.</param>
         /// <param name="body">Email body</param>
         /// <returns>Queued email identifier</returns>
-        int SendContactUsMessage(int languageId, string senderEmail, string senderName, string subject, string body);
+        IList<int> SendContactUsMessage(int languageId, string senderEmail, string senderName, string subject, string body);
 
-       
+        /// <summary>
+        /// Sends "contact vendor" message
+        /// </summary>
+        /// <param name="vendor">Vendor</param>
+        /// <param name="languageId">Message language identifier</param>
+        /// <param name="senderEmail">Sender email</param>
+        /// <param name="senderName">Sender name</param>
+        /// <param name="subject">Email subject. Pass null if you want a message template subject to be used.</param>
+        /// <param name="body">Email body</param>
+        /// <returns>Queued email identifier</returns>
+        IList<int> SendContactVendorMessage(Vendor vendor, int languageId, string senderEmail, string senderName, string subject, string body);
+
         /// <summary>
         /// Sends a test email
         /// </summary>
@@ -200,11 +243,11 @@ namespace Nop.Services.Messages
         /// <param name="fromName">Sender name. If specified, then it overrides passed "emailAccount" details</param>
         /// <param name="subject">Subject. If specified, then it overrides subject of a message template</param>
         /// <returns>Queued email identifier</returns>
-        int SendNotification(MessageTemplate messageTemplate,
-            EmailAccount emailAccount, int languageId, IEnumerable<Token> tokens,
-            string toEmailAddress, string toName,
-            string attachmentFilePath = null, string attachmentFileName = null,
-            string replyToEmailAddress = null, string replyToName = null,
+        int SendNotification(MessageTemplate messageTemplate, 
+            EmailAccount emailAccount, int languageId, IEnumerable<Token> tokens, 
+            string toEmailAddress, string toName, 
+            string attachmentFilePath = null, string attachmentFileName = null, 
+            string replyToEmailAddress = null, string replyToName = null, 
             string fromEmail = null, string fromName = null, string subject = null);
 
         #endregion

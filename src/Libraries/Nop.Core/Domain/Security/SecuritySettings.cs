@@ -37,6 +37,7 @@ namespace Nop.Core.Domain.Security
         /// Gets or sets a value indicating whether honeypot is enabled on the registration page
         /// </summary>
         public bool HoneypotEnabled { get; set; }
+
         /// <summary>
         /// Gets or sets a honeypot input name
         /// </summary>
@@ -46,5 +47,10 @@ namespace Nop.Core.Domain.Security
         /// Get or set the blacklist of static file extension for plugin directories
         /// </summary>
         public string PluginStaticFileExtensionsBlacklist { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to allow non-ASCII characters in headers
+        /// </summary>
+        public bool AllowNonAsciiCharactersInHeaders { get; set; }
     }
 }

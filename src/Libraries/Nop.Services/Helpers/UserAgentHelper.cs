@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
-using Nop.Core;
 using Nop.Core.Configuration;
 using Nop.Core.Infrastructure;
 
@@ -16,23 +15,23 @@ namespace Nop.Services.Helpers
     {
         #region Fields
 
-        private readonly NopConfig _nopConfig;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private static readonly object _locker = new object();
+
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly INopFileProvider _fileProvider;
+        private readonly NopConfig _nopConfig;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="nopConfig">Config</param>
-        /// <param name="httpContextAccessor">HTTP context accessor</param>
-        public UserAgentHelper(NopConfig nopConfig, IHttpContextAccessor httpContextAccessor)
+        public UserAgentHelper(IHttpContextAccessor httpContextAccessor,
+            INopFileProvider fileProvider,
+            NopConfig nopConfig)
         {
-            this._nopConfig = nopConfig;
             this._httpContextAccessor = httpContextAccessor;
+            this._fileProvider = fileProvider;
+            this._nopConfig = nopConfig;
         }
 
         #endregion
@@ -60,12 +59,12 @@ namespace Nop.Services.Helpers
                 if (Singleton<BrowscapXmlHelper>.Instance != null)
                     return Singleton<BrowscapXmlHelper>.Instance;
 
-                var userAgentStringsPath = CommonHelper.MapPath(_nopConfig.UserAgentStringsPath);
+                var userAgentStringsPath = _fileProvider.MapPath(_nopConfig.UserAgentStringsPath);
                 var crawlerOnlyUserAgentStringsPath = !string.IsNullOrEmpty(_nopConfig.CrawlerOnlyUserAgentStringsPath)
-                    ? CommonHelper.MapPath(_nopConfig.CrawlerOnlyUserAgentStringsPath)
+                    ? _fileProvider.MapPath(_nopConfig.CrawlerOnlyUserAgentStringsPath)
                     : string.Empty;
 
-                var browscapXmlHelper = new BrowscapXmlHelper(userAgentStringsPath, crawlerOnlyUserAgentStringsPath);
+                var browscapXmlHelper = new BrowscapXmlHelper(userAgentStringsPath, crawlerOnlyUserAgentStringsPath, _fileProvider);
                 Singleton<BrowscapXmlHelper>.Instance = browscapXmlHelper;
 
                 return Singleton<BrowscapXmlHelper>.Instance;
@@ -82,7 +81,7 @@ namespace Nop.Services.Helpers
         /// <returns>Result</returns>
         public virtual bool IsSearchEngine()
         {
-            if (_httpContextAccessor == null || _httpContextAccessor.HttpContext == null)
+            if (_httpContextAccessor?.HttpContext == null)
                 return false;
 
             //we put required logic in try-catch block
@@ -100,6 +99,7 @@ namespace Nop.Services.Helpers
             }
             catch
             {
+                // ignored
             }
 
             return false;
@@ -111,7 +111,7 @@ namespace Nop.Services.Helpers
         /// <returns></returns>
         public virtual bool IsMobileDevice()
         {
-            if (_httpContextAccessor == null || _httpContextAccessor.HttpContext == null)
+            if (_httpContextAccessor?.HttpContext == null)
                 return false;
 
             //we put required logic in try-catch block
@@ -129,6 +129,7 @@ namespace Nop.Services.Helpers
             }
             catch
             {
+                // ignored
             }
 
             return false;
@@ -140,7 +141,7 @@ namespace Nop.Services.Helpers
         /// <returns></returns>
         public virtual bool IsIe8()
         {
-            if (_httpContextAccessor == null || _httpContextAccessor.HttpContext == null)
+            if (_httpContextAccessor?.HttpContext == null)
                 return false;
 
             //https://blogs.msdn.microsoft.com/ie/2009/01/09/the-internet-explorer-8-user-agent-string-updated-edition/
@@ -148,7 +149,7 @@ namespace Nop.Services.Helpers
             var userAgent = _httpContextAccessor.HttpContext.Request.Headers[HeaderNames.UserAgent].ToString();
             return !string.IsNullOrEmpty(userAgent) && userAgent.IndexOf("MSIE 8.0", StringComparison.InvariantCultureIgnoreCase) >= 0;
         }
-        
+
         #endregion
     }
 }

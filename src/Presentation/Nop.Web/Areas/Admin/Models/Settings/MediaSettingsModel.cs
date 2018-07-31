@@ -1,10 +1,15 @@
 ﻿using Nop.Web.Framework.Mvc.ModelBinding;
-using Nop.Web.Framework.Mvc.Models;
+using Nop.Web.Framework.Models;
 
 namespace Nop.Web.Areas.Admin.Models.Settings
 {
-    public partial class MediaSettingsModel : BaseNopModel
+    /// <summary>
+    /// Represents a media settings model
+    /// </summary>
+    public partial class MediaSettingsModel : BaseNopModel, ISettingsModel
     {
+        #region Properties
+
         public int ActiveStoreScopeConfiguration { get; set; }
 
         [NopResourceDisplayName("Admin.Configuration.Settings.Media.PicturesStoredIntoDatabase")]
@@ -18,10 +23,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
         public int ProductThumbPictureSize { get; set; }
         public bool ProductThumbPictureSize_OverrideForStore { get; set; }
 
-        [NopResourceDisplayName("Admin.Configuration.Settings.Media.AssociatedProductPictureSize")]
-        public int AssociatedProductPictureSize { get; set; }
-        public bool AssociatedProductPictureSize_OverrideForStore { get; set; }
-
         [NopResourceDisplayName("Admin.Configuration.Settings.Media.ProductDetailsPictureSize")]
         public int ProductDetailsPictureSize { get; set; }
         public bool ProductDetailsPictureSize_OverrideForStore { get; set; }
@@ -30,9 +31,17 @@ namespace Nop.Web.Areas.Admin.Models.Settings
         public int ProductThumbPictureSizeOnProductDetailsPage { get; set; }
         public bool ProductThumbPictureSizeOnProductDetailsPage_OverrideForStore { get; set; }
 
+        [NopResourceDisplayName("Admin.Configuration.Settings.Media.AssociatedProductPictureSize")]
+        public int AssociatedProductPictureSize { get; set; }
+        public bool AssociatedProductPictureSize_OverrideForStore { get; set; }
+
         [NopResourceDisplayName("Admin.Configuration.Settings.Media.CategoryThumbPictureSize")]
         public int CategoryThumbPictureSize { get; set; }
         public bool CategoryThumbPictureSize_OverrideForStore { get; set; }
+
+        [NopResourceDisplayName("Admin.Configuration.Settings.Media.VendorThumbPictureSize")]
+        public int VendorThumbPictureSize { get; set; }
+        public bool VendorThumbPictureSize_OverrideForStore { get; set; }
 
         [NopResourceDisplayName("Admin.Configuration.Settings.Media.MaximumImageSize")]
         public int MaximumImageSize { get; set; }
@@ -53,5 +62,7 @@ namespace Nop.Web.Areas.Admin.Models.Settings
         [NopResourceDisplayName("Admin.Configuration.Settings.Media.DefaultPictureZoomEnabled")]
         public bool DefaultPictureZoomEnabled { get; set; }
         public bool DefaultPictureZoomEnabled_OverrideForStore { get; set; }
+
+        #endregion
     }
 }

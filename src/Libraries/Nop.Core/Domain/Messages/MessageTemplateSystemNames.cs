@@ -55,6 +55,11 @@ namespace Nop.Core.Domain.Messages
         /// </summary>
         public const string EmailAFriendMessage = "Service.EmailAFriend";
 
+        /// <summary>
+        /// Represents system name of 'Email a friend' message with wishlist
+        /// </summary>
+        public const string WishlistToFriendMessage = "Wishlist.EmailAFriend";
+
         #endregion
 
         #region Forum
@@ -77,11 +82,26 @@ namespace Nop.Core.Domain.Messages
         #endregion
 
         #region Misc
+        
+        /// <summary>
+        /// Represents system name of notification store owner about applying new vendor account
+        /// </summary>
+        public const string NewVendorAccountApplyStoreOwnerNotification = "VendorAccountApply.StoreOwnerNotification";
+
+        /// <summary>
+        /// Represents system name of notification vendor about changing information
+        /// </summary>
+        public const string VendorInformationChangeNotification = "VendorInformationChange.StoreOwnerNotification";
 
         /// <summary>
         /// Represents system name of notification store owner about new product review
         /// </summary>
-        public const string ProductReviewNotification = "Product.ProductReview";
+        public const string ProductReviewStoreOwnerNotification = "Product.ProductReview";
+
+        /// <summary>
+        /// Represents system name of notification customer about product review reply
+        /// </summary>
+        public const string ProductReviewReplyCustomerNotification = "ProductReview.Reply.CustomerNotification";
 
         /// <summary>
         /// Represents system name of notification store owner about new blog comment
@@ -94,10 +114,20 @@ namespace Nop.Core.Domain.Messages
         public const string NewsCommentNotification = "News.NewsComment";
 
         /// <summary>
+        /// Represents system name of notification customer about product receipt
+        /// </summary>
+        public const string BackInStockNotification = "Customer.BackInStock";
+
+        /// <summary>
         /// Represents system name of 'Contact us' message
         /// </summary>
         public const string ContactUsMessage = "Service.ContactUs";
-       
+
+        /// <summary>
+        /// Represents system name of 'Contact vendor' message
+        /// </summary>
+        public const string ContactVendorMessage = "Service.ContactVendor";
+
         #endregion
     }
 }

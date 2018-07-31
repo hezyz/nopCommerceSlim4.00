@@ -1,4 +1,4 @@
-﻿@model ProductModel
+@model ProductModel
 
 @{
     //page title
@@ -37,15 +37,18 @@
                 <i class="fa fa-trash-o"></i>
                 @T("Admin.Common.Delete")
             </span>
-            @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_details_buttons", additionalData = Model.Id })
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsButtons, additionalData = Model })
         </div>
     </div>
     @await Html.PartialAsync("_CreateOrUpdate", Model)
 </form>
 <nop-delete-confirmation asp-model-id="@Model.Id" asp-button-id="product-delete" />
 
-@await Html.PartialAsync("_ProductEditorSettingsModal", Model)
-
+@if (!Model.IsLoggedInAsVendor)
+{
+    //product editor settings modal
+    @await Html.PartialAsync("_ProductEditorSettingsModal", Model)
+}
 
 @*copy product form*@
 <div id="copyproduct-window" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="copyproduct-window-title">

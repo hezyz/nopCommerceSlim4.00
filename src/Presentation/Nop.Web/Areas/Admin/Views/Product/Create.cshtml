@@ -1,4 +1,4 @@
-﻿@model ProductModel
+@model ProductModel
 
 @{
     //page title
@@ -25,10 +25,13 @@
                 <i class="fa fa-floppy-o"></i>
                 @T("Admin.Common.SaveContinue")
             </button>
-            @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_details_buttons" })
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsButtons })
         </div>
     </div>
     @await Html.PartialAsync("_CreateOrUpdate", Model)
 </form>
-
+@if (!Model.IsLoggedInAsVendor)
+{
+    //product editor settings modal
     @await Html.PartialAsync("_ProductEditorSettingsModal", Model)
+}

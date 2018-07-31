@@ -1,6 +1,13 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Moq;
+using Nop.Core.Caching;
+using Nop.Core.Data;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
+using Nop.Services.Common;
+using Nop.Services.Customers;
+using Nop.Services.Events;
 using Nop.Tests;
 using NUnit.Framework;
 
@@ -12,45 +19,28 @@ namespace Nop.Core.Tests.Domain.Customers
         [Test]
         public void Can_check_IsInCustomerRole()
         {
-            var customer = new Customer
-            {
-                /*CustomerRoles = new List<CustomerRole>()
-                {
-                    new CustomerRole()
-                    {
-                        Active = true,
-                        Name = "Test name 1",
-                        SystemName = "Test system name 1",
-                    },
-                    new CustomerRole()
-                    {
-                        Active = false,
-                        Name = "Test name 2",
-                        SystemName = "Test system name 2",
-                    },
-                }*/
-            };
+            var customer = new Customer();
 
             customer.CustomerRoles.Add(new CustomerRole
             {
                 Active = true,
                 Name = "Test name 1",
-                SystemName = "Test system name 1",
+                SystemName = "Test system name 1"
             });
             customer.CustomerRoles.Add(new CustomerRole
             {
                 Active = false,
                 Name = "Test name 2",
-                SystemName = "Test system name 2",
+                SystemName = "Test system name 2"
             });
             customer.IsInCustomerRole("Test system name 1", false).ShouldBeTrue();
-            customer.IsInCustomerRole("Test system name 1", true).ShouldBeTrue();
+            customer.IsInCustomerRole("Test system name 1").ShouldBeTrue();
 
             customer.IsInCustomerRole("Test system name 2", false).ShouldBeTrue();
-            customer.IsInCustomerRole("Test system name 2", true).ShouldBeFalse();
+            customer.IsInCustomerRole("Test system name 2").ShouldBeFalse();
 
             customer.IsInCustomerRole("Test system name 3", false).ShouldBeFalse();
-            customer.IsInCustomerRole("Test system name 3", true).ShouldBeFalse();
+            customer.IsInCustomerRole("Test system name 3").ShouldBeFalse();
         }
         [Test]
         public void Can_check_whether_customer_is_admin()
@@ -61,13 +51,13 @@ namespace Nop.Core.Tests.Domain.Customers
             {
                 Active = true,
                 Name = "Registered",
-                SystemName = SystemCustomerRoleNames.Registered
+                SystemName = NopCustomerDefaults.RegisteredRoleName
             });
             customer.CustomerRoles.Add(new CustomerRole
             {
                 Active = true,
                 Name = "Guests",
-                SystemName = SystemCustomerRoleNames.Guests
+                SystemName = NopCustomerDefaults.GuestsRoleName
             });
 
             customer.IsAdmin().ShouldBeFalse();
@@ -77,26 +67,26 @@ namespace Nop.Core.Tests.Domain.Customers
                 {
                     Active = true,
                     Name = "Administrators",
-                    SystemName = SystemCustomerRoleNames.Administrators
+                    SystemName = NopCustomerDefaults.AdministratorsRoleName
                 });
             customer.IsAdmin().ShouldBeTrue();
         }
         [Test]
         public void Can_check_whether_customer_is_forum_moderator()
         {
-            var customer = new Customer();
+            var customer = new TestCustomer();
 
             customer.CustomerRoles.Add(new CustomerRole
             {
                 Active = true,
                 Name = "Registered",
-                SystemName = SystemCustomerRoleNames.Registered
+                SystemName = NopCustomerDefaults.RegisteredRoleName
             });
             customer.CustomerRoles.Add(new CustomerRole
             {
                 Active = true,
                 Name = "Guests",
-                SystemName = SystemCustomerRoleNames.Guests
+                SystemName = NopCustomerDefaults.GuestsRoleName
             });
 
             customer.IsForumModerator().ShouldBeFalse();
@@ -106,7 +96,7 @@ namespace Nop.Core.Tests.Domain.Customers
                 {
                     Active = true,
                     Name = "ForumModerators",
-                    SystemName = SystemCustomerRoleNames.ForumModerators
+                    SystemName = NopCustomerDefaults.ForumModeratorsRoleName
                 });
             customer.IsForumModerator().ShouldBeTrue();
         }
@@ -119,14 +109,14 @@ namespace Nop.Core.Tests.Domain.Customers
             {
                 Active = true,
                 Name = "Registered",
-                SystemName = SystemCustomerRoleNames.Registered
+                SystemName = NopCustomerDefaults.RegisteredRoleName
             });
 
             customer.CustomerRoles.Add(new CustomerRole
             {
                 Active = true,
                 Name = "Administrators",
-                SystemName = SystemCustomerRoleNames.Administrators
+                SystemName = NopCustomerDefaults.AdministratorsRoleName
             });
 
             customer.IsGuest().ShouldBeFalse();
@@ -136,7 +126,7 @@ namespace Nop.Core.Tests.Domain.Customers
                 {
                     Active = true,
                     Name = "Guests",
-                    SystemName = SystemCustomerRoleNames.Guests
+                    SystemName = NopCustomerDefaults.GuestsRoleName
 
                 }
                 );
@@ -150,14 +140,14 @@ namespace Nop.Core.Tests.Domain.Customers
             {
                 Active = true,
                 Name = "Administrators",
-                SystemName = SystemCustomerRoleNames.Administrators
+                SystemName = NopCustomerDefaults.AdministratorsRoleName
             });
 
             customer.CustomerRoles.Add(new CustomerRole
             {
                 Active = true,
                 Name = "Guests",
-                SystemName = SystemCustomerRoleNames.Guests
+                SystemName = NopCustomerDefaults.GuestsRoleName
             });
 
             customer.IsRegistered().ShouldBeFalse();
@@ -167,35 +157,44 @@ namespace Nop.Core.Tests.Domain.Customers
                 {
                     Active = true,
                     Name = "Registered",
-                    SystemName = SystemCustomerRoleNames.Registered
+                    SystemName = NopCustomerDefaults.RegisteredRoleName
                 });
             customer.IsRegistered().ShouldBeTrue();
         }
-
-        [Test]
-        public void Can_add_address()
-        {
-            var customer = new Customer();
-            var address = new Address { Id = 1 };
-
-            customer.Addresses.Add(address);
-
-            customer.Addresses.Count.ShouldEqual(1);
-            customer.Addresses.First().Id.ShouldEqual(1);
-        }
-        
+       
         [Test]
         public void Can_remove_address_assigned_as_billing_address()
         {
-            var customer = new Customer();
+            var _customerRepo = new Mock<IRepository<Customer>>();
+            var _customerCustomerRoleMappingRepo = new Mock<IRepository<CustomerCustomerRoleMapping>>();
+            var _customerPasswordRepo = new Mock<IRepository<CustomerPassword>>();
+            var _genericAttributeRepo = new Mock<IRepository<GenericAttribute>>();
+            var _genericAttributeService = new Mock<IGenericAttributeService>();
+            var _eventPublisher = new Mock<IEventPublisher>();
+            var _customerRoleRepo = new Mock<IRepository<CustomerRole>>();
+
+            var _customerService = new CustomerService(new CustomerSettings(), 
+                new NopNullCache(), 
+                null,
+                null,
+                _eventPublisher.Object,
+                _genericAttributeService.Object,
+                _customerRepo.Object,
+                _customerCustomerRoleMappingRepo.Object,
+                _customerPasswordRepo.Object,
+                _customerRoleRepo.Object,
+                _genericAttributeRepo.Object,
+                null);
+
+            var customer = new TestCustomer();
             var address = new Address { Id = 1 };
 
-            customer.Addresses.Add(address);
+            customer.AddAddresses(address);
             customer.BillingAddress  = address;
 
             customer.BillingAddress.ShouldBeTheSameAs(customer.Addresses.First());
 
-            customer.RemoveAddress(address);
+            _customerService.RemoveCustomerAddress(customer, address);
             customer.Addresses.Count.ShouldEqual(0);
             customer.BillingAddress.ShouldBeNull();
         }
@@ -221,6 +220,19 @@ namespace Nop.Core.Tests.Domain.Customers
             //customer.AddRewardPointsHistoryEntry(1, 0, "Points for registration");
 
             //customer.GetRewardPointsBalance(0).ShouldEqual(1);
+        }
+
+        class TestCustomer : Customer
+        {
+            public TestCustomer()
+            {
+                _customerAddressMappings = new List<CustomerAddressMapping>();
+            }
+
+            public void AddAddresses(Address address)
+            {
+                _customerAddressMappings.Add(new CustomerAddressMapping{Address = address, AddressId = address.Id});
+            }
         }
     }
 }

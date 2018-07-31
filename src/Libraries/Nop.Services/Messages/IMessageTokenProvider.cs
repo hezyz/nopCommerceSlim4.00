@@ -5,6 +5,7 @@ using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.Messages;
 using Nop.Core.Domain.News;
 using Nop.Core.Domain.Stores;
+using Nop.Core.Domain.Vendors;
 using System.Collections.Generic;
 
 namespace Nop.Services.Messages
@@ -28,6 +29,13 @@ namespace Nop.Services.Messages
         /// <param name="tokens">List of already added tokens</param>
         /// <param name="customer">Customer</param>
         void AddCustomerTokens(IList<Token> tokens, Customer customer);
+
+        /// <summary>
+        /// Add vendor tokens
+        /// </summary>
+        /// <param name="tokens">List of already added tokens</param>
+        /// <param name="vendor">Vendor</param>
+        void AddVendorTokens(IList<Token> tokens, Vendor vendor);
 
         /// <summary>
         /// Add newsletter subscription tokens
@@ -108,5 +116,12 @@ namespace Nop.Services.Messages
         /// <param name="tokenGroups">Collection of token groups; pass null to get all available tokens</param>
         /// <returns>Collection of allowed message tokens</returns>
         IEnumerable<string> GetListOfAllowedTokens(IEnumerable<string> tokenGroups = null);
+
+        /// <summary>
+        /// Get token groups of message template
+        /// </summary>
+        /// <param name="messageTemplate">Message template</param>
+        /// <returns>Collection of token group names</returns>
+        IEnumerable<string> GetTokenGroups(MessageTemplate messageTemplate);
     }
 }

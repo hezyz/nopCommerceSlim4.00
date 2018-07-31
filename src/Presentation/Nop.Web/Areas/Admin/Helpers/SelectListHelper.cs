@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
-using Nop.Core.Caching;
-using Nop.Services.Catalog;
-using Nop.Web.Areas.Admin.Infrastructure.Cache;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Nop.Web.Areas.Admin.Infrastructure.Cache;
+using Nop.Core.Caching;
+using Nop.Services.Catalog;
+using Nop.Services.Vendors;
 
 namespace Nop.Web.Areas.Admin.Helpers
 {
@@ -34,7 +35,7 @@ namespace Nop.Web.Areas.Admin.Helpers
                 var categories = categoryService.GetAllCategories(showHidden: showHidden);
                 return categories.Select(c => new SelectListItem
                 {
-                    Text = c.GetFormattedBreadCrumb(categories),
+                    Text = categoryService.GetFormattedBreadCrumb(c, categories),
                     Value = c.Id.ToString()
                 });
             });
@@ -53,5 +54,44 @@ namespace Nop.Web.Areas.Admin.Helpers
             return result;
         }
 
+        /// <summary>
+        /// Get vendor list
+        /// </summary>
+        /// <param name="vendorService">Vendor service</param>
+        /// <param name="cacheManager">Cache manager</param>
+        /// <param name="showHidden">A value indicating whether to show hidden records</param>
+        /// <returns>Vendor list</returns>
+        public static List<SelectListItem> GetVendorList(IVendorService vendorService, ICacheManager cacheManager, bool showHidden = false)
+        {
+            if (vendorService == null)
+                throw new ArgumentNullException(nameof(vendorService));
+
+            if (cacheManager == null)
+                throw new ArgumentNullException(nameof(cacheManager));
+
+            var cacheKey = string.Format(ModelCacheEventConsumer.VENDORS_LIST_KEY, showHidden);
+            var listItems = cacheManager.Get(cacheKey, () =>
+            {
+                var vendors = vendorService.GetAllVendors(showHidden: showHidden);
+                return vendors.Select(v => new SelectListItem
+                {
+                    Text = v.Name,
+                    Value = v.Id.ToString()
+                });
+            });
+
+            var result = new List<SelectListItem>();
+            //clone the list to ensure that "selected" property is not set
+            foreach (var item in listItems)
+            {
+                result.Add(new SelectListItem
+                {
+                    Text = item.Text,
+                    Value = item.Value
+                });
+            }
+
+            return result;
+        }
     }
 }

@@ -21,36 +21,36 @@ namespace Nop.Web.Controllers
     {
         #region Fields
 
-        private readonly IPrivateMessagesModelFactory _privateMessagesModelFactory;
-        private readonly IForumService _forumService;
-        private readonly ICustomerService _customerService;
-        private readonly ICustomerActivityService _customerActivityService;
-        private readonly ILocalizationService _localizationService;
-        private readonly IWorkContext _workContext;
-        private readonly IStoreContext _storeContext;
         private readonly ForumSettings _forumSettings;
+        private readonly ICustomerActivityService _customerActivityService;
+        private readonly ICustomerService _customerService;
+        private readonly IForumService _forumService;
+        private readonly ILocalizationService _localizationService;
+        private readonly IPrivateMessagesModelFactory _privateMessagesModelFactory;
+        private readonly IStoreContext _storeContext;
+        private readonly IWorkContext _workContext;
 
         #endregion
 
         #region Ctor
 
-        public PrivateMessagesController(IPrivateMessagesModelFactory privateMessagesModelFactory,
-            IForumService forumService,
-            ICustomerService customerService,
+        public PrivateMessagesController(ForumSettings forumSettings,
             ICustomerActivityService customerActivityService,
+            ICustomerService customerService,
+            IForumService forumService,
             ILocalizationService localizationService,
-            IWorkContext workContext, 
+            IPrivateMessagesModelFactory privateMessagesModelFactory,
             IStoreContext storeContext,
-            ForumSettings forumSettings)
+            IWorkContext workContext)
         {
-            this._privateMessagesModelFactory = privateMessagesModelFactory;
-            this._forumService = forumService;
-            this._customerService = customerService;
-            this._customerActivityService = customerActivityService;
-            this._localizationService = localizationService;
-            this._workContext = workContext;
-            this._storeContext = storeContext;
             this._forumSettings = forumSettings;
+            this._customerActivityService = customerActivityService;
+            this._customerService = customerService;
+            this._forumService = forumService;
+            this._localizationService = localizationService;
+            this._privateMessagesModelFactory = privateMessagesModelFactory;
+            this._storeContext = storeContext;
+            this._workContext = workContext;
         }
 
         #endregion
@@ -257,7 +257,8 @@ namespace Nop.Web.Controllers
                     _forumService.InsertPrivateMessage(privateMessage);
 
                     //activity log
-                    _customerActivityService.InsertActivity("PublicStore.SendPM", _localizationService.GetResource("ActivityLog.PublicStore.SendPM"), toCustomer.Email);
+                    _customerActivityService.InsertActivity("PublicStore.SendPM",
+                        string.Format(_localizationService.GetResource("ActivityLog.PublicStore.SendPM"), toCustomer.Email), toCustomer);
 
                     return RedirectToRoute("PrivateMessages", new { tab = "sent" });
                 }

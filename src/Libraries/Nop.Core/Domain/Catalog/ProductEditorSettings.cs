@@ -28,9 +28,14 @@ namespace Nop.Core.Domain.Catalog
         public bool ProductTemplate { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether 'Admin comment' feild is shown
+        /// Gets or sets a value indicating whether 'Admin comment' field is shown
         /// </summary>
         public bool AdminComment { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether 'Vendor' field is shown
+        /// </summary>
+        public bool Vendor { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether 'Stores' field is shown
@@ -61,6 +66,11 @@ namespace Nop.Core.Domain.Catalog
         /// Gets or sets a value indicating whether 'Product tags' field is shown
         /// </summary>
         public bool ProductTags { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether 'PAngV' field is shown
+        /// </summary>
+        public bool PAngV { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether 'Mark as new' field is shown

@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Http;
 using Nop.Core.Data;
 using Nop.Core.Domain.Media;
 using Nop.Services.Events;
 using System;
+using System.IO;
 using System.Linq;
 
 namespace Nop.Services.Media
@@ -13,23 +15,18 @@ namespace Nop.Services.Media
     {
         #region Fields
 
-        private readonly IRepository<Download> _downloadRepository;
         private readonly IEventPublisher _eventPubisher;
+        private readonly IRepository<Download> _downloadRepository;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="downloadRepository">Download repository</param>
-        /// <param name="eventPubisher"></param>
-        public DownloadService(IRepository<Download> downloadRepository,
-            IEventPublisher eventPubisher)
+        public DownloadService(IEventPublisher eventPubisher,
+            IRepository<Download> downloadRepository)
         {
-            _downloadRepository = downloadRepository;
             _eventPubisher = eventPubisher;
+            _downloadRepository = downloadRepository;
         }
 
         #endregion
@@ -45,7 +42,7 @@ namespace Nop.Services.Media
         {
             if (downloadId == 0)
                 return null;
-            
+
             return _downloadRepository.GetById(downloadId);
         }
 
@@ -107,6 +104,25 @@ namespace Nop.Services.Media
 
             _eventPubisher.EntityUpdated(download);
         }
+
+        /// <summary>
+        /// Gets the download binary array
+        /// </summary>
+        /// <param name="file">File</param>
+        /// <returns>Download binary array</returns>
+        public virtual byte[] GetDownloadBits(IFormFile file)
+        {
+            using (var fileStream = file.OpenReadStream())
+            {
+                using (var ms = new MemoryStream())
+                {
+                    fileStream.CopyTo(ms);
+                    var fileBytes = ms.ToArray();
+                    return fileBytes;
+                }
+            }
+        }
+
         #endregion
     }
 }

@@ -5,10 +5,13 @@ using Nop.Core.Domain;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Localization;
+using Nop.Core.Domain.Security;
+using Nop.Core.Domain.Vendors;
 using Nop.Services.Common;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Messages;
+using Nop.Services.Vendors;
 using Nop.Web.Factories;
 using Nop.Web.Framework.Localization;
 using Nop.Web.Framework.Mvc.Filters;
@@ -24,56 +27,60 @@ namespace Nop.Web.Controllers
     {
         #region Fields
 
+        private readonly CaptchaSettings _captchaSettings;
+        private readonly CommonSettings _commonSettings;
         private readonly ICommonModelFactory _commonModelFactory;
+        private readonly ICustomerActivityService _customerActivityService;
+        private readonly IGenericAttributeService _genericAttributeService;
         private readonly ILanguageService _languageService;
         private readonly ILocalizationService _localizationService;
-        private readonly IWorkContext _workContext;
+        private readonly ILogger _logger;
         private readonly IStoreContext _storeContext;
         private readonly IThemeContext _themeContext;
-        private readonly IGenericAttributeService _genericAttributeService;
-        private readonly ICustomerActivityService _customerActivityService;
+        private readonly IVendorService _vendorService;
+        private readonly IWorkContext _workContext;
         private readonly IWorkflowMessageService _workflowMessageService;
-        private readonly ILogger _logger;
-        
-        private readonly StoreInformationSettings _storeInformationSettings;
-        private readonly CommonSettings _commonSettings;
         private readonly LocalizationSettings _localizationSettings;
-        private readonly CaptchaSettings _captchaSettings;
+        private readonly StoreInformationSettings _storeInformationSettings;
+        private readonly VendorSettings _vendorSettings;
         
         #endregion
         
         #region Ctor
 
-        public CommonController(ICommonModelFactory commonModelFactory,
+        public CommonController(CaptchaSettings captchaSettings,
+            CommonSettings commonSettings,
+            ICommonModelFactory commonModelFactory,
+            ICustomerActivityService customerActivityService,
+            IGenericAttributeService genericAttributeService,
             ILanguageService languageService,
             ILocalizationService localizationService,
-            IWorkContext workContext,
+            ILogger logger,
             IStoreContext storeContext,
             IThemeContext themeContext,
-            IGenericAttributeService genericAttributeService,
-            ICustomerActivityService customerActivityService,
+            IVendorService vendorService,
+            IWorkContext workContext,
             IWorkflowMessageService workflowMessageService,
-            ILogger logger,
-            StoreInformationSettings storeInformationSettings,
-            CommonSettings commonSettings,
             LocalizationSettings localizationSettings,
-            CaptchaSettings captchaSettings
-            )
+            StoreInformationSettings storeInformationSettings,
+            VendorSettings vendorSettings)
         {
+            this._captchaSettings = captchaSettings;
+            this._commonSettings = commonSettings;
             this._commonModelFactory = commonModelFactory;
+            this._customerActivityService = customerActivityService;
+            this._genericAttributeService = genericAttributeService;
             this._languageService = languageService;
             this._localizationService = localizationService;
-            this._workContext = workContext;
+            this._logger = logger;
             this._storeContext = storeContext;
             this._themeContext = themeContext;
-            this._genericAttributeService = genericAttributeService;
-            this._customerActivityService = customerActivityService;
+            this._vendorService = vendorService;
+            this._workContext = workContext;
             this._workflowMessageService = workflowMessageService;
-            this._logger = logger;
-            this._storeInformationSettings = storeInformationSettings;
-            this._commonSettings = commonSettings;
             this._localizationSettings = localizationSettings;
-            this._captchaSettings = captchaSettings;
+            this._storeInformationSettings = storeInformationSettings;
+            this._vendorSettings = vendorSettings;
         }
 
         #endregion
@@ -131,21 +138,6 @@ namespace Nop.Web.Controllers
             return Redirect(returnUrl);
         }
 
-        //available even when navigation is not allowed
-        [CheckAccessPublicStore(true)]
-        public virtual IActionResult SetCurrency(int customerCurrency, string returnUrl = "")
-        {
-            //home page
-            if (string.IsNullOrEmpty(returnUrl))
-                returnUrl = Url.RouteUrl("HomePage");
-
-            //prevent open redirection attack
-            if (!Url.IsLocalUrl(returnUrl))
-                returnUrl = Url.RouteUrl("HomePage");
-
-            return Redirect(returnUrl);
-        }
-        
         //contact us page
         [HttpsRequirement(SslRequirement.Yes)]
         //available even when a store is closed
@@ -184,7 +176,61 @@ namespace Nop.Web.Controllers
                 model.Result = _localizationService.GetResource("ContactUs.YourEnquiryHasBeenSent");
 
                 //activity log
-                _customerActivityService.InsertActivity("PublicStore.ContactUs", _localizationService.GetResource("ActivityLog.PublicStore.ContactUs"));
+                _customerActivityService.InsertActivity("PublicStore.ContactUs", 
+                    _localizationService.GetResource("ActivityLog.PublicStore.ContactUs"));
+
+                return View(model);
+            }
+
+            return View(model);
+        }
+
+        //contact vendor page
+        [HttpsRequirement(SslRequirement.Yes)]
+        public virtual IActionResult ContactVendor(int vendorId)
+        {
+            if (!_vendorSettings.AllowCustomersToContactVendors)
+                return RedirectToRoute("HomePage");
+
+            var vendor = _vendorService.GetVendorById(vendorId);
+            if (vendor == null || !vendor.Active || vendor.Deleted)
+                return RedirectToRoute("HomePage");
+
+            var model = new ContactVendorModel();
+            model = _commonModelFactory.PrepareContactVendorModel(model, vendor, false);
+            return View(model);
+        }
+
+        [HttpPost, ActionName("ContactVendor")]
+        [PublicAntiForgery]
+        [ValidateCaptcha]
+        public virtual IActionResult ContactVendorSend(ContactVendorModel model, bool captchaValid)
+        {
+            if (!_vendorSettings.AllowCustomersToContactVendors)
+                return RedirectToRoute("HomePage");
+
+            var vendor = _vendorService.GetVendorById(model.VendorId);
+            if (vendor == null || !vendor.Active || vendor.Deleted)
+                return RedirectToRoute("HomePage");
+
+            //validate CAPTCHA
+            if (_captchaSettings.Enabled && _captchaSettings.ShowOnContactUsPage && !captchaValid)
+            {
+                ModelState.AddModelError("", _captchaSettings.GetWrongCaptchaMessage(_localizationService));
+            }
+
+            model = _commonModelFactory.PrepareContactVendorModel(model, vendor, true);
+
+            if (ModelState.IsValid)
+            {
+                var subject = _commonSettings.SubjectFieldOnContactUsForm ? model.Subject : null;
+                var body = Core.Html.HtmlHelper.FormatText(model.Enquiry, false, true, false, false, false, false);
+
+                _workflowMessageService.SendContactVendorMessage(vendor, _workContext.WorkingLanguage.Id,
+                    model.Email.Trim(), model.FullName, subject, body);
+
+                model.SuccessfullySent = true;
+                model.Result = _localizationService.GetResource("ContactVendor.YourEnquiryHasBeenSent");
 
                 return View(model);
             }
@@ -194,12 +240,12 @@ namespace Nop.Web.Controllers
 
         //sitemap page
         [HttpsRequirement(SslRequirement.No)]
-        public virtual IActionResult Sitemap()
+        public virtual IActionResult Sitemap(SitemapPageModel pageModel)
         {
             if (!_commonSettings.SitemapEnabled)
                 return RedirectToRoute("HomePage");
 
-            var model = _commonModelFactory.PrepareSitemapModel();
+            var model = _commonModelFactory.PrepareSitemapModel(pageModel);
             return View(model);
         }
 
@@ -243,7 +289,7 @@ namespace Nop.Web.Controllers
                 return Json(new { stored = false });
 
             //save setting
-            _genericAttributeService.SaveAttribute(_workContext.CurrentCustomer, SystemCustomerAttributeNames.EuCookieLawAccepted, true, _storeContext.CurrentStore.Id);
+            _genericAttributeService.SaveAttribute(_workContext.CurrentCustomer, NopCustomerDefaults.EuCookieLawAcceptedAttribute, true, _storeContext.CurrentStore.Id);
             return Json(new { stored = true });
         }
 

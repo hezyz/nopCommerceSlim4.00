@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Web.Framework.Mvc.ModelBinding;
-using Nop.Web.Framework.Mvc.Models;
+using Nop.Web.Framework.Models;
 
 namespace Nop.Web.Models.Catalog
 {
@@ -13,6 +13,7 @@ namespace Nop.Web.Models.Catalog
             this.Products = new List<ProductOverviewModel>();
 
             this.AvailableCategories = new List<SelectListItem>();
+            this.AvailableVendors = new List<SelectListItem>();
         }
 
         public string Warning { get; set; }
@@ -35,6 +36,12 @@ namespace Nop.Web.Models.Catalog
         public bool isc { get; set; }
 
         /// <summary>
+        /// Vendor ID
+        /// </summary>
+        [NopResourceDisplayName("Search.Vendor")]
+        public int vid { get; set; }
+
+        /// <summary>
         /// A value indicating whether to search in descriptions
         /// </summary>
         [NopResourceDisplayName("Search.SearchInDescriptions")]
@@ -46,8 +53,13 @@ namespace Nop.Web.Models.Catalog
         [NopResourceDisplayName("Search.AdvancedSearch")]
         public bool adv { get; set; }
 
+        /// <summary>
+        /// A value indicating whether "allow search by vendor" is enabled
+        /// </summary>
+        public bool asv { get; set; }
 
         public IList<SelectListItem> AvailableCategories { get; set; }
+        public IList<SelectListItem> AvailableVendors { get; set; }
 
 
         public CatalogPagingFilteringModel PagingFilteringContext { get; set; }

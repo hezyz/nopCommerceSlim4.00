@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Nop.Core.Caching;
 using Nop.Core.Data;
@@ -13,61 +14,35 @@ namespace Nop.Services.Common
     /// </summary>
     public partial class AddressService : IAddressService
     {
-        #region Constants
-
-        /// <summary>
-        /// Key for caching
-        /// </summary>
-        /// <remarks>
-        /// {0} : address ID
-        /// </remarks>
-        private const string ADDRESSES_BY_ID_KEY = "Nop.address.id-{0}";
-        /// <summary>
-        /// Key pattern to clear cache
-        /// </summary>
-        private const string ADDRESSES_PATTERN_KEY = "Nop.address.";
-
-        #endregion
-
         #region Fields
 
-        private readonly IRepository<Address> _addressRepository;
-        private readonly ICountryService _countryService;
-        private readonly IStateProvinceService _stateProvinceService;
-        private readonly IAddressAttributeService _addressAttributeService;
-        private readonly IEventPublisher _eventPublisher;
         private readonly AddressSettings _addressSettings;
+        private readonly IAddressAttributeService _addressAttributeService;
         private readonly ICacheManager _cacheManager;
+        private readonly ICountryService _countryService;
+        private readonly IEventPublisher _eventPublisher;
+        private readonly IRepository<Address> _addressRepository;
+        private readonly IStateProvinceService _stateProvinceService;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="cacheManager">Cache manager</param>
-        /// <param name="addressRepository">Address repository</param>
-        /// <param name="countryService">Country service</param>
-        /// <param name="stateProvinceService">State/province service</param>
-        /// <param name="addressAttributeService">Address attribute service</param>
-        /// <param name="eventPublisher">Event publisher</param>
-        /// <param name="addressSettings">Address settings</param>
-        public AddressService(ICacheManager cacheManager,
-            IRepository<Address> addressRepository,
-            ICountryService countryService, 
-            IStateProvinceService stateProvinceService,
+        public AddressService(AddressSettings addressSettings,
             IAddressAttributeService addressAttributeService,
-            IEventPublisher eventPublisher, 
-            AddressSettings addressSettings)
+            ICacheManager cacheManager,
+            ICountryService countryService,
+            IEventPublisher eventPublisher,
+            IRepository<Address> addressRepository,
+            IStateProvinceService stateProvinceService)
         {
-            this._cacheManager = cacheManager;
-            this._addressRepository = addressRepository;
-            this._countryService = countryService;
-            this._stateProvinceService = stateProvinceService;
-            this._addressAttributeService = addressAttributeService;
-            this._eventPublisher = eventPublisher;
             this._addressSettings = addressSettings;
+            this._addressAttributeService = addressAttributeService;
+            this._cacheManager = cacheManager;
+            this._countryService = countryService;
+            this._eventPublisher = eventPublisher;
+            this._addressRepository = addressRepository;
+            this._stateProvinceService = stateProvinceService;
         }
 
         #endregion
@@ -86,7 +61,7 @@ namespace Nop.Services.Common
             _addressRepository.Delete(address);
 
             //cache
-            _cacheManager.RemoveByPattern(ADDRESSES_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopCommonDefaults.AddressesPatternCacheKey);
 
             //event notification
             _eventPublisher.EntityDeleted(address);
@@ -134,7 +109,7 @@ namespace Nop.Services.Common
             if (addressId == 0)
                 return null;
 
-            var key = string.Format(ADDRESSES_BY_ID_KEY, addressId);
+            var key = string.Format(NopCommonDefaults.AddressesByIdCacheKey, addressId);
             return _cacheManager.Get(key, () => _addressRepository.GetById(addressId));
         }
 
@@ -146,7 +121,7 @@ namespace Nop.Services.Common
         {
             if (address == null)
                 throw new ArgumentNullException(nameof(address));
-            
+
             address.CreatedOnUtc = DateTime.UtcNow;
 
             //some validation
@@ -158,7 +133,7 @@ namespace Nop.Services.Common
             _addressRepository.Insert(address);
 
             //cache
-            _cacheManager.RemoveByPattern(ADDRESSES_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopCommonDefaults.AddressesPatternCacheKey);
 
             //event notification
             _eventPublisher.EntityInserted(address);
@@ -182,12 +157,12 @@ namespace Nop.Services.Common
             _addressRepository.Update(address);
 
             //cache
-            _cacheManager.RemoveByPattern(ADDRESSES_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopCommonDefaults.AddressesPatternCacheKey);
 
             //event notification
             _eventPublisher.EntityUpdated(address);
         }
-        
+
         /// <summary>
         /// Gets a value indicating whether address is valid (can be saved)
         /// </summary>
@@ -251,6 +226,11 @@ namespace Nop.Services.Common
                 }
             }
 
+            if (_addressSettings.CountyEnabled &&
+                _addressSettings.CountyRequired &&
+                string.IsNullOrWhiteSpace(address.County))
+                return false;
+
             if (_addressSettings.CityEnabled &&
                 _addressSettings.CityRequired &&
                 string.IsNullOrWhiteSpace(address.City))
@@ -272,7 +252,48 @@ namespace Nop.Services.Common
 
             return true;
         }
-        
+
+        /// <summary>
+        /// Find an address
+        /// </summary>
+        /// <param name="source">Source</param>
+        /// <param name="firstName">First name</param>
+        /// <param name="lastName">Last name</param>
+        /// <param name="phoneNumber">Phone number</param>
+        /// <param name="email">Email</param>
+        /// <param name="faxNumber">Fax number</param>
+        /// <param name="company">Company</param>
+        /// <param name="address1">Address 1</param>
+        /// <param name="address2">Address 2</param>
+        /// <param name="city">City</param>
+        /// <param name="county">County</param>
+        /// <param name="stateProvinceId">State/province identifier</param>
+        /// <param name="zipPostalCode">Zip postal code</param>
+        /// <param name="countryId">Country identifier</param>
+        /// <param name="customAttributes">Custom address attributes (XML format)</param>
+        /// <returns>Address</returns>
+        public virtual Address FindAddress(List<Address> source, string firstName, string lastName, string phoneNumber, string email,
+            string faxNumber, string company, string address1, string address2, string city, string county, int? stateProvinceId,
+            string zipPostalCode, int? countryId, string customAttributes)
+        {
+            return source.Find(a => ((string.IsNullOrEmpty(a.FirstName) && string.IsNullOrEmpty(firstName)) || a.FirstName == firstName) &&
+                ((string.IsNullOrEmpty(a.LastName) && string.IsNullOrEmpty(lastName)) || a.LastName == lastName) &&
+                ((string.IsNullOrEmpty(a.PhoneNumber) && string.IsNullOrEmpty(phoneNumber)) || a.PhoneNumber == phoneNumber) &&
+                ((string.IsNullOrEmpty(a.Email) && string.IsNullOrEmpty(email)) || a.Email == email) &&
+                ((string.IsNullOrEmpty(a.FaxNumber) && string.IsNullOrEmpty(faxNumber)) || a.FaxNumber == faxNumber) &&
+                ((string.IsNullOrEmpty(a.Company) && string.IsNullOrEmpty(company)) || a.Company == company) &&
+                ((string.IsNullOrEmpty(a.Address1) && string.IsNullOrEmpty(address1)) || a.Address1 == address1) &&
+                ((string.IsNullOrEmpty(a.Address2) && string.IsNullOrEmpty(address2)) || a.Address2 == address2) &&
+                ((string.IsNullOrEmpty(a.City) && string.IsNullOrEmpty(city)) || a.City == city) &&
+                ((string.IsNullOrEmpty(a.County) && string.IsNullOrEmpty(county)) || a.County == county) &&
+                ((a.StateProvinceId == null && stateProvinceId == null) || a.StateProvinceId.Value == stateProvinceId.Value) &&
+                ((string.IsNullOrEmpty(a.ZipPostalCode) && string.IsNullOrEmpty(zipPostalCode)) || a.ZipPostalCode == zipPostalCode) &&
+                ((a.CountryId == null && countryId == null) || a.CountryId.Value == countryId.Value) &&
+                //actually we should parse custom address attribute (in case if "Display order" is changed) and then compare
+                //bu we simplify this process and simply compare their values in XML
+                ((string.IsNullOrEmpty(a.CustomAttributes) && string.IsNullOrEmpty(customAttributes)) || a.CustomAttributes == customAttributes));
+        }
+
         #endregion
     }
 }

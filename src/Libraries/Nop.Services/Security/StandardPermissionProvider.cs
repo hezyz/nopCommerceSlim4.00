@@ -17,6 +17,7 @@ namespace Nop.Services.Security
         public static readonly PermissionRecord ManageProductReviews = new PermissionRecord { Name = "Admin area. Manage Product Reviews", SystemName = "ManageProductReviews", Category = "Catalog" };
         public static readonly PermissionRecord ManageProductTags = new PermissionRecord { Name = "Admin area. Manage Product Tags", SystemName = "ManageProductTags", Category = "Catalog" };
         public static readonly PermissionRecord ManageCustomers = new PermissionRecord { Name = "Admin area. Manage Customers", SystemName = "ManageCustomers", Category = "Customers" };
+        public static readonly PermissionRecord ManageVendors = new PermissionRecord { Name = "Admin area. Manage Vendors", SystemName = "ManageVendors", Category = "Customers" };
         public static readonly PermissionRecord ManageCampaigns = new PermissionRecord { Name = "Admin area. Manage Campaigns", SystemName = "ManageCampaigns", Category = "Promo" };
         public static readonly PermissionRecord ManageNewsletterSubscribers = new PermissionRecord { Name = "Admin area. Manage Newsletter Subscribers", SystemName = "ManageNewsletterSubscribers", Category = "Promo" };
         public static readonly PermissionRecord ManagePolls = new PermissionRecord { Name = "Admin area. Manage Polls", SystemName = "ManagePolls", Category = "Content Management" };
@@ -60,6 +61,7 @@ namespace Nop.Services.Security
                 ManageProductReviews,
                 ManageProductTags,
                 ManageCustomers,
+                ManageVendors,
                 ManageCampaigns,
                 ManageNewsletterSubscribers,
                 ManagePolls,
@@ -98,7 +100,7 @@ namespace Nop.Services.Security
             {
                 new DefaultPermissionRecord 
                 {
-                    CustomerRoleSystemName = SystemCustomerRoleNames.Administrators,
+                    CustomerRoleSystemName = NopCustomerDefaults.AdministratorsRoleName,
                     PermissionRecords = new[] 
                     {
                         AccessAdminPanel,
@@ -108,6 +110,7 @@ namespace Nop.Services.Security
                         ManageProductReviews,
                         ManageProductTags,
                         ManageCustomers,
+                        ManageVendors,
                         ManageCampaigns,
                         ManageNewsletterSubscribers,
                         ManagePolls,
@@ -137,7 +140,7 @@ namespace Nop.Services.Security
                 },
                 new DefaultPermissionRecord 
                 {
-                    CustomerRoleSystemName = SystemCustomerRoleNames.ForumModerators,
+                    CustomerRoleSystemName = NopCustomerDefaults.ForumModeratorsRoleName,
                     PermissionRecords = new[] 
                     {
                         PublicStoreAllowNavigation
@@ -145,7 +148,7 @@ namespace Nop.Services.Security
                 },
                 new DefaultPermissionRecord 
                 {
-                    CustomerRoleSystemName = SystemCustomerRoleNames.Guests,
+                    CustomerRoleSystemName = NopCustomerDefaults.GuestsRoleName,
                     PermissionRecords = new[] 
                     {
                         PublicStoreAllowNavigation
@@ -153,10 +156,20 @@ namespace Nop.Services.Security
                 },
                 new DefaultPermissionRecord 
                 {
-                    CustomerRoleSystemName = SystemCustomerRoleNames.Registered,
+                    CustomerRoleSystemName = NopCustomerDefaults.RegisteredRoleName,
                     PermissionRecords = new[] 
                     {
                         PublicStoreAllowNavigation
+                    }
+                },
+                new DefaultPermissionRecord 
+                {
+                    CustomerRoleSystemName = NopCustomerDefaults.VendorsRoleName,
+                    PermissionRecords = new[] 
+                    {
+                        AccessAdminPanel,
+                        ManageProducts,
+                        ManageProductReviews
                     }
                 }
             };

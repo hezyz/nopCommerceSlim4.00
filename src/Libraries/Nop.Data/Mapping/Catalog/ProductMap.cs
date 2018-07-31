@@ -1,28 +1,34 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Nop.Core.Domain.Catalog;
 
 namespace Nop.Data.Mapping.Catalog
 {
     /// <summary>
-    /// Mapping class
+    /// Represents a product mapping configuration
     /// </summary>
     public partial class ProductMap : NopEntityTypeConfiguration<Product>
     {
+        #region Methods
+
         /// <summary>
-        /// Ctor
+        /// Configures the entity
         /// </summary>
-        public ProductMap()
+        /// <param name="builder">The builder to be used to configure the entity</param>
+        public override void Configure(EntityTypeBuilder<Product> builder)
         {
-            this.ToTable("Product");
-            this.HasKey(p => p.Id);
-            this.Property(p => p.Name).IsRequired().HasMaxLength(400);
-            this.Property(p => p.MetaKeywords).HasMaxLength(400);
-            this.Property(p => p.MetaTitle).HasMaxLength(400);
+            builder.ToTable(nameof(Product));
+            builder.HasKey(product => product.Id);
 
-            this.Ignore(p => p.ProductType);
+            builder.Property(product => product.Name).HasMaxLength(400).IsRequired();
+            builder.Property(product => product.MetaKeywords).HasMaxLength(400);
+            builder.Property(product => product.MetaTitle).HasMaxLength(400);
 
-            this.HasMany(p => p.ProductTags)
-                .WithMany(pt => pt.Products)
-                .Map(m => m.ToTable("Product_ProductTag_Mapping"));
+            builder.Ignore(product => product.ProductType);
+
+            base.Configure(builder);
         }
+
+        #endregion
     }
 }

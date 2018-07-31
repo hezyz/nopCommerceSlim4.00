@@ -1,33 +1,26 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Core;
-using Nop.Core.Caching;
 using Nop.Core.Domain.Catalog;
-using Nop.Services;
+using Nop.Core.Domain.Vendors;
+using Nop.Core.Infrastructure;
 using Nop.Services.Catalog;
 using Nop.Services.Configuration;
 using Nop.Services.Customers;
-using Nop.Services.ExportImport;
-using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Media;
 using Nop.Services.Security;
 using Nop.Services.Seo;
 using Nop.Services.Stores;
-using Nop.Web.Areas.Admin.Extensions;
-using Nop.Web.Areas.Admin.Helpers;
+using Nop.Web.Areas.Admin.Factories;
+using Nop.Web.Areas.Admin.Infrastructure.Mapper.Extensions;
 using Nop.Web.Areas.Admin.Models.Catalog;
 using Nop.Web.Framework.Controllers;
-using Nop.Web.Framework.Extensions;
-using Nop.Web.Framework.Kendoui;
 using Nop.Web.Framework.Mvc;
 using Nop.Web.Framework.Mvc.Filters;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Text;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
@@ -35,81 +28,75 @@ namespace Nop.Web.Areas.Admin.Controllers
     {
         #region Fields
 
-        private readonly IProductService _productService;
-        private readonly IProductTemplateService _productTemplateService;
+        private readonly IAclService _aclService;
         private readonly ICategoryService _categoryService;
+        private readonly ICopyProductService _copyProductService;
+        private readonly ICustomerActivityService _customerActivityService;
         private readonly ICustomerService _customerService;
-        private readonly IUrlRecordService _urlRecordService;
-        private readonly IWorkContext _workContext;
+        private readonly IDownloadService _downloadService;
         private readonly ILanguageService _languageService;
         private readonly ILocalizationService _localizationService;
         private readonly ILocalizedEntityService _localizedEntityService;
-        private readonly IPictureService _pictureService;
-        private readonly IProductTagService _productTagService;
-        private readonly ICopyProductService _copyProductService;
-        private readonly IExportManager _exportManager;
-        private readonly IImportManager _importManager;
-        private readonly ICustomerActivityService _customerActivityService;
+        private readonly INopFileProvider _fileProvider;
         private readonly IPermissionService _permissionService;
-        private readonly IAclService _aclService;
-        private readonly IStoreService _storeService;
-        private readonly IStoreMappingService _storeMappingService;
-        private readonly IStaticCacheManager _cacheManager;
-        private readonly IDateTimeHelper _dateTimeHelper;
-        private readonly IDownloadService _downloadService;
+        private readonly IPictureService _pictureService;
+        private readonly IProductModelFactory _productModelFactory;
+        private readonly IProductService _productService;
+        private readonly IProductTagService _productTagService;
         private readonly ISettingService _settingService;
-        
+        private readonly IStoreMappingService _storeMappingService;
+        private readonly IStoreService _storeService;
+        private readonly IUrlRecordService _urlRecordService;
+        private readonly IWorkContext _workContext;
+        private readonly VendorSettings _vendorSettings;
+
         #endregion
 
         #region Ctor
 
-        public ProductController(IProductService productService,
-            IProductTemplateService productTemplateService,
+        public ProductController(IAclService aclService,
             ICategoryService categoryService,
+            IProductModelFactory productModelFactory,
+             ICopyProductService copyProductService,
+            ICustomerActivityService customerActivityService,
             ICustomerService customerService,
-            IUrlRecordService urlRecordService,
-            IWorkContext workContext,
+            IDownloadService downloadService,
             ILanguageService languageService,
             ILocalizationService localizationService,
             ILocalizedEntityService localizedEntityService,
-            IPictureService pictureService,
-            IProductTagService productTagService,
-            ICopyProductService copyProductService,
-            IExportManager exportManager,
-            IImportManager importManager,
-            ICustomerActivityService customerActivityService,
+            INopFileProvider fileProvider,
             IPermissionService permissionService,
-            IAclService aclService,
-            IStoreService storeService,
+            IPictureService pictureService,
+            IProductService productService,
+            IProductTagService productTagService,
+            ISettingService settingService,
             IStoreMappingService storeMappingService,
-            IStaticCacheManager cacheManager,
-            IDateTimeHelper dateTimeHelper,
-            IDownloadService downloadService,
-            ISettingService settingService)
+            IStoreService storeService,
+            IUrlRecordService urlRecordService,
+            IWorkContext workContext,
+            VendorSettings vendorSettings)
         {
-            this._productService = productService;
-            this._productTemplateService = productTemplateService;
+            this._aclService = aclService;
             this._categoryService = categoryService;
+            this._productModelFactory = productModelFactory;
+            this._copyProductService = copyProductService;
+            this._customerActivityService = customerActivityService;
             this._customerService = customerService;
-            this._urlRecordService = urlRecordService;
-            this._workContext = workContext;
+            this._downloadService = downloadService;
             this._languageService = languageService;
             this._localizationService = localizationService;
             this._localizedEntityService = localizedEntityService;
-            this._pictureService = pictureService;
-            this._productTagService = productTagService;
-            this._copyProductService = copyProductService;
-            this._exportManager = exportManager;
-            this._importManager = importManager;
-            this._customerActivityService = customerActivityService;
+            this._fileProvider = fileProvider;
             this._permissionService = permissionService;
-            this._aclService = aclService;
-            this._storeService = storeService;
-            this._storeMappingService = storeMappingService;
-            this._cacheManager = cacheManager;
-            this._dateTimeHelper = dateTimeHelper;
-            this._downloadService = downloadService;
+            this._pictureService = pictureService;
+            this._productService = productService;
+            this._productTagService = productTagService;
             this._settingService = settingService;
+            this._storeMappingService = storeMappingService;
+            this._storeService = storeService;
+            this._urlRecordService = urlRecordService;
+            this._workContext = workContext;
+            this._vendorSettings = vendorSettings;
         }
 
         #endregion
@@ -146,7 +133,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     localized.LanguageId);
 
                 //search engine name
-                var seName = product.ValidateSeName(localized.SeName, localized.Name, false);
+                var seName = _urlRecordService.ValidateSeName(product, localized.SeName, localized.Name, false);
                 _urlRecordService.SaveSlug(product, seName, localized.LanguageId);
             }
         }
@@ -159,6 +146,9 @@ namespace Nop.Web.Areas.Admin.Controllers
                     x => x.Name,
                     localized.Name,
                     localized.LanguageId);
+
+                var seName = _urlRecordService.ValidateSeName(productTag, string.Empty, localized.Name, false);
+                _urlRecordService.SaveSlug(productTag, seName, localized.LanguageId);
             }
         }
 
@@ -166,26 +156,6 @@ namespace Nop.Web.Areas.Admin.Controllers
         {
             foreach (var pp in product.ProductPictures)
                 _pictureService.SetSeoFilename(pp.PictureId, _pictureService.GetPictureSeName(product.Name));
-        }
-
-        protected virtual void PrepareAclModel(ProductModel model, Product product, bool excludeProperties)
-        {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-
-            if (!excludeProperties && product != null)
-                model.SelectedCustomerRoleIds = _aclService.GetCustomerRoleIdsWithAccess(product).ToList();
-
-            var allRoles = _customerService.GetAllCustomerRoles(true);
-            foreach (var role in allRoles)
-            {
-                model.AvailableCustomerRoles.Add(new SelectListItem
-                {
-                    Text = role.Name,
-                    Value = role.Id.ToString(),
-                    Selected = model.SelectedCustomerRoleIds.Contains(role.Id)
-                });
-            }
         }
 
         protected virtual void SaveProductAcl(Product product, ProductModel model)
@@ -209,26 +179,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                     if (aclRecordToDelete != null)
                         _aclService.DeleteAclRecord(aclRecordToDelete);
                 }
-            }
-        }
-
-        protected virtual void PrepareStoresMappingModel(ProductModel model, Product product, bool excludeProperties)
-        {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-
-            if (!excludeProperties && product != null)
-                model.SelectedStoreIds = _storeMappingService.GetStoresIdsWithAccess(product).ToList();
-
-            var allStores = _storeService.GetAllStores();
-            foreach (var store in allStores)
-            {
-                model.AvailableStores.Add(new SelectListItem
-                {
-                    Text = store.Name,
-                    Value = store.Id.ToString(),
-                    Selected = model.SelectedStoreIds.Contains(store.Id)
-                });
             }
         }
 
@@ -256,22 +206,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             }
         }
 
-        protected virtual void PrepareCategoryMappingModel(ProductModel model, Product product, bool excludeProperties)
-        {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-
-            if (!excludeProperties && product != null)
-                model.SelectedCategoryIds = _categoryService.GetProductCategoriesByProductId(product.Id, true).Select(c => c.CategoryId).ToList();
-
-            var allCategories = SelectListHelper.GetCategoryList(_categoryService, _cacheManager, true);
-            foreach (var c in allCategories)
-            {
-                c.Selected = model.SelectedCategoryIds.Contains(int.Parse(c.Value));
-                model.AvailableCategories.Add(c);
-            }
-        }
-
         protected virtual void SaveCategoryMappings(Product product, ProductModel model)
         {
             var existingProductCategories = _categoryService.GetProductCategoriesByProductId(product.Id, true);
@@ -283,7 +217,8 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             //add categories
             foreach (var categoryId in model.SelectedCategoryIds)
-                if (existingProductCategories.FindProductCategory(product.Id, categoryId) == null)
+            {
+                if (_categoryService.FindProductCategory(existingProductCategories, product.Id, categoryId) == null)
                 {
                     //find next display order
                     var displayOrder = 1;
@@ -297,116 +232,21 @@ namespace Nop.Web.Areas.Admin.Controllers
                         DisplayOrder = displayOrder
                     });
                 }
+            }
         }
 
         protected virtual string[] ParseProductTags(string productTags)
         {
             var result = new List<string>();
-            if (!string.IsNullOrWhiteSpace(productTags))
-            {
-                var values = productTags.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (var val1 in values)
-                    if (!string.IsNullOrEmpty(val1.Trim()))
-                        result.Add(val1.Trim());
-            }
+            if (string.IsNullOrWhiteSpace(productTags))
+                return result.ToArray();
+
+            var values = productTags.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var val in values)
+                if (!string.IsNullOrEmpty(val.Trim()))
+                    result.Add(val.Trim());
+
             return result.ToArray();
-        }
-        
-        protected virtual void PrepareProductModel(ProductModel model, Product product, bool setPredefinedValues, bool excludeProperties)
-        {
-            if (model == null)
-                throw new ArgumentNullException(nameof(model));
-
-            if (product != null)
-            {
-                var parentGroupedProduct = _productService.GetProductById(product.ParentGroupedProductId);
-                if (parentGroupedProduct != null)
-                {
-                    //model.AssociatedToProductId = product.ParentGroupedProductId;
-                    //model.AssociatedToProductName = parentGroupedProduct.Name;
-                }
-                model.CreatedOn = _dateTimeHelper.ConvertToUserTime(product.CreatedOnUtc, DateTimeKind.Utc);
-                model.UpdatedOn = _dateTimeHelper.ConvertToUserTime(product.UpdatedOnUtc, DateTimeKind.Utc);
-            }     
-
-            //copy product
-            if (product != null)
-            {
-                model.CopyProductModel.Id = product.Id;
-                model.CopyProductModel.Name = string.Format(_localizationService.GetResource("Admin.Catalog.Products.Copy.Name.New"), product.Name);
-                model.CopyProductModel.Published = true;
-                model.CopyProductModel.CopyImages = true;
-            }
-
-            //templates
-            var templates = _productTemplateService.GetAllProductTemplates();
-            foreach (var template in templates)
-            {
-                model.AvailableProductTemplates.Add(new SelectListItem
-                {
-                    Text = template.Name,
-                    Value = template.Id.ToString()
-                });
-            }
-
-            //supported product types
-            foreach (var productType in ProductType.SimpleProduct.ToSelectList(false).ToList())
-            {
-                var productTypeId = int.Parse(productType.Value);
-                model.ProductsTypesSupportedByProductTemplates.Add(productTypeId, new List<SelectListItem>());
-                foreach (var template in templates)
-                {
-                    if (string.IsNullOrEmpty(template.IgnoredProductTypes) ||
-                        !((IList<int>)TypeDescriptor.GetConverter(typeof(List<int>)).ConvertFrom(template.IgnoredProductTypes)).Contains(productTypeId))
-                    {
-                        model.ProductsTypesSupportedByProductTemplates[productTypeId].Add(new SelectListItem
-                        {
-                            Text = template.Name,
-                            Value = template.Id.ToString()
-                        });
-                    }
-                }
-            }
-
-            //product tags
-            if (product != null)
-            {
-                var result = new StringBuilder();
-                for (var i = 0; i < product.ProductTags.Count; i++)
-                {
-                    var pt = product.ProductTags.ToList()[i];
-                    result.Append(pt.Name);
-                    if (i != product.ProductTags.Count - 1)
-                        result.Append(", ");
-                }
-                model.ProductTags = result.ToString();
-            }
-
-         
-
-            //default values
-            if (setPredefinedValues)
-            {
-                model.AllowCustomerReviews = true;
-                model.Published = true;
-                model.VisibleIndividually = true;
-            }
-
-            //editor settings
-            var productEditorSettings = _settingService.LoadSetting<ProductEditorSettings>();
-            model.ProductEditorSettingsModel = productEditorSettings.ToModel();
-        }
-
-        protected virtual List<int> GetChildCategoryIds(int parentCategoryId)
-        {
-            var categoriesIds = new List<int>();
-            var categories = _categoryService.GetAllCategoriesByParentCategoryId(parentCategoryId, true);
-            foreach (var category in categories)
-            {
-                categoriesIds.Add(category.Id);
-                categoriesIds.AddRange(GetChildCategoryIds(category.Id));
-            }
-            return categoriesIds;
         }
 
         #endregion
@@ -415,7 +255,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         #region Product list / create / edit / delete
 
-        //list products
         public virtual IActionResult Index()
         {
             return RedirectToAction("List");
@@ -426,100 +265,40 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductListModel
-            {
-            };
-
-            //categories
-            model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            var categories = SelectListHelper.GetCategoryList(_categoryService, _cacheManager, true);
-            foreach (var c in categories)
-                model.AvailableCategories.Add(c);
-
-            //stores
-            model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            foreach (var s in _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
-
-            //product types
-            model.AvailableProductTypes = ProductType.SimpleProduct.ToSelectList(false).ToList();
-            model.AvailableProductTypes.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-
-            //"published" property
-            //0 - all (according to "ShowHidden" parameter)
-            //1 - published only
-            //2 - unpublished only
-            model.AvailablePublishedOptions.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Catalog.Products.List.SearchPublished.All"), Value = "0" });
-            model.AvailablePublishedOptions.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Catalog.Products.List.SearchPublished.PublishedOnly"), Value = "1" });
-            model.AvailablePublishedOptions.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Catalog.Products.List.SearchPublished.UnpublishedOnly"), Value = "2" });
+            //prepare model
+            var model = _productModelFactory.PrepareProductSearchModel(new ProductSearchModel());
 
             return View(model);
         }
 
         [HttpPost]
-        public virtual IActionResult ProductList(DataSourceRequest command, ProductListModel model)
+        public virtual IActionResult ProductList(ProductSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            var categoryIds = new List<int> { model.SearchCategoryId };
-            //include subcategories
-            if (model.SearchIncludeSubCategories && model.SearchCategoryId > 0)
-                categoryIds.AddRange(GetChildCategoryIds(model.SearchCategoryId));
+            //prepare model
+            var model = _productModelFactory.PrepareProductListModel(searchModel);
 
-            //0 - all (according to "ShowHidden" parameter)
-            //1 - published only
-            //2 - unpublished only
-            bool? overridePublished = null;
-            if (model.SearchPublishedId == 1)
-                overridePublished = true;
-            else if (model.SearchPublishedId == 2)
-                overridePublished = false;
-
-            var products = _productService.SearchProducts(
-                categoryIds: categoryIds,
-                storeId: model.SearchStoreId,
-                 productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
-                keywords: model.SearchProductName,
-                pageIndex: command.Page - 1,
-                pageSize: command.PageSize,
-                showHidden: true,
-                overridePublished: overridePublished
-            );
-            var gridModel = new DataSourceResult
-            {
-                Data = products.Select(x =>
-                {
-                    var productModel = x.ToModel();
-                //little performance optimization: ensure that "FullDescription" is not returned
-                productModel.FullDescription = "";
-
-                //picture
-                var defaultProductPicture = _pictureService.GetPicturesByProductId(x.Id, 1).FirstOrDefault();
-                    productModel.PictureThumbnailUrl = _pictureService.GetPictureUrl(defaultProductPicture, 75, true);
-                    //product type
-                    productModel.ProductTypeName = x.ProductType.GetLocalizedEnum(_localizationService, _workContext);
-                    return productModel;
-                }),
-                Total = products.TotalCount
-            };
-
-            return Json(gridModel);
+            return Json(model);
         }
 
-        //create product
         public virtual IActionResult Create()
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel();
+            //validate maximum number of products per vendor
+            if (_vendorSettings.MaximumProductNumber > 0 && _workContext.CurrentVendor != null
+                && _productService.GetNumberOfProductsByVendorId(_workContext.CurrentVendor.Id) >= _vendorSettings.MaximumProductNumber)
+            {
+                ErrorNotification(string.Format(_localizationService.GetResource("Admin.Catalog.Products.ExceededMaximumNumber"),
+                    _vendorSettings.MaximumProductNumber));
+                return RedirectToAction("List");
+            }
 
-            PrepareProductModel(model, null, true, true);
-            AddLocales(_languageService, model.Locales);
-            PrepareAclModel(model, null, false);
-            PrepareStoresMappingModel(model, null, false);
-            PrepareCategoryMappingModel(model, null, false);
+            //prepare model
+            var model = _productModelFactory.PrepareProductModel(new ProductModel(),null);
 
             return View(model);
         }
@@ -530,79 +309,88 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
+            //validate maximum number of products per vendor
+            if (_vendorSettings.MaximumProductNumber > 0 && _workContext.CurrentVendor != null
+                && _productService.GetNumberOfProductsByVendorId(_workContext.CurrentVendor.Id) >= _vendorSettings.MaximumProductNumber)
+            {
+                ErrorNotification(string.Format(_localizationService.GetResource("Admin.Catalog.Products.ExceededMaximumNumber"),
+                    _vendorSettings.MaximumProductNumber));
+                return RedirectToAction("List");
+            }
+
             if (ModelState.IsValid)
             {
+                //a vendor should have access only to his products
+                if (_workContext.CurrentVendor != null)
+                    model.VendorId = _workContext.CurrentVendor.Id;
+
+                //vendors cannot edit "Show on home page" property
+                if (_workContext.CurrentVendor != null && model.ShowOnHomePage)
+                    model.ShowOnHomePage = false;
+
                 //product
-                var product = model.ToEntity();
+                var product = model.ToEntity<Product>();
                 product.CreatedOnUtc = DateTime.UtcNow;
                 product.UpdatedOnUtc = DateTime.UtcNow;
                 _productService.InsertProduct(product);
+
                 //search engine name
-                model.SeName = product.ValidateSeName(model.SeName, product.Name, true);
+                model.SeName = _urlRecordService.ValidateSeName(product, model.SeName, product.Name, true);
                 _urlRecordService.SaveSlug(product, model.SeName, 0);
+
                 //locales
                 UpdateLocales(product, model);
+
                 //categories
                 SaveCategoryMappings(product, model);
+
                 //ACL (customer roles)
                 SaveProductAcl(product, model);
+
                 //stores
                 SaveStoreMappings(product, model);
+
                 //tags
                 _productTagService.UpdateProductTags(product, ParseProductTags(model.ProductTags));
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewProduct", _localizationService.GetResource("ActivityLog.AddNewProduct"), product.Name);
+                _customerActivityService.InsertActivity("AddNewProduct",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewProduct"), product.Name), product);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Added"));
 
-                if (continueEditing)
-                {
-                    //selected tab
-                    SaveSelectedTabName();
+                if (!continueEditing)
+                    return RedirectToAction("List");
 
-                    return RedirectToAction("Edit", new { id = product.Id });
-                }
-                return RedirectToAction("List");
+                //selected tab
+                SaveSelectedTabName();
+
+                return RedirectToAction("Edit", new { id = product.Id });
             }
 
-            //If we got this far, something failed, redisplay form
-            PrepareProductModel(model, null, false, true);
-            PrepareAclModel(model, null, true);
-            PrepareStoresMappingModel(model, null, true);
-            PrepareCategoryMappingModel(model, null, true);
+            //prepare model
+            model = _productModelFactory.PrepareProductModel(model, null, true);
 
+            //if we got this far, something failed, redisplay form
             return View(model);
         }
 
-        //edit product
         public virtual IActionResult Edit(int id)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
+            //try to get a product with the specified id
             var product = _productService.GetProductById(id);
             if (product == null || product.Deleted)
-                //No product found with the specified id
                 return RedirectToAction("List");
 
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return RedirectToAction("List");
 
-            var model = product.ToModel();
-            PrepareProductModel(model, product, false, false);
-            AddLocales(_languageService, model.Locales, (locale, languageId) =>
-            {
-                locale.Name = product.GetLocalized(x => x.Name, languageId, false, false);
-                locale.ShortDescription = product.GetLocalized(x => x.ShortDescription, languageId, false, false);
-                locale.FullDescription = product.GetLocalized(x => x.FullDescription, languageId, false, false);
-                locale.MetaKeywords = product.GetLocalized(x => x.MetaKeywords, languageId, false, false);
-                locale.MetaDescription = product.GetLocalized(x => x.MetaDescription, languageId, false, false);
-                locale.MetaTitle = product.GetLocalized(x => x.MetaTitle, languageId, false, false);
-                locale.SeName = product.GetSeName(languageId, false, false);
-            });
-
-            PrepareAclModel(model, product, false);
-            PrepareStoresMappingModel(model, product, false);
-            PrepareCategoryMappingModel(model, product, false);
+            //prepare model
+            var model = _productModelFactory.PrepareProductModel(null, product);
 
             return View(model);
         }
@@ -613,79 +401,100 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
+            //try to get a product with the specified id
             var product = _productService.GetProductById(model.Id);
-
             if (product == null || product.Deleted)
-                //No product found with the specified id
                 return RedirectToAction("List");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return RedirectToAction("List");
+
 
             if (ModelState.IsValid)
             {
+                //a vendor should have access only to his products
+                if (_workContext.CurrentVendor != null)
+                    model.VendorId = _workContext.CurrentVendor.Id;
+
+                //we do not validate maximum number of products per vendor when editing existing products (only during creation of new products)
+                //vendors cannot edit "Show on home page" property
+                if (_workContext.CurrentVendor != null && model.ShowOnHomePage != product.ShowOnHomePage)
+                    model.ShowOnHomePage = product.ShowOnHomePage;
+
                 //product
                 product = model.ToEntity(product);
 
                 product.UpdatedOnUtc = DateTime.UtcNow;
                 _productService.UpdateProduct(product);
+
                 //search engine name
-                model.SeName = product.ValidateSeName(model.SeName, product.Name, true);
+                model.SeName = _urlRecordService.ValidateSeName(product, model.SeName, product.Name, true);
                 _urlRecordService.SaveSlug(product, model.SeName, 0);
+
                 //locales
                 UpdateLocales(product, model);
+
                 //tags
                 _productTagService.UpdateProductTags(product, ParseProductTags(model.ProductTags));
+
                 //categories
                 SaveCategoryMappings(product, model);
+
                 //ACL (customer roles)
                 SaveProductAcl(product, model);
+
                 //stores
                 SaveStoreMappings(product, model);
+
                 //picture seo names
                 UpdatePictureSeoNames(product);
 
-              
-
                 //activity log
-                _customerActivityService.InsertActivity("EditProduct", _localizationService.GetResource("ActivityLog.EditProduct"), product.Name);
+                _customerActivityService.InsertActivity("EditProduct",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditProduct"), product.Name), product);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Updated"));
 
-                if (continueEditing)
-                {
-                    //selected tab
-                    SaveSelectedTabName();
+                if (!continueEditing)
+                    return RedirectToAction("List");
 
-                    return RedirectToAction("Edit", new { id = product.Id });
-                }
-                return RedirectToAction("List");
+                //selected tab
+                SaveSelectedTabName();
+
+                return RedirectToAction("Edit", new { id = product.Id });
             }
 
-            //If we got this far, something failed, redisplay form
-            PrepareProductModel(model, product, false, true);
-            PrepareAclModel(model, product, true);
-            PrepareStoresMappingModel(model, product, true);
-            PrepareCategoryMappingModel(model, product, true);
+            //prepare model
+            model = _productModelFactory.PrepareProductModel(model, product, true);
 
+            //if we got this far, something failed, redisplay form
             return View(model);
         }
 
-        //delete product
         [HttpPost]
         public virtual IActionResult Delete(int id)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
+            //try to get a product with the specified id
             var product = _productService.GetProductById(id);
             if (product == null)
-                //No product found with the specified id
+                return RedirectToAction("List");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
                 return RedirectToAction("List");
 
             _productService.DeleteProduct(product);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteProduct", _localizationService.GetResource("ActivityLog.DeleteProduct"), product.Name);
+            _customerActivityService.InsertActivity("DeleteProduct",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteProduct"), product.Name), product);
 
             SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Deleted"));
+
             return RedirectToAction("List");
         }
 
@@ -697,7 +506,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (selectedIds != null)
             {
-                _productService.DeleteProducts(_productService.GetProductsByIds(selectedIds.ToArray()).ToList());
+                _productService.DeleteProducts(_productService.GetProductsByIds(selectedIds.ToArray()).Where(p => _workContext.CurrentVendor == null || p.VendorId == _workContext.CurrentVendor.Id).ToList());
             }
 
             return Json(new { Result = true });
@@ -714,9 +523,14 @@ namespace Nop.Web.Areas.Admin.Controllers
             {
                 var originalProduct = _productService.GetProductById(copyModel.Id);
 
-                var newProduct = _copyProductService.CopyProduct(originalProduct,
-                    copyModel.Name, copyModel.Published, copyModel.CopyImages);
+                //a vendor should have access only to his products
+                if (_workContext.CurrentVendor != null && originalProduct.VendorId != _workContext.CurrentVendor.Id)
+                    return RedirectToAction("List");
+
+                var newProduct = _copyProductService.CopyProduct(originalProduct, copyModel.Name, copyModel.Published, copyModel.CopyImages);
+
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Copied"));
+
                 return RedirectToAction("Edit", new { id = newProduct.Id });
             }
             catch (Exception exc)
@@ -731,41 +545,42 @@ namespace Nop.Web.Areas.Admin.Controllers
         #region Related products
 
         [HttpPost]
-        public virtual IActionResult RelatedProductList(DataSourceRequest command, int productId)
+        public virtual IActionResult RelatedProductList(RelatedProductSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            var relatedProducts = _productService.GetRelatedProductsByProductId1(productId, true);
-            var relatedProductsModel = relatedProducts
-                .Select(x => new ProductModel.RelatedProductModel
-                {
-                    Id = x.Id,
-                    //ProductId1 = x.ProductId1,
-                    ProductId2 = x.ProductId2,
-                    Product2Name = _productService.GetProductById(x.ProductId2).Name,
-                    DisplayOrder = x.DisplayOrder
-                })
-                .ToList();
+            //try to get a product with the specified id
+            var product = _productService.GetProductById(searchModel.ProductId)
+                ?? throw new ArgumentException("No product found with the specified id");
 
-            var gridModel = new DataSourceResult
-            {
-                Data = relatedProductsModel,
-                Total = relatedProductsModel.Count
-            };
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return Content("This is not your product");
 
-            return Json(gridModel);
+            //prepare model
+            var model = _productModelFactory.PrepareRelatedProductListModel(searchModel, product);
+
+            return Json(model);
         }
 
         [HttpPost]
-        public virtual IActionResult RelatedProductUpdate(ProductModel.RelatedProductModel model)
+        public virtual IActionResult RelatedProductUpdate(RelatedProductModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var relatedProduct = _productService.GetRelatedProductById(model.Id);
-            if (relatedProduct == null)
-                throw new ArgumentException("No related product found with the specified id");
+            //try to get a related product with the specified id
+            var relatedProduct = _productService.GetRelatedProductById(model.Id)
+                ?? throw new ArgumentException("No related product found with the specified id");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null)
+            {
+                var product = _productService.GetProductById(relatedProduct.ProductId1);
+                if (product != null && product.VendorId != _workContext.CurrentVendor.Id)
+                    return Content("This is not your product");
+            }
 
             relatedProduct.DisplayOrder = model.DisplayOrder;
             _productService.UpdateRelatedProduct(relatedProduct);
@@ -779,11 +594,19 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var relatedProduct = _productService.GetRelatedProductById(id);
-            if (relatedProduct == null)
-                throw new ArgumentException("No related product found with the specified id");
+            //try to get a related product with the specified id
+            var relatedProduct = _productService.GetRelatedProductById(id)
+                ?? throw new ArgumentException("No related product found with the specified id");
 
             var productId = relatedProduct.ProductId1;
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null)
+            {
+                var product = _productService.GetProductById(productId);
+                if (product != null && product.VendorId != _workContext.CurrentVendor.Id)
+                    return Content("This is not your product");
+            }
 
             _productService.DeleteRelatedProduct(relatedProduct);
 
@@ -795,83 +618,56 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel.AddRelatedProductModel
-            {
-            };
-
-            //categories
-            model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            var categories = SelectListHelper.GetCategoryList(_categoryService, _cacheManager, true);
-            foreach (var c in categories)
-                model.AvailableCategories.Add(c);
-
-            //stores
-            model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            foreach (var s in _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
-      
-            //product types
-            model.AvailableProductTypes = ProductType.SimpleProduct.ToSelectList(false).ToList();
-            model.AvailableProductTypes.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
+            //prepare model
+            var model = _productModelFactory.PrepareAddRelatedProductSearchModel(new AddRelatedProductSearchModel());
 
             return View(model);
         }
 
         [HttpPost]
-        public virtual IActionResult RelatedProductAddPopupList(DataSourceRequest command, ProductModel.AddRelatedProductModel model)
+        public virtual IActionResult RelatedProductAddPopupList(AddRelatedProductSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            var products = _productService.SearchProducts(
-                categoryIds: new List<int> { model.SearchCategoryId },
-                storeId: model.SearchStoreId,
-                 productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
-                keywords: model.SearchProductName,
-                pageIndex: command.Page - 1,
-                pageSize: command.PageSize,
-                showHidden: true
-                );
-            var gridModel = new DataSourceResult
-            {
-                Data = products.Select(x => x.ToModel()),
-                Total = products.TotalCount
-            };
+            //prepare model
+            var model = _productModelFactory.PrepareAddRelatedProductListModel(searchModel);
 
-            return Json(gridModel);
+            return Json(model);
         }
 
         [HttpPost]
         [FormValueRequired("save")]
-        public virtual IActionResult RelatedProductAddPopup(ProductModel.AddRelatedProductModel model)
+        public virtual IActionResult RelatedProductAddPopup(AddRelatedProductModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            if (model.SelectedProductIds != null)
+            var selectedProducts = _productService.GetProductsByIds(model.SelectedProductIds.ToArray());
+            if (selectedProducts.Any())
             {
-                foreach (var id in model.SelectedProductIds)
+                var existingRelatedProducts = _productService.GetRelatedProductsByProductId1(model.ProductId);
+                foreach (var product in selectedProducts)
                 {
-                    var product = _productService.GetProductById(id);
-                    if (product != null)
+                    //a vendor should have access only to his products
+                    if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                        continue;
+
+                    if (_productService.FindRelatedProduct(existingRelatedProducts, model.ProductId, product.Id) != null)
+                        continue;
+
+                    _productService.InsertRelatedProduct(new RelatedProduct
                     {
-                        var existingRelatedProducts = _productService.GetRelatedProductsByProductId1(model.ProductId);
-                        if (existingRelatedProducts.FindRelatedProduct(model.ProductId, id) == null)
-                        {
-                            _productService.InsertRelatedProduct(
-                                new RelatedProduct
-                                {
-                                    ProductId1 = model.ProductId,
-                                    ProductId2 = id,
-                                    DisplayOrder = 1
-                                });
-                        }
-                    }
+                        ProductId1 = model.ProductId,
+                        ProductId2 = product.Id,
+                        DisplayOrder = 1
+                    });
                 }
             }
 
             ViewBag.RefreshPage = true;
-            return View(model);
+
+            return View(new AddRelatedProductSearchModel());
         }
 
         #endregion
@@ -879,40 +675,38 @@ namespace Nop.Web.Areas.Admin.Controllers
         #region Associated products
 
         [HttpPost]
-        public virtual IActionResult AssociatedProductList(DataSourceRequest command, int productId)
+        public virtual IActionResult AssociatedProductList(AssociatedProductSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            var associatedProducts = _productService.GetAssociatedProducts(parentGroupedProductId: productId,
-                showHidden: true);
-            var associatedProductsModel = associatedProducts
-                .Select(x => new ProductModel.AssociatedProductModel
-                {
-                    Id = x.Id,
-                    ProductName = x.Name,
-                    DisplayOrder = x.DisplayOrder
-                })
-                .ToList();
+            //try to get a product with the specified id
+            var product = _productService.GetProductById(searchModel.ProductId)
+                ?? throw new ArgumentException("No product found with the specified id");
 
-            var gridModel = new DataSourceResult
-            {
-                Data = associatedProductsModel,
-                Total = associatedProductsModel.Count
-            };
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return Content("This is not your product");
 
-            return Json(gridModel);
+            //prepare model
+            var model = _productModelFactory.PrepareAssociatedProductListModel(searchModel, product);
+
+            return Json(model);
         }
 
         [HttpPost]
-        public virtual IActionResult AssociatedProductUpdate(ProductModel.AssociatedProductModel model)
+        public virtual IActionResult AssociatedProductUpdate(AssociatedProductModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var associatedProduct = _productService.GetProductById(model.Id);
-            if (associatedProduct == null)
-                throw new ArgumentException("No associated product found with the specified id");
+            //try to get an associated product with the specified id
+            var associatedProduct = _productService.GetProductById(model.Id)
+                ?? throw new ArgumentException("No associated product found with the specified id");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && associatedProduct.VendorId != _workContext.CurrentVendor.Id)
+                return Content("This is not your product");
 
             associatedProduct.DisplayOrder = model.DisplayOrder;
             _productService.UpdateProduct(associatedProduct);
@@ -926,9 +720,13 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var product = _productService.GetProductById(id);
-            if (product == null)
-                throw new ArgumentException("No associated product found with the specified id");
+            //try to get an associated product with the specified id
+            var product = _productService.GetProductById(id)
+                ?? throw new ArgumentException("No associated product found with the specified id");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return Content("This is not your product");
 
             product.ParentGroupedProductId = 0;
             _productService.UpdateProduct(product);
@@ -941,85 +739,48 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel.AddAssociatedProductModel
-            {
-            };
-
-            //categories
-            model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            var categories = SelectListHelper.GetCategoryList(_categoryService, _cacheManager, true);
-            foreach (var c in categories)
-                model.AvailableCategories.Add(c);
-
-            //stores
-            model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            foreach (var s in _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
-
-            //product types
-            model.AvailableProductTypes = ProductType.SimpleProduct.ToSelectList(false).ToList();
-            model.AvailableProductTypes.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
+            //prepare model
+            var model = _productModelFactory.PrepareAddAssociatedProductSearchModel(new AddAssociatedProductSearchModel());
 
             return View(model);
         }
 
         [HttpPost]
-        public virtual IActionResult AssociatedProductAddPopupList(DataSourceRequest command, ProductModel.AddAssociatedProductModel model)
+        public virtual IActionResult AssociatedProductAddPopupList(AddAssociatedProductSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            var products = _productService.SearchProducts(
-                categoryIds: new List<int> { model.SearchCategoryId },
-                storeId: model.SearchStoreId,
-                productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
-                keywords: model.SearchProductName,
-                pageIndex: command.Page - 1,
-                pageSize: command.PageSize,
-                showHidden: true
-                );
-            var gridModel = new DataSourceResult
-            {
-                Data = products.Select(x =>
-                {
-                    var productModel = x.ToModel();
-                    //display already associated products
-                    var parentGroupedProduct = _productService.GetProductById(x.ParentGroupedProductId);
-                    if (parentGroupedProduct != null)
-                    {
-                        productModel.AssociatedToProductId = x.ParentGroupedProductId;
-                        productModel.AssociatedToProductName = parentGroupedProduct.Name;
-                    }
-                    return productModel;
-                }),
-                Total = products.TotalCount
-            };
+            //prepare model
+            var model = _productModelFactory.PrepareAddAssociatedProductListModel(searchModel);
 
-            return Json(gridModel);
+            return Json(model);
         }
 
         [HttpPost]
         [FormValueRequired("save")]
-        public virtual IActionResult AssociatedProductAddPopup(ProductModel.AddAssociatedProductModel model)
+        public virtual IActionResult AssociatedProductAddPopup(AddAssociatedProductModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            if (model.SelectedProductIds != null)
+            var selectedProducts = _productService.GetProductsByIds(model.SelectedProductIds.ToArray());
+            if (selectedProducts.Any())
             {
-                foreach (var id in model.SelectedProductIds)
+                foreach (var product in selectedProducts)
                 {
-                    var product = _productService.GetProductById(id);
-                    if (product != null)
-                    {
-                        product.ParentGroupedProductId = model.ProductId;
-                        _productService.UpdateProduct(product);
-                    }
+                    //a vendor should have access only to his products
+                    if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                        continue;
+
+                    product.ParentGroupedProductId = model.ProductId;
+                    _productService.UpdateProduct(product);
                 }
             }
 
             ViewBag.RefreshPage = true;
-            return View(model);
+
+            return View(new AddAssociatedProductSearchModel());
         }
 
         #endregion
@@ -1027,8 +788,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         #region Product pictures
 
         public virtual IActionResult ProductPictureAdd(int pictureId, int displayOrder,
-            string overrideAltAttribute, string overrideTitleAttribute,
-            int productId)
+            string overrideAltAttribute, string overrideTitleAttribute, int productId)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
@@ -1036,13 +796,20 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (pictureId == 0)
                 throw new ArgumentException();
 
-            var product = _productService.GetProductById(productId);
-            if (product == null)
-                throw new ArgumentException("No product found with the specified id");
+            //try to get a product with the specified id
+            var product = _productService.GetProductById(productId)
+                ?? throw new ArgumentException("No product found with the specified id");
 
-            var picture = _pictureService.GetPictureById(pictureId);
-            if (picture == null)
-                throw new ArgumentException("No picture found with the specified id");
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return RedirectToAction("List");
+
+            if (_productService.GetProductPicturesByProductId(productId).Any(p => p.PictureId == pictureId))
+                return Json(new { Result = false });
+
+            //try to get a picture with the specified id
+            var picture = _pictureService.GetPictureById(pictureId)
+                ?? throw new ArgumentException("No picture found with the specified id");
 
             _pictureService.UpdatePicture(picture.Id,
                 _pictureService.LoadPictureBinary(picture),
@@ -1057,61 +824,53 @@ namespace Nop.Web.Areas.Admin.Controllers
             {
                 PictureId = pictureId,
                 ProductId = productId,
-                DisplayOrder = displayOrder,
+                DisplayOrder = displayOrder
             });
 
             return Json(new { Result = true });
         }
 
         [HttpPost]
-        public virtual IActionResult ProductPictureList(DataSourceRequest command, int productId)
+        public virtual IActionResult ProductPictureList(ProductPictureSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            var productPictures = _productService.GetProductPicturesByProductId(productId);
-            var productPicturesModel = productPictures
-                .Select(x =>
-                {
-                    var picture = _pictureService.GetPictureById(x.PictureId);
-                    if (picture == null)
-                        throw new Exception("Picture cannot be loaded");
-                    var m = new ProductModel.ProductPictureModel
-                    {
-                        Id = x.Id,
-                        ProductId = x.ProductId,
-                        PictureId = x.PictureId,
-                        PictureUrl = _pictureService.GetPictureUrl(picture),
-                        OverrideAltAttribute = picture.AltAttribute,
-                        OverrideTitleAttribute = picture.TitleAttribute,
-                        DisplayOrder = x.DisplayOrder
-                    };
-                    return m;
-                })
-                .ToList();
+            //try to get a product with the specified id
+            var product = _productService.GetProductById(searchModel.ProductId)
+                ?? throw new ArgumentException("No product found with the specified id");
 
-            var gridModel = new DataSourceResult
-            {
-                Data = productPicturesModel,
-                Total = productPicturesModel.Count
-            };
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return Content("This is not your product");
 
-            return Json(gridModel);
+            //prepare model
+            var model = _productModelFactory.PrepareProductPictureListModel(searchModel, product);
+
+            return Json(model);
         }
 
         [HttpPost]
-        public virtual IActionResult ProductPictureUpdate(ProductModel.ProductPictureModel model)
+        public virtual IActionResult ProductPictureUpdate(ProductPictureModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var productPicture = _productService.GetProductPictureById(model.Id);
-            if (productPicture == null)
-                throw new ArgumentException("No product picture found with the specified id");
+            //try to get a product picture with the specified id
+            var productPicture = _productService.GetProductPictureById(model.Id)
+                ?? throw new ArgumentException("No product picture found with the specified id");
 
-            var picture = _pictureService.GetPictureById(productPicture.PictureId);
-            if (picture == null)
-                throw new ArgumentException("No picture found with the specified id");
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null)
+            {
+                var product = _productService.GetProductById(productPicture.ProductId);
+                if (product != null && product.VendorId != _workContext.CurrentVendor.Id)
+                    return Content("This is not your product");
+            }
+
+            //try to get a picture with the specified id
+            var picture = _pictureService.GetPictureById(productPicture.PictureId)
+                ?? throw new ArgumentException("No picture found with the specified id");
 
             _pictureService.UpdatePicture(picture.Id,
                 _pictureService.LoadPictureBinary(picture),
@@ -1132,17 +891,25 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var productPicture = _productService.GetProductPictureById(id);
-            if (productPicture == null)
-                throw new ArgumentException("No product picture found with the specified id");
+            //try to get a product picture with the specified id
+            var productPicture = _productService.GetProductPictureById(id)
+                ?? throw new ArgumentException("No product picture found with the specified id");
 
-            var productId = productPicture.ProductId;
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null)
+            {
+                var product = _productService.GetProductById(productPicture.ProductId);
+                if (product != null && product.VendorId != _workContext.CurrentVendor.Id)
+                    return Content("This is not your product");
+            }
+
             var pictureId = productPicture.PictureId;
             _productService.DeleteProductPicture(productPicture);
 
-            var picture = _pictureService.GetPictureById(pictureId);
-            if (picture == null)
-                throw new ArgumentException("No picture found with the specified id");
+            //try to get a picture with the specified id
+            var picture = _pictureService.GetPictureById(pictureId)
+                ?? throw new ArgumentException("No picture found with the specified id");
+
             _pictureService.DeletePicture(picture);
 
             return new NullJsonResult();
@@ -1157,33 +924,22 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductTags))
                 return AccessDeniedView();
 
-            return View();
+            //prepare model
+            var model = _productModelFactory.PrepareProductTagSearchModel(new ProductTagSearchModel());
+
+            return View(model);
         }
 
         [HttpPost]
-        public virtual IActionResult ProductTags(DataSourceRequest command)
+        public virtual IActionResult ProductTags(ProductTagSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductTags))
                 return AccessDeniedKendoGridJson();
 
-            var tags = _productTagService.GetAllProductTags()
-                //order by product count
-                .OrderByDescending(x => _productTagService.GetProductCount(x.Id, 0))
-                .Select(x => new ProductTagModel
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    ProductCount = _productTagService.GetProductCount(x.Id, 0)
-                })
-                .ToList();
+            //prepare model
+            var model = _productModelFactory.PrepareProductTagListModel(searchModel);
 
-            var gridModel = new DataSourceResult
-            {
-                Data = tags.PagedForCommand(command),
-                Total = tags.Count
-            };
-
-            return Json(gridModel);
+            return Json(model);
         }
 
         [HttpPost]
@@ -1192,36 +948,27 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductTags))
                 return AccessDeniedView();
 
-            var tag = _productTagService.GetProductTagById(id);
-            if (tag == null)
-                throw new ArgumentException("No product tag found with the specified id");
+            //try to get a product tag with the specified id
+            var tag = _productTagService.GetProductTagById(id)
+                ?? throw new ArgumentException("No product tag found with the specified id");
+
             _productTagService.DeleteProductTag(tag);
 
             return new NullJsonResult();
         }
 
-        //edit
         public virtual IActionResult EditProductTag(int id)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductTags))
                 return AccessDeniedView();
 
+            //try to get a product tag with the specified id
             var productTag = _productTagService.GetProductTagById(id);
             if (productTag == null)
-                //No product tag found with the specified id
                 return RedirectToAction("List");
 
-            var model = new ProductTagModel
-            {
-                Id = productTag.Id,
-                Name = productTag.Name,
-                ProductCount = _productTagService.GetProductCount(productTag.Id, 0)
-            };
-            //locales
-            AddLocales(_languageService, model.Locales, (locale, languageId) =>
-            {
-                locale.Name = productTag.GetLocalized(x => x.Name, languageId, false, false);
-            });
+            //prepare tag model
+            var model = _productModelFactory.PrepareProductTagModel(null, productTag);
 
             return View(model);
         }
@@ -1232,15 +979,16 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductTags))
                 return AccessDeniedView();
 
+            //try to get a product tag with the specified id
             var productTag = _productTagService.GetProductTagById(model.Id);
             if (productTag == null)
-                //No product tag found with the specified id
                 return RedirectToAction("List");
 
             if (ModelState.IsValid)
             {
                 productTag.Name = model.Name;
                 _productTagService.UpdateProductTag(productTag);
+
                 //locales
                 UpdateLocales(productTag, model);
 
@@ -1248,7 +996,10 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return View(model);
             }
 
-            //If we got this far, something failed, redisplay form
+            //prepare model
+            model = _productModelFactory.PrepareProductTagModel(model, productTag, true);
+
+            //if we got this far, something failed, redisplay form
             return View(model);
         }
 
@@ -1261,51 +1012,22 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new BulkEditListModel();
-            //categories
-            model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            var categories = SelectListHelper.GetCategoryList(_categoryService, _cacheManager, true);
-            foreach (var c in categories)
-                model.AvailableCategories.Add(c);
-
-            //product types
-            model.AvailableProductTypes = ProductType.SimpleProduct.ToSelectList(false).ToList();
-            model.AvailableProductTypes.Insert(0, new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
+            //prepare model
+            var model = _productModelFactory.PrepareBulkEditProductSearchModel(new BulkEditProductSearchModel());
 
             return View(model);
         }
 
         [HttpPost]
-        public virtual IActionResult BulkEditSelect(DataSourceRequest command, BulkEditListModel model)
+        public virtual IActionResult BulkEditSelect(BulkEditProductSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            var products = _productService.SearchProducts(categoryIds: new List<int> { model.SearchCategoryId },
-                 productType: model.SearchProductTypeId > 0 ? (ProductType?)model.SearchProductTypeId : null,
-                keywords: model.SearchProductName,
-                pageIndex: command.Page - 1,
-                pageSize: command.PageSize,
-                showHidden: true);
+            //prepare model
+            var model = _productModelFactory.PrepareBulkEditProductListModel(searchModel);
 
-            var gridModel = new DataSourceResult
-            {
-                Data = products.Select(x =>
-                {
-                    var productModel = new BulkEditProductModel
-                    {
-                        Id = x.Id,
-                        Name = x.Name,
-                        Published = x.Published
-                    };
-
-                    return productModel;
-                }),
-
-                Total = products.TotalCount
-            };
-
-            return Json(gridModel);
+            return Json(model);
         }
 
         [HttpPost]
@@ -1314,21 +1036,26 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            if (products != null)
-            {
-                foreach (var pModel in products)
-                {
-                    //update
-                    var product = _productService.GetProductById(pModel.Id);
-                    if (product != null)
-                    {
+            if (products == null)
+                return new NullJsonResult();
 
-                        product.Name = pModel.Name;
-                        product.Published = pModel.Published;
-                        product.UpdatedOnUtc = DateTime.UtcNow;
-                        _productService.UpdateProduct(product);
-                    }
-                }
+            foreach (var pModel in products)
+            {
+                //update
+                var product = _productService.GetProductById(pModel.Id);
+                if (product == null)
+                    continue;
+
+                //a vendor should have access only to his products
+                if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                    continue;
+
+
+                product.Name = pModel.Name;
+                product.Published = pModel.Published;
+                product.UpdatedOnUtc = DateTime.UtcNow;
+                _productService.UpdateProduct(product);
+
             }
 
             return new NullJsonResult();
@@ -1340,18 +1067,23 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            if (products != null)
+            if (products == null)
+                return new NullJsonResult();
+
+            foreach (var pModel in products)
             {
-                foreach (var pModel in products)
-                {
-                    //delete
-                    var product = _productService.GetProductById(pModel.Id);
-                    if (product != null)
-                    {
-                        _productService.DeleteProduct(product);
-                    }
-                }
+                //delete
+                var product = _productService.GetProductById(pModel.Id);
+                if (product == null)
+                    continue;
+
+                //a vendor should have access only to his products
+                if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                    continue;
+
+                _productService.DeleteProduct(product);
             }
+
             return new NullJsonResult();
         }
 
@@ -1365,8 +1097,12 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
+            //vendors cannot manage these settings
+            if (_workContext.CurrentVendor != null)
+                return RedirectToAction("List");
+
             var productEditorSettings = _settingService.LoadSetting<ProductEditorSettings>();
-            productEditorSettings = model.ProductEditorSettingsModel.ToEntity(productEditorSettings);
+            productEditorSettings = model.ProductEditorSettingsModel.ToSettings(productEditorSettings);
             _settingService.SaveSetting(productEditorSettings);
 
             //product list

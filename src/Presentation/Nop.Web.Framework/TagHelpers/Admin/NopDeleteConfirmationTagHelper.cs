@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using Nop.Web.Framework.Extensions;
-using Nop.Web.Framework.Mvc.Models;
+using Nop.Web.Framework.Models;
 
 namespace Nop.Web.Framework.TagHelpers.Admin
 {
@@ -67,7 +68,7 @@ namespace Nop.Web.Framework.TagHelpers.Admin
         /// </summary>
         /// <param name="context">Context</param>
         /// <param name="output">Output</param>
-        public override void Process(TagHelperContext context, TagHelperOutput output)
+        public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
         {
             if (context == null)
             {
@@ -86,7 +87,10 @@ namespace Nop.Web.Framework.TagHelpers.Admin
             if (string.IsNullOrEmpty(Action))
                 Action = "Delete";
 
-            var modalId = new HtmlString(_htmlHelper.ViewData.ModelMetadata.ModelType.Name.ToLower() + "-delete-confirmation").ToHtmlString();
+            var modelName = _htmlHelper.ViewData.ModelMetadata.ModelType.Name.ToLower();
+            if (!string.IsNullOrEmpty(Action))
+                modelName += "-" + Action;
+            var modalId = new HtmlString(modelName + "-delete-confirmation").ToHtmlString();
 
             if (int.TryParse(ModelId, out int modelId))
             {
@@ -107,7 +111,7 @@ namespace Nop.Web.Framework.TagHelpers.Admin
                 output.Attributes.Add("tabindex", "-1");
                 output.Attributes.Add("role", "dialog");
                 output.Attributes.Add("aria-labelledby", $"{modalId}-title");
-                output.Content.SetHtmlContent(_htmlHelper.Partial("Delete", deleteConfirmationModel));
+                output.Content.SetHtmlContent(await _htmlHelper.PartialAsync("Delete", deleteConfirmationModel));
 
                 //modal script
                 var script = new TagBuilder("script");

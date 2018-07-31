@@ -1,10 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Core;
-using Nop.Core.Caching;
-using Nop.Services.Localization;
-using Nop.Web.Framework.Mvc.Models;
+using Nop.Web.Framework.Models;
 using Nop.Web.Framework.UI.Paging;
-using Nop.Web.Infrastructure.Cache;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -72,6 +69,5 @@ namespace Nop.Web.Models.Catalog
         public string ViewMode { get; set; }
         
         #endregion
-
     }
 }

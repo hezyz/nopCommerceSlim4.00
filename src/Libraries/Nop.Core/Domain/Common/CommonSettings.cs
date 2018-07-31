@@ -8,9 +8,6 @@ namespace Nop.Core.Domain.Common
     /// </summary>
     public class CommonSettings : ISettings
     {
-        /// <summary>
-        /// Ctor
-        /// </summary>
         public CommonSettings()
         {
             SitemapCustomUrls = new List<string>();
@@ -21,15 +18,11 @@ namespace Nop.Core.Domain.Common
         /// Gets or sets a value indicating whether the contacts form should have "Subject"
         /// </summary>
         public bool SubjectFieldOnContactUsForm { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether the contacts form should use system email
         /// </summary>
         public bool UseSystemEmailForContactUsForm { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether stored procedures are enabled (should be used if possible)
-        /// </summary>
-        public bool UseStoredProceduresIfSupported { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to use stored procedure (if supported) for loading categories (it's much faster in admin area with a large number of categories than the LINQ implementation)
@@ -40,6 +33,11 @@ namespace Nop.Core.Domain.Common
         /// Gets or sets a value indicating whether sitemap is enabled
         /// </summary>
         public bool SitemapEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the page size for sitemap
+        /// </summary>
+        public int SitemapPageSize { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to include categories to sitemap
@@ -110,5 +108,26 @@ namespace Nop.Core.Domain.Common
         /// Gets or sets a value indicating whether "accept terms of service" links should be open in popup window. If disabled, then they'll be open on a new page.
         /// </summary>
         public bool PopupForTermsOfServiceLinks { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether jQuery migrate script logging is active
+        /// </summary>
+        public bool JqueryMigrateScriptLoggingActive { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether we should support previous nopCommerce versions (it can slightly improve performance)
+        /// </summary>
+        public bool SupportPreviousNopcommerceVersions { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to compress response (gzip by default). 
+        /// You may want to disable it, for example, If you have an active IIS Dynamic Compression Module configured at the server level
+        /// </summary>
+        public bool UseResponseCompression { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value of "Cache-Control" header value for static content
+        /// </summary>
+        public string StaticFilesCacheControl { get; set; }
     }
 }

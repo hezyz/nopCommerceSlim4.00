@@ -3,6 +3,7 @@ using Nop.Core;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Localization;
+using Nop.Core.Domain.Security;
 using Nop.Services.Catalog;
 using Nop.Services.Events;
 using Nop.Services.Localization;
@@ -30,60 +31,63 @@ namespace Nop.Web.Controllers
     {
         #region Fields
 
-        private readonly IProductModelFactory _productModelFactory;
-        private readonly IProductService _productService;
-        private readonly IWorkContext _workContext;
-        private readonly IStoreContext _storeContext;
-        private readonly ILocalizationService _localizationService;
-        private readonly IWebHelper _webHelper;
-        private readonly IRecentlyViewedProductsService _recentlyViewedProductsService;
-        private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly CaptchaSettings _captchaSettings;
+        private readonly CatalogSettings _catalogSettings;
         private readonly IAclService _aclService;
-        private readonly IStoreMappingService _storeMappingService;
-        private readonly IPermissionService _permissionService;
         private readonly ICustomerActivityService _customerActivityService;
         private readonly IEventPublisher _eventPublisher;
-        private readonly CatalogSettings _catalogSettings;
+        private readonly ILocalizationService _localizationService;
+        private readonly IPermissionService _permissionService;
+        private readonly IProductModelFactory _productModelFactory;
+        private readonly IProductService _productService;
+        private readonly IRecentlyViewedProductsService _recentlyViewedProductsService;
+        private readonly IStoreContext _storeContext;
+        private readonly IStoreMappingService _storeMappingService;
+        private readonly IUrlRecordService _urlRecordService;
+        private readonly IWebHelper _webHelper;
+        private readonly IWorkContext _workContext;
+        private readonly IWorkflowMessageService _workflowMessageService;
         private readonly LocalizationSettings _localizationSettings;
-        private readonly CaptchaSettings _captchaSettings;
 
         #endregion
 
         #region Ctor
 
-        public ProductController(IProductModelFactory productModelFactory,
-            IProductService productService,
-            IWorkContext workContext,
-            IStoreContext storeContext,
-            ILocalizationService localizationService,
-            IWebHelper webHelper,
-            IRecentlyViewedProductsService recentlyViewedProductsService,
-            IWorkflowMessageService workflowMessageService,
+        public ProductController(CaptchaSettings captchaSettings,
+            CatalogSettings catalogSettings,
             IAclService aclService,
-            IStoreMappingService storeMappingService,
-            IPermissionService permissionService,
             ICustomerActivityService customerActivityService,
             IEventPublisher eventPublisher,
-            CatalogSettings catalogSettings,
-            LocalizationSettings localizationSettings,
-            CaptchaSettings captchaSettings)
+            ILocalizationService localizationService,
+            IPermissionService permissionService,
+            IProductModelFactory productModelFactory,
+            IProductService productService,
+            IRecentlyViewedProductsService recentlyViewedProductsService,
+            IStoreContext storeContext,
+            IStoreMappingService storeMappingService,
+            IUrlRecordService urlRecordService,
+            IWebHelper webHelper,
+            IWorkContext workContext,
+            IWorkflowMessageService workflowMessageService,
+            LocalizationSettings localizationSettings)
         {
-            this._productModelFactory = productModelFactory;
-            this._productService = productService;
-            this._workContext = workContext;
-            this._storeContext = storeContext;
-            this._localizationService = localizationService;
-            this._webHelper = webHelper;
-            this._recentlyViewedProductsService = recentlyViewedProductsService;
-           this._workflowMessageService = workflowMessageService;
+            this._captchaSettings = captchaSettings;
+            this._catalogSettings = catalogSettings;
             this._aclService = aclService;
-            this._storeMappingService = storeMappingService;
-            this._permissionService = permissionService;
             this._customerActivityService = customerActivityService;
             this._eventPublisher = eventPublisher;
-            this._catalogSettings = catalogSettings;
+            this._localizationService = localizationService;
+            this._permissionService = permissionService;
+            this._productModelFactory = productModelFactory;
+            this._productService = productService;
+            this._recentlyViewedProductsService = recentlyViewedProductsService;
+            this._storeContext = storeContext;
+            this._storeMappingService = storeMappingService;
+            this._urlRecordService = urlRecordService;
+            this._webHelper = webHelper;
+            this._workContext = workContext;
+            this._workflowMessageService = workflowMessageService;
             this._localizationSettings = localizationSettings;
-            this._captchaSettings = captchaSettings;
         }
 
         #endregion
@@ -117,7 +121,7 @@ namespace Nop.Web.Controllers
                 if (parentGroupedProduct == null)
                     return RedirectToRoute("HomePage");
 
-                return RedirectToRoute("Product", new { SeName = parentGroupedProduct.GetSeName() });
+                return RedirectToRoute("Product", new { SeName = _urlRecordService.GetSeName(parentGroupedProduct) });
             }
 
             //save as recently viewed
@@ -127,20 +131,25 @@ namespace Nop.Web.Controllers
             if (_permissionService.Authorize(StandardPermissionProvider.AccessAdminPanel) &&
                 _permissionService.Authorize(StandardPermissionProvider.ManageProducts))
             {
-                DisplayEditLink(Url.Action("Edit", "Product", new { id = product.Id, area = AreaNames.Admin }));
+                //a vendor should have access only to his products
+                if (_workContext.CurrentVendor == null || _workContext.CurrentVendor.Id == product.VendorId)
+                {
+                    DisplayEditLink(Url.Action("Edit", "Product", new { id = product.Id, area = AreaNames.Admin }));
+                }
             }
 
             //activity log
-            _customerActivityService.InsertActivity("PublicStore.ViewProduct", _localizationService.GetResource("ActivityLog.PublicStore.ViewProduct"), product.Name);
+            _customerActivityService.InsertActivity("PublicStore.ViewProduct",
+                string.Format(_localizationService.GetResource("ActivityLog.PublicStore.ViewProduct"), product.Name), product);
 
             //model
-            var model = _productModelFactory.PrepareProductDetailsModel(product);
+            var model = _productModelFactory.PrepareProductDetailsModel(product, false);
             //template
             var productTemplateViewPath = _productModelFactory.PrepareProductTemplateViewPath(product);
 
             return View(productTemplateViewPath, model);
         }
-        
+
         #endregion
 
         #region Recently viewed products
@@ -185,7 +194,7 @@ namespace Nop.Web.Controllers
         public virtual IActionResult NewProductsRss()
         {
             var feed = new RssFeed(
-                $"{_storeContext.CurrentStore.GetLocalized(x => x.Name)}: New products", 
+                $"{_localizationService.GetLocalized(_storeContext.CurrentStore, x => x.Name)}: New products",
                 "Information about products",
                 new Uri(_webHelper.GetStoreLocation()),
                 DateTime.UtcNow);
@@ -203,9 +212,9 @@ namespace Nop.Web.Controllers
                 pageSize: _catalogSettings.NewProductsNumber);
             foreach (var product in products)
             {
-                var productUrl = Url.RouteUrl("Product", new { SeName = product.GetSeName() }, _webHelper.IsCurrentConnectionSecured() ? "https" : "http");
-                var productName = product.GetLocalized(x => x.Name);
-                var productDescription = product.GetLocalized(x => x.ShortDescription);
+                var productUrl = Url.RouteUrl("Product", new { SeName = _urlRecordService.GetSeName(product) }, _webHelper.CurrentRequestProtocol);
+                var productName = _localizationService.GetLocalized(product, x => x.Name);
+                var productDescription = _localizationService.GetLocalized(product, x => x.ShortDescription);
                 var item = new RssItem(productName, productDescription, new Uri(productUrl), $"urn:store:{_storeContext.CurrentStore.Id}:newProducts:product:{product.Id}", product.CreatedOnUtc);
                 items.Add(item);
                 //uncomment below if you want to add RSS enclosure for pictures
@@ -240,6 +249,14 @@ namespace Nop.Web.Controllers
 
             //default value
             model.AddProductReview.Rating = _catalogSettings.DefaultProductRatingValue;
+
+            //default value for all additional review types
+            if (model.ReviewTypeList.Count > 0)
+                foreach (var additionalProductReview in model.AddAdditionalProductReviewList)
+                {
+                    additionalProductReview.Rating = additionalProductReview.IsRequired ? _catalogSettings.DefaultProductRatingValue : 0;
+                }
+
             return View(model);
         }
 
@@ -285,8 +302,20 @@ namespace Nop.Web.Controllers
                     CreatedOnUtc = DateTime.UtcNow,
                     StoreId = _storeContext.CurrentStore.Id,
                 };
+
                 product.ProductReviews.Add(productReview);
-                _productService.UpdateProduct(product);
+
+                //add product review and review type mapping                
+                foreach (var additionalReview in model.AddAdditionalProductReviewList)
+                {
+                    var additionalProductReview = new ProductReviewReviewTypeMapping
+                    {
+                        ProductReviewId = productReview.Id,
+                        ReviewTypeId = additionalReview.ReviewTypeId,
+                        Rating = additionalReview.Rating
+                    };
+                    productReview.ProductReviewReviewTypeMappingEntries.Add(additionalProductReview);
+                }
 
                 //update product totals
                 _productService.UpdateProductReviewTotals(product);
@@ -296,7 +325,8 @@ namespace Nop.Web.Controllers
                     _workflowMessageService.SendProductReviewNotificationMessage(productReview, _localizationSettings.DefaultAdminLanguageId);
 
                 //activity log
-                _customerActivityService.InsertActivity("PublicStore.AddProductReview", _localizationService.GetResource("ActivityLog.PublicStore.AddProductReview"), product.Name);
+                _customerActivityService.InsertActivity("PublicStore.AddProductReview",
+                    string.Format(_localizationService.GetResource("ActivityLog.PublicStore.AddProductReview"), product.Name), product);
 
                 //raise event
                 if (productReview.IsApproved)
@@ -433,7 +463,7 @@ namespace Nop.Web.Controllers
             {
                 ModelState.AddModelError("", _localizationService.GetResource("Products.EmailAFriend.OnlyRegisteredUsers"));
             }
-            
+
             if (ModelState.IsValid)
             {
                 //email
@@ -455,6 +485,5 @@ namespace Nop.Web.Controllers
         }
 
         #endregion
-      
     }
 }

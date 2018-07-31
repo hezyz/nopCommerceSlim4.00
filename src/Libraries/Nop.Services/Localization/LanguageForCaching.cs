@@ -14,12 +14,8 @@ namespace Nop.Services.Localization
     [NotMapped]
     public class LanguageForCaching : Language, IEntityForCaching
     {
-        /// <summary>
-        /// Ctor
-        /// </summary>
         public LanguageForCaching()
         {
-
         }
 
         /// <summary>
@@ -35,6 +31,7 @@ namespace Nop.Services.Localization
             FlagImageFileName = l.FlagImageFileName;
             Rtl = l.Rtl;
             LimitedToStores = l.LimitedToStores;
+            DefaultCurrencyId = l.DefaultCurrencyId;
             Published = l.Published;
             DisplayOrder = l.DisplayOrder;
         }

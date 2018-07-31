@@ -17,7 +17,8 @@ namespace Nop.Core
         /// <param name="source">source</param>
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
-        public PagedList(IQueryable<T> source, int pageIndex, int pageSize)
+        /// <param name="getOnlyTotalCount">A value in indicating whether you want to load only total number of records. Set to "true" if you don't want to load data from database</param>
+        public PagedList(IQueryable<T> source, int pageIndex, int pageSize, bool getOnlyTotalCount = false)
         {
             var total = source.Count();
             this.TotalCount = total;
@@ -28,6 +29,8 @@ namespace Nop.Core
 
             this.PageSize = pageSize;
             this.PageIndex = pageIndex;
+            if (getOnlyTotalCount)
+                return;
             this.AddRange(source.Skip(pageIndex * pageSize).Take(pageSize).ToList());
         }
 
@@ -39,7 +42,7 @@ namespace Nop.Core
         /// <param name="pageSize">Page size</param>
         public PagedList(IList<T> source, int pageIndex, int pageSize)
         {
-            TotalCount = source.Count();
+            TotalCount = source.Count;
             TotalPages = TotalCount / pageSize;
 
             if (TotalCount % pageSize > 0)
@@ -74,31 +77,30 @@ namespace Nop.Core
         /// Page index
         /// </summary>
         public int PageIndex { get; }
+
         /// <summary>
         /// Page size
         /// </summary>
         public int PageSize { get; }
+
         /// <summary>
         /// Total count
         /// </summary>
         public int TotalCount { get; }
+
         /// <summary>
         /// Total pages
         /// </summary>
         public int TotalPages { get; }
+
         /// <summary>
         /// Has previous page
         /// </summary>
-        public bool HasPreviousPage
-        {
-            get { return (PageIndex > 0); }
-        }
+        public bool HasPreviousPage => PageIndex > 0;
+
         /// <summary>
         /// Has next page
         /// </summary>
-        public bool HasNextPage
-        {
-            get { return (PageIndex + 1 < TotalPages); }
-        }
+        public bool HasNextPage => PageIndex + 1 < TotalPages;
     }
 }

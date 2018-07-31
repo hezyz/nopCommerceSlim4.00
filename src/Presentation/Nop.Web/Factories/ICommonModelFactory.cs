@@ -1,4 +1,5 @@
-﻿using Nop.Web.Models.Common;
+﻿using Nop.Core.Domain.Vendors;
+using Nop.Web.Models.Common;
 
 namespace Nop.Web.Factories
 {
@@ -52,10 +53,21 @@ namespace Nop.Web.Factories
         ContactUsModel PrepareContactUsModel(ContactUsModel model, bool excludeProperties);
 
         /// <summary>
+        /// Prepare the contact vendor model
+        /// </summary>
+        /// <param name="model">Contact vendor model</param>
+        /// <param name="vendor">Vendor</param>
+        /// <param name="excludeProperties">Whether to exclude populating of model properties from the entity</param>
+        /// <returns>Contact vendor model</returns>
+        ContactVendorModel PrepareContactVendorModel(ContactVendorModel model, Vendor vendor,
+            bool excludeProperties);
+
+        /// <summary>
         /// Prepare the sitemap model
         /// </summary>
+        /// <param name="pageModel">Sitemap page model</param>
         /// <returns>Sitemap model</returns>
-        SitemapModel PrepareSitemapModel();
+        SitemapModel PrepareSitemapModel(SitemapPageModel pageModel);
 
         /// <summary>
         /// Get the sitemap in XML format

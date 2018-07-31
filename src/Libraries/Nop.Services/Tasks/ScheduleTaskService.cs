@@ -19,10 +19,6 @@ namespace Nop.Services.Tasks
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="taskRepository">Task repository</param>
         public ScheduleTaskService(IRepository<ScheduleTask> taskRepository)
         {
             this._taskRepository = taskRepository;
@@ -87,6 +83,7 @@ namespace Nop.Services.Tasks
             {
                 query = query.Where(t => t.Enabled);
             }
+
             query = query.OrderByDescending(t => t.Seconds);
 
             var tasks = query.ToList();

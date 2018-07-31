@@ -1,4 +1,5 @@
 ﻿@model ProductModel
+
 @inject IEventPublisher eventPublisher
 
 <div asp-validation-summary="All"></div>
@@ -11,10 +12,13 @@
                 <div class="pull-left">
                     @await Component.InvokeAsync("SettingMode", new { modeName = "product-advanced-mode" })
                 </div>
+                @if (!Model.IsLoggedInAsVendor)
+                {
                     <button type="button" class="btn btn-info pull-left margin-l-10" id="product-editor-settings" data-toggle="modal" data-target="#productsettings-window">
                         <i class="fa fa-gear"></i>
                         @T("Admin.Configuration.Settings.ProductEditor.Button")
                     </button>
+                }
             </div>
         </div>
 

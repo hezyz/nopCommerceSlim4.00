@@ -81,6 +81,7 @@ CREATE PROCEDURE [dbo].[ProductLoadAllPaged]
 (
 	@CategoryIds		nvarchar(MAX) = null,	--a list of category IDs (comma-separated list). e.g. 1,2,3
 	@StoreId			int = 0,
+	@VendorId			int = 0,
 	@ProductTypeId		int = null, --product type identifier, null - load all products
 	@VisibleIndividuallyOnly bit = 0, 	--0 - load all products , 1 - "visible indivially" only
 	@MarkedAsNewOnly	bit = 0, 	--0 - load all products , 1 - "marked as new" only
@@ -354,14 +355,14 @@ BEGIN
 	IF @CategoryIdsCount > 0
 	BEGIN
 		SET @sql = @sql + '
-		LEFT JOIN Product_Category_Mapping pcm with (NOLOCK)
+		INNER JOIN Product_Category_Mapping pcm with (NOLOCK)
 			ON p.Id = pcm.ProductId'
 	END
-
+	
 	IF ISNULL(@ProductTagId, 0) != 0
 	BEGIN
 		SET @sql = @sql + '
-		LEFT JOIN Product_ProductTag_Mapping pptm with (NOLOCK)
+		INNER JOIN Product_ProductTag_Mapping pptm with (NOLOCK)
 			ON p.Id = pptm.Product_Id'
 	END
 	
@@ -381,15 +382,27 @@ BEGIN
 	IF @CategoryIdsCount > 0
 	BEGIN
 		SET @sql = @sql + '
-		AND pcm.CategoryId IN (SELECT CategoryId FROM #FilteredCategoryIds)'
+		AND pcm.CategoryId IN ('
 		
+		SET @sql = @sql + + CAST(@CategoryIds AS nvarchar(max))
+
+		SET @sql = @sql + ')'
+
 		IF @FeaturedProducts IS NOT NULL
 		BEGIN
 			SET @sql = @sql + '
 		AND pcm.IsFeaturedProduct = ' + CAST(@FeaturedProducts AS nvarchar(max))
 		END
 	END
-
+		
+	--filter by vendor
+	IF @VendorId > 0
+	BEGIN
+		SET @sql = @sql + '
+		AND p.VendorId = ' + CAST(@VendorId AS nvarchar(max))
+	END
+	
+	
 	--filter by product type
 	IF @ProductTypeId is not null
 	BEGIN
@@ -486,7 +499,7 @@ BEGIN
 	BEGIN
 		--category position (display order)
 		IF @CategoryIdsCount > 0 SET @sql_orderby = ' pcm.DisplayOrder ASC'
-	
+		
 		--name
 		IF LEN(@sql_orderby) > 0 SET @sql_orderby = @sql_orderby + ', '
 		SET @sql_orderby = @sql_orderby + ' p.[Name] ASC'
@@ -573,7 +586,7 @@ BEGIN
 		ELSE 0
 		END
 	ELSE 0
-	END')
+	END as Value')
 END
 GO
 

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Nop.Core.Domain.Media;
 using System;
 
@@ -39,5 +40,12 @@ namespace Nop.Services.Media
         /// </summary>
         /// <param name="download">Download</param>
         void UpdateDownload(Download download);
+
+        /// <summary>
+        /// Gets the download binary array
+        /// </summary>
+        /// <param name="file">File</param>
+        /// <returns>Download binary array</returns>
+        byte[] GetDownloadBits(IFormFile file);
     }
 }

@@ -33,6 +33,9 @@ namespace Nop.Web.Infrastructure
             routeBuilder.MapLocalizedRoute("Category", "{SeName}", 
                 new { controller = "Catalog", action = "Category" });
 
+            routeBuilder.MapLocalizedRoute("Vendor", "{SeName}", 
+                new { controller = "Catalog", action = "Vendor" });
+            
             routeBuilder.MapLocalizedRoute("NewsItem", "{SeName}", 
                 new { controller = "News", action = "NewsItem" });
 
@@ -41,6 +44,10 @@ namespace Nop.Web.Infrastructure
 
             routeBuilder.MapLocalizedRoute("Topic", "{SeName}", 
                 new { controller = "Topic", action = "TopicDetails" });
+
+            //product tags
+            routeBuilder.MapLocalizedRoute("ProductsByTag", "{SeName}",
+                new { controller = "Catalog", action = "ProductsByTag" });
         }
 
         #endregion

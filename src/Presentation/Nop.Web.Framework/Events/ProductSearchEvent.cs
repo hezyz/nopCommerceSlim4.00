@@ -23,5 +23,9 @@ namespace Nop.Web.Framework.Events
         /// Language identifier
         /// </summary>
         public int WorkingLanguageId { get; set; }
+        /// <summary>
+        /// Vendor identifier
+        /// </summary>
+        public int VendorId { get; set; }
     }
 }

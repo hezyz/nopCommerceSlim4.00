@@ -1,22 +1,24 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Net.Http.Headers;
 using Nop.Core;
 using Nop.Core.Configuration;
 using Nop.Core.Data;
-using Nop.Core.Domain;
+using Nop.Core.Domain.Common;
+using Nop.Core.Domain.Security;
 using Nop.Core.Http;
 using Nop.Core.Infrastructure;
 using Nop.Services.Authentication;
 using Nop.Services.Logging;
-using Nop.Services.Security;
-using System.Threading.Tasks;
 using Nop.Web.Framework.Globalization;
 using Nop.Web.Framework.Mvc.Routing;
-using StackExchange.Profiling.Storage;
 
 namespace Nop.Web.Framework.Infrastructure.Extensions
 {
@@ -66,7 +68,7 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
                     try
                     {
                         //check whether database is installed
-                        if (DataSettingsHelper.DatabaseIsInstalled())
+                        if (DataSettingsManager.DatabaseIsInstalled)
                         {
                             //get current customer
                             var currentCustomer = EngineContext.Current.Resolve<IWorkContext>().CurrentCustomer;
@@ -152,6 +154,90 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
         }
 
         /// <summary>
+        /// Configure middleware for dynamically compressing HTTP responses
+        /// </summary>
+        /// <param name="application">Builder for configuring an application's request pipeline</param>
+        public static void UseNopResponseCompression(this IApplicationBuilder application)
+        {
+            //whether to use compression (gzip by default)
+            if (DataSettingsManager.DatabaseIsInstalled && EngineContext.Current.Resolve<CommonSettings>().UseResponseCompression)
+                application.UseResponseCompression();
+        }
+
+        /// <summary>
+        /// Configure static file serving
+        /// </summary>
+        /// <param name="application">Builder for configuring an application's request pipeline</param>
+        public static void UseNopStaticFiles(this IApplicationBuilder application)
+        {
+            var fileProvider = EngineContext.Current.Resolve<INopFileProvider>();
+
+            Action<StaticFileResponseContext> staticFileResponse = (context) =>
+            {
+                if (DataSettingsManager.DatabaseIsInstalled)
+                {
+                    var commonSettings = EngineContext.Current.Resolve<CommonSettings>();
+                    if (!string.IsNullOrEmpty(commonSettings.StaticFilesCacheControl))
+                        context.Context.Response.Headers.Append(HeaderNames.CacheControl, commonSettings.StaticFilesCacheControl);
+                }
+            };
+
+            //common static files
+            application.UseStaticFiles(new StaticFileOptions { OnPrepareResponse = staticFileResponse });
+
+            //themes static files
+            application.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(fileProvider.MapPath(@"Themes")),
+                RequestPath = new PathString("/Themes"),
+                OnPrepareResponse = staticFileResponse
+            });
+
+            //plugins static files
+            var staticFileOptions = new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(fileProvider.MapPath(@"Plugins")),
+                RequestPath = new PathString("/Plugins"),
+                OnPrepareResponse = staticFileResponse
+            };
+
+            if (DataSettingsManager.DatabaseIsInstalled)
+            {
+                var securitySettings = EngineContext.Current.Resolve<SecuritySettings>();
+                if (!string.IsNullOrEmpty(securitySettings.PluginStaticFileExtensionsBlacklist))
+                {
+                    var fileExtensionContentTypeProvider = new FileExtensionContentTypeProvider();
+
+                    foreach (var ext in securitySettings.PluginStaticFileExtensionsBlacklist
+                        .Split(';', ',')
+                        .Select(e => e.Trim().ToLower())
+                        .Select(e => $"{(e.StartsWith(".") ? string.Empty : ".")}{e}")
+                        .Where(fileExtensionContentTypeProvider.Mappings.ContainsKey))
+                    {
+                        fileExtensionContentTypeProvider.Mappings.Remove(ext);
+                    }
+
+                    staticFileOptions.ContentTypeProvider = fileExtensionContentTypeProvider;
+                }
+            }
+            application.UseStaticFiles(staticFileOptions);
+
+            //add support for backups
+            var provider = new FileExtensionContentTypeProvider
+            {
+                Mappings = { [".bak"] = MimeTypes.ApplicationOctetStream }
+            };
+
+            application.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(fileProvider.GetAbsolutePath("db_backups")),
+                RequestPath = new PathString("/db_backups"),
+                ContentTypeProvider = provider
+            });
+
+        }
+
+        /// <summary>
         /// Configure middleware checking whether requested page is keep alive page
         /// </summary>
         /// <param name="application">Builder for configuring an application's request pipeline</param>
@@ -176,7 +262,7 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
         public static void UseNopAuthentication(this IApplicationBuilder application)
         {
             //check whether database is installed
-            if (!DataSettingsHelper.DatabaseIsInstalled())
+            if (!DataSettingsManager.DatabaseIsInstalled)
                 return;
 
             application.UseMiddleware<AuthenticationMiddleware>();
@@ -189,7 +275,7 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
         public static void UseCulture(this IApplicationBuilder application)
         {
             //check whether database is installed
-            if (!DataSettingsHelper.DatabaseIsInstalled())
+            if (!DataSettingsManager.DatabaseIsInstalled)
                 return;
 
             application.UseMiddleware<CultureMiddleware>();
@@ -206,32 +292,6 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
                 //register all routes
                 EngineContext.Current.Resolve<IRoutePublisher>().RegisterRoutes(routeBuilder);
             });
-        }
-
-        /// <summary>
-        /// Create and configure MiniProfiler service
-        /// </summary>
-        /// <param name="application">Builder for configuring an application's request pipeline</param>
-        public static void UseMiniProfiler(this IApplicationBuilder application)
-        {
-            //whether database is already installed
-            if (!DataSettingsHelper.DatabaseIsInstalled())
-                return;
-
-            //whether MiniProfiler should be displayed
-            if (EngineContext.Current.Resolve<StoreInformationSettings>().DisplayMiniProfilerInPublicStore)
-            {
-                application.UseMiniProfiler(miniProfilerOptions =>
-                {
-                    //use memory cache provider for storing each result
-                    miniProfilerOptions.Storage = new MemoryCacheStorage(TimeSpan.FromMinutes(60));
-
-                    //determine who can access the MiniProfiler results
-                    miniProfilerOptions.ResultsAuthorize = request =>
-                        !EngineContext.Current.Resolve<StoreInformationSettings>().DisplayMiniProfilerForAdminOnly ||
-                        EngineContext.Current.Resolve<IPermissionService>().Authorize(StandardPermissionProvider.AccessAdminPanel);
-                });
-            }
         }
     }
 }

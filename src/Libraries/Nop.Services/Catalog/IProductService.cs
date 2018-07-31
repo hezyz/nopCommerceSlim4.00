@@ -1,7 +1,7 @@
-using System;
-using System.Collections.Generic;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
+using System;
+using System.Collections.Generic;
 
 namespace Nop.Services.Catalog
 {
@@ -29,14 +29,14 @@ namespace Nop.Services.Catalog
         /// </summary>
         /// <returns>Products</returns>
         IList<Product> GetAllProductsDisplayedOnHomePage();
-        
+
         /// <summary>
         /// Gets product
         /// </summary>
         /// <param name="productId">Product identifier</param>
         /// <returns>Product</returns>
         Product GetProductById(int productId);
-        
+
         /// <summary>
         /// Gets products by identifier
         /// </summary>
@@ -77,6 +77,7 @@ namespace Nop.Services.Catalog
         /// <param name="pageSize">Page size</param>
         /// <param name="categoryIds">Category identifiers</param>
         /// <param name="storeId">Store identifier; 0 to load all records</param>
+        /// <param name="vendorId">Vendor identifier; 0 to load all records</param>
         /// <param name="productType">Product type; 0 to load all records</param>
         /// <param name="visibleIndividuallyOnly">A values indicating whether to load only products marked as "visible individually"; "false" to load all records; "true" to load "visible individually" only</param>
         /// <param name="markedAsNewOnly">A values indicating whether to load only products marked as "new"; "false" to load all records; "true" to load "marked as new" only</param>
@@ -99,6 +100,7 @@ namespace Nop.Services.Catalog
             int pageSize = int.MaxValue,
             IList<int> categoryIds = null,
             int storeId = 0,
+            int vendorId = 0,
             ProductType? productType = null,
             bool visibleIndividuallyOnly = false,
             bool markedAsNewOnly = false,
@@ -117,16 +119,33 @@ namespace Nop.Services.Catalog
         /// </summary>
         /// <param name="parentGroupedProductId">Parent product identifier (used with grouped products)</param>
         /// <param name="storeId">Store identifier; 0 to load all records</param>
+        /// <param name="vendorId">Vendor identifier; 0 to load all records</param>
         /// <param name="showHidden">A value indicating whether to show hidden records</param>
         /// <returns>Products</returns>
         IList<Product> GetAssociatedProducts(int parentGroupedProductId,
-            int storeId = 0, bool showHidden = false);
+            int storeId = 0, int vendorId = 0, bool showHidden = false);
 
         /// <summary>
         /// Update product review totals
         /// </summary>
         /// <param name="product">Product</param>
         void UpdateProductReviewTotals(Product product);
+
+        /// <summary>
+        /// Gets number of products by vendor identifier
+        /// </summary>
+        /// <param name="vendorId">Vendor identifier</param>
+        /// <returns>Number of products</returns>
+        int GetNumberOfProductsByVendorId(int vendorId);
+
+        /// <summary>
+        /// Indicates whether a product tag exists
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="productTagId">Product tag identifier</param>
+        /// <returns>Result</returns>
+        bool ProductTagExists(Product product, int productTagId);
+
         #endregion
 
         #region Related products
@@ -163,6 +182,15 @@ namespace Nop.Services.Catalog
         /// </summary>
         /// <param name="relatedProduct">Related product</param>
         void UpdateRelatedProduct(RelatedProduct relatedProduct);
+
+        /// <summary>
+        /// Finds a related product item by specified identifiers
+        /// </summary>
+        /// <param name="source">Source</param>
+        /// <param name="productId1">The first product identifier</param>
+        /// <param name="productId2">The second product identifier</param>
+        /// <returns>Related product</returns>
+        RelatedProduct FindRelatedProduct(IList<RelatedProduct> source, int productId1, int productId2);
 
         #endregion
 
@@ -205,7 +233,7 @@ namespace Nop.Services.Catalog
         /// </summary>
         /// <param name="productsIds">Products IDs</param>
         /// <returns>All picture identifiers grouped by product ID</returns>
-        IDictionary<int, int[]> GetProductsImagesIds(int [] productsIds);
+        IDictionary<int, int[]> GetProductsImagesIds(int[] productsIds);
 
         #endregion
 
@@ -217,16 +245,18 @@ namespace Nop.Services.Catalog
         /// <param name="customerId">Customer identifier (who wrote a review); 0 to load all records</param>
         /// <param name="approved">A value indicating whether to content is approved; null to load all records</param> 
         /// <param name="fromUtc">Item creation from; null to load all records</param>
-        /// <param name="toUtc">Item item creation to; null to load all records</param>
+        /// <param name="toUtc">Item creation to; null to load all records</param>
         /// <param name="message">Search title or review text; null to load all records</param>
         /// <param name="storeId">The store identifier; pass 0 to load all records</param>
         /// <param name="productId">The product identifier; pass 0 to load all records</param>
+        /// <param name="vendorId">The vendor identifier (limit to products of this vendor); pass 0 to load all records</param>
+        /// <param name="showHidden">A value indicating whether to show hidden records</param>
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
         /// <returns>Reviews</returns>
         IPagedList<ProductReview> GetAllProductReviews(int customerId, bool? approved,
             DateTime? fromUtc = null, DateTime? toUtc = null,
-            string message = null, int storeId = 0, int productId = 0,
+            string message = null, int storeId = 0, int productId = 0, int vendorId = 0, bool showHidden = false,
             int pageIndex = 0, int pageSize = int.MaxValue);
 
         /// <summary>
@@ -256,6 +286,5 @@ namespace Nop.Services.Catalog
         void DeleteProductReviews(IList<ProductReview> productReviews);
 
         #endregion
-
     }
 }

@@ -1,24 +1,24 @@
-﻿@model BulkEditListModel
-@inject AdminAreaSettings adminAreaSettings
+@model BulkEditProductSearchModel
 
 @{
-    var defaultGridPageSize = adminAreaSettings.DefaultGridPageSize;
-    var gridPageSizes = adminAreaSettings.GridPageSizes;
-
     //page title
     ViewBag.Title = T("Admin.Catalog.BulkEdit").Text;
     //active menu item (system name)
-    Html.SetActiveMenuItemSystemName("Bulk edit products");
+    Html.SetActiveMenuItemSystemName("Products");
 }
 
 <form asp-controller="Product" asp-action="BulkEdit" method="post">
         <div class="content-header clearfix">
             <h1 class="pull-left">
                 @T("Admin.Catalog.BulkEdit")
+                <small>
+                    <i class="fa fa-arrow-circle-left"></i>
+                    <a asp-action="List">@T("Admin.Catalog.Products.BackToList")</a>
+                </small>
             </h1>
             <div class="pull-right">
                 &nbsp;
-                @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_bulk_edit_buttons" })
+                @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductBulkEditButtons })
             </div>
         </div>
 
@@ -43,6 +43,14 @@
                                         </div>
                                         <div class="col-md-8">
                                             <nop-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories" />
+                                        </div>
+                                    </div>
+                                    <div class="form-group" @(Model.AvailableManufacturers.SelectionIsNotPossible() ? Html.Raw("style=\"display:none\"") : null)>
+                                        <div class="col-md-4">
+                                            <nop-label asp-for="SearchManufacturerId" />
+                                        </div>
+                                        <div class="col-md-8">
+                                            <nop-select asp-for="SearchManufacturerId" asp-items="Model.AvailableManufacturers" />
                                         </div>
                                     </div>
                                     <div class="form-group">
@@ -70,7 +78,7 @@
                         <div class="panel-body">
                             <div id="products-grid"></div>
 
-                            <script type="text/javascript">
+                            <script>
                             $(document).ready(function() {
                                 $("#products-grid").kendoGrid({
                                     dataSource: {
@@ -80,7 +88,16 @@
                                                 url: "@Html.Raw(Url.Action("BulkEditSelect", "Product"))",
                                                 type: "POST",
                                                 dataType: "json",
-                                                data: additionalData
+                                                data: function() {
+                                                    var data = {
+                                                        SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
+                                                        SearchCategoryId: $('#SearchCategoryId').val(),
+                                                        SearchManufacturerId: $('#SearchManufacturerId').val(),
+                                                        SearchProductTypeId: $('#SearchProductTypeId').val()
+                                                    };
+                                                    addAntiForgeryToken(data);
+                                                    return data;
+                                                }
                                             },
                                             update: {
                                                 url: "@Html.Raw(Url.Action("BulkEditUpdate", "Product"))",
@@ -127,6 +144,11 @@
                                                 fields: {
                                                     Name: { editable: true, type: "string" },
                                                     ProductId: { editable: false, type: "number" },
+                                                    Sku: { editable: true, type: "string" },
+                                                    Price: { editable: true, type: "number" },
+                                                    OldPrice: { editable: true, type: "number" },
+                                                    ManageInventoryMethod: { editable: false, type: "string" },
+                                                    StockQuantity: { editable: true, type: "number" },
                                                     Published: { editable: true, type: "boolean" },
                                                     Id: { editable: false, type: "number" }
                                                 }
@@ -144,17 +166,17 @@
                                         },
                                         //bulk editing
                                         batch: true,
-                                        pageSize: @(defaultGridPageSize),
+                                        pageSize: @(Model.PageSize),
                                         serverPaging: true,
                                         serverFiltering: true,
                                         serverSorting: true
                                     },
                                     pageable: {
                                         refresh: true,
-                                        pageSizes: [@(gridPageSizes)],
+                                        pageSizes: [@(Model.AvailablePageSizes)],
                                         @await Html.PartialAsync("_GridPagerMessages")
                                     },
-                                    toolbar: ["save", "cancel"],
+                                    toolbar: [{ name: "save", text: "@T("Admin.Common.SaveChanges")" }, { name: "cancel", text: "@T("Admin.Common.CancelChanges")" }],
                                     editable: {
                                         confirmation: "@T("Admin.Common.DeleteConfirmation")",
                                         //bulk editing
@@ -173,6 +195,44 @@
                                         attributes: { style: "text-align:center" },
                                         template: '<a class="btn btn-default" href="@Url.Content("~/Admin/Product/Edit/")#=Id#"><i class="fa fa-eye"></i>@T("Admin.Common.View")</a>'
                                     },{
+                                        field: "Sku",
+                                        title: "@T("Admin.Catalog.BulkEdit.Fields.Sku")",
+                                        width: 150
+                                    }, {
+                                        field: "Price",
+                                        title: "@T("Admin.Catalog.BulkEdit.Fields.Price")",
+                                        width: 150,
+                                        editor: function (container, options) {
+                                            $('<input name="' + options.field + '"/>')
+                                                .appendTo(container)
+                                                .kendoNumericTextBox({
+                                                    format: "{0:n4}",
+                                                    decimals: 4
+                                                });
+                                        }
+                                    }, {
+                                        field: "OldPrice",
+                                        title: "@T("Admin.Catalog.BulkEdit.Fields.OldPrice")",
+                                        width: 150,
+                                        editor: function (container, options) {
+                                            $('<input name="' + options.field + '"/>')
+                                                .appendTo(container)
+                                                .kendoNumericTextBox({
+                                                    format: "{0:n4}",
+                                                    decimals: 4
+                                                });
+                                        }
+                                    }, {
+                                        field: "ManageInventoryMethod",
+                                        title: "@T("Admin.Catalog.BulkEdit.Fields.ManageInventoryMethod")",
+                                        width: 150
+                                    }, {
+                                        field: "StockQuantity",
+                                        title: "@T("Admin.Catalog.BulkEdit.Fields.StockQuantity")",
+                                        //integer format
+                                        format: "{0:0}",
+                                        width: 150
+                                    },{
                                         field: "Published",
                                         title: "@T("Admin.Catalog.BulkEdit.Fields.Published")",
                                         width: 200
@@ -186,7 +246,7 @@
                             });
                             </script>
 
-                            <script type="text/javascript">
+                            <script>
                             $(document).ready(function () {
                                 $('#search-products').click(function () {
                                     var grid = $('#products-grid').data('kendoGrid');
@@ -202,16 +262,6 @@
                                     }
                                 });
                             });
-
-                            function additionalData() {
-                                var data = {
-                                    SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
-                                    SearchCategoryId: $('#SearchCategoryId').val(),
-                                    SearchProductTypeId: $('#SearchProductTypeId').val()
-                                };
-                                addAntiForgeryToken(data);
-                                return data;
-                            }
                             </script>
                         </div>
                     </div>

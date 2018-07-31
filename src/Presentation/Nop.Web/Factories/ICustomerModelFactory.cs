@@ -1,5 +1,4 @@
-﻿using Nop.Core.Domain.Catalog;
-using Nop.Core.Domain.Customers;
+﻿using Nop.Core.Domain.Customers;
 using Nop.Web.Models.Customer;
 using System.Collections.Generic;
 
@@ -91,5 +90,11 @@ namespace Nop.Web.Factories
         /// <param name="model">Customer avatar model</param>
         /// <returns>Customer avatar model</returns>
         CustomerAvatarModel PrepareCustomerAvatarModel(CustomerAvatarModel model);
+
+        /// <summary>
+        /// Prepare the GDPR tools model
+        /// </summary>
+        /// <returns>GDPR tools model</returns>
+        GdprToolsModel PrepareGdprToolsModel();
     }
 }

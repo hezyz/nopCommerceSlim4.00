@@ -1,6 +1,7 @@
-﻿using Nop.Core.Domain.Catalog;
+﻿using System.Collections.Generic;
+using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Vendors;
 using Nop.Web.Models.Catalog;
-using System.Collections.Generic;
 
 namespace Nop.Web.Factories
 {
@@ -84,10 +85,32 @@ namespace Nop.Web.Factories
         /// </summary>
         /// <param name="rootCategoryId">Root category identifier</param>
         /// <param name="loadSubCategories">A value indicating whether subcategories should be loaded</param>
-        /// <param name="allCategories">All available categories; pass null to load them internally</param>
         /// <returns>List of category (simple) models</returns>
-        List<CategorySimpleModel> PrepareCategorySimpleModels(int rootCategoryId,
-            bool loadSubCategories = true, IList<Category> allCategories = null);
+        List<CategorySimpleModel> PrepareCategorySimpleModels(int rootCategoryId, bool loadSubCategories = true);
+
+        #endregion
+
+        #region Vendors
+
+        /// <summary>
+        /// Prepare vendor model
+        /// </summary>
+        /// <param name="vendor">Vendor</param>
+        /// <param name="command">Catalog paging filtering command</param>
+        /// <returns>Vendor model</returns>
+        VendorModel PrepareVendorModel(Vendor vendor, CatalogPagingFilteringModel command);
+
+        /// <summary>
+        /// Prepare vendor all models
+        /// </summary>
+        /// <returns>List of vendor models</returns>
+        List<VendorModel> PrepareVendorAllModels();
+
+        /// <summary>
+        /// Prepare vendor navigation model
+        /// </summary>
+        /// <returns>Vendor navigation model</returns>
+        VendorNavigationModel PrepareVendorNavigationModel();
 
         #endregion
 

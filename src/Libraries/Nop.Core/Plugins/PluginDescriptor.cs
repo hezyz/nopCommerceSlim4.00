@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 using Newtonsoft.Json;
 using Nop.Core.Infrastructure;
@@ -12,11 +11,8 @@ namespace Nop.Core.Plugins
     /// </summary>
     public class PluginDescriptor : IDescriptor, IComparable<PluginDescriptor>
     {
-        #region Ctors
+        #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
         public PluginDescriptor()
         {
             this.SupportedVersions = new List<string>();
@@ -62,14 +58,17 @@ namespace Nop.Core.Plugins
             {
                 //try resolve
             }
+
             if (instance == null)
             {
                 //not resolved
                 instance = EngineContext.Current.ResolveUnregistered(PluginType);
             }
+
             var typedInstance = instance as T;
             if (typedInstance != null)
                 typedInstance.PluginDescriptor = this;
+
             return typedInstance;
         }
 
@@ -200,7 +199,7 @@ namespace Nop.Core.Plugins
         /// Gets or sets the original assembly file that a shadow copy was made from it
         /// </summary>
         [JsonIgnore]
-        public virtual FileInfo OriginalAssemblyFile { get; internal set; }
+        public virtual string OriginalAssemblyFile { get; internal set; }
 
         /// <summary>
         /// Gets or sets the assembly that has been shadow copied that is active in the application
@@ -209,6 +208,5 @@ namespace Nop.Core.Plugins
         public virtual Assembly ReferencedAssembly { get; internal set; }
 
         #endregion
-
     }
 }

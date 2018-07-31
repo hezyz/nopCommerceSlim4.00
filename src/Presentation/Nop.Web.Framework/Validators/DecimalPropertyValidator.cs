@@ -1,5 +1,5 @@
-﻿using FluentValidation.Validators;
-using Nop.Services.Catalog;
+﻿using System;
+using FluentValidation.Validators;
 
 namespace Nop.Web.Framework.Validators
 {
@@ -28,9 +28,8 @@ namespace Nop.Web.Framework.Validators
         protected override bool IsValid(PropertyValidatorContext context)
         {
             if (decimal.TryParse(context.PropertyValue.ToString(), out decimal value))
-            {
-                //return RoundingHelper.RoundPrice(value) < _maxValue;
-            }
+                return Math.Round(value, 3) < _maxValue;
+
             return false;
         }
     }

@@ -1,5 +1,6 @@
 ﻿using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Localization;
+using Nop.Core.Domain.Vendors;
 
 namespace Nop.Core
 {
@@ -17,6 +18,11 @@ namespace Nop.Core
         /// Gets the original customer (in case the current one is impersonated)
         /// </summary>
         Customer OriginalCustomerIfImpersonated { get; }
+
+        /// <summary>
+        /// Gets the current vendor (logged-in manager)
+        /// </summary>
+        Vendor CurrentVendor { get; }
 
         /// <summary>
         /// Gets or sets current user working language

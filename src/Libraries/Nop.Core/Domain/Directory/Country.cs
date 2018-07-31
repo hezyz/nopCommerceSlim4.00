@@ -10,6 +10,7 @@ namespace Nop.Core.Domain.Directory
     public partial class Country : BaseEntity, ILocalizedEntity, IStoreMappingSupported
     {
         private ICollection<StateProvince> _stateProvinces;
+
         /// <summary>
         /// Gets or sets the name
         /// </summary>
@@ -50,9 +51,8 @@ namespace Nop.Core.Domain.Directory
         /// </summary>
         public virtual ICollection<StateProvince> StateProvinces
         {
-            get { return _stateProvinces ?? (_stateProvinces = new List<StateProvince>()); }
-            protected set { _stateProvinces = value; }
+            get => _stateProvinces ?? (_stateProvinces = new List<StateProvince>());
+            protected set => _stateProvinces = value;
         }
     }
-
 }

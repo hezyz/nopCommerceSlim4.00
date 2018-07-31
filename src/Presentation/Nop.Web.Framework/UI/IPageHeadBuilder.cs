@@ -127,7 +127,6 @@ namespace Nop.Web.Framework.UI
         /// <param name="bundleFiles">A value indicating whether to bundle script elements</param>
         /// <returns>Generated string</returns>
         string GenerateCssFiles(IUrlHelper urlHelper, ResourceLocation location, bool? bundleFiles = null);
-
         /// <summary>
         /// Add canonical URL element to the <![CDATA[<head>]]>
         /// </summary>

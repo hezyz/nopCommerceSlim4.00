@@ -24,12 +24,15 @@ namespace Nop.Web.Factories
         /// <param name="productThumbPictureSize">Product thumb picture size (longest side); pass null to use the default value of media settings</param>
         /// <returns>Collection of product overview model</returns>
         IEnumerable<ProductOverviewModel> PrepareProductOverviewModels(IEnumerable<Product> products,
-            bool preparePictureModel = true, int? productThumbPictureSize = null);
+            bool preparePictureModel = true,
+            int? productThumbPictureSize = null);
 
         /// <summary>
         /// Prepare the product details model
         /// </summary>
         /// <param name="product">Product</param>
+        /// <param name="updatecartitem">Updated shopping cart item</param>
+        /// <param name="isAssociatedProduct">Whether the product is associated</param>
         /// <returns>Product details model</returns>
         ProductDetailsModel PrepareProductDetailsModel(Product product, bool isAssociatedProduct = false);
 
@@ -56,5 +59,6 @@ namespace Nop.Web.Factories
         /// <param name="excludeProperties">Whether to exclude populating of model properties from the entity</param>
         /// <returns>product email a friend model</returns>
         ProductEmailAFriendModel PrepareProductEmailAFriendModel(ProductEmailAFriendModel model, Product product, bool excludeProperties);
+
     }
 }

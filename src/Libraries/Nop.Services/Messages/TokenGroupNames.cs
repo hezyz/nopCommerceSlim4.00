@@ -46,6 +46,11 @@
         public const string PrivateMessageTokens = "Private message tokens";
 
         /// <summary>
+        /// Represents tokens with information about the vendor
+        /// </summary>
+        public const string VendorTokens = "Vendor tokens";
+
+        /// <summary>
         /// Represents tokens with information about the product review
         /// </summary>
         public const string ProductReviewTokens = "Product review tokens";
@@ -69,5 +74,10 @@
         /// Represents tokens with information about contact us
         /// </summary>
         public const string ContactUs = "Contact us tokens";
+
+        /// <summary>
+        /// Represents tokens with information about contact vendor
+        /// </summary>
+        public const string ContactVendor = "Contact vendor tokens";
     }
 }

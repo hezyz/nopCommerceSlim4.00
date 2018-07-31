@@ -22,34 +22,29 @@ namespace Nop.Services.Installation
     {
         #region Fields
 
-        private readonly IRepository<Language> _languageRepository;
-        private readonly IRepository<Customer> _customerRepository;
-        private readonly IRepository<Store> _storeRepository;
         private readonly IDbContext _dbContext;
+        private readonly INopFileProvider _fileProvider;
+        private readonly IRepository<Customer> _customerRepository;
+        private readonly IRepository<Language> _languageRepository;
+        private readonly IRepository<Store> _storeRepository;
         private readonly IWebHelper _webHelper;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="languageRepository">Language repository</param>
-        /// <param name="customerRepository">Customer repository</param>
-        /// <param name="storeRepository">Store repository</param>
-        /// <param name="dbContext">DB context</param>
-        /// <param name="webHelper">Web helper</param>
-        public SqlFileInstallationService(IRepository<Language> languageRepository,
+        public SqlFileInstallationService(IDbContext dbContext,
+            INopFileProvider fileProvider,
             IRepository<Customer> customerRepository,
+            IRepository<Language> languageRepository,
             IRepository<Store> storeRepository,
-            IDbContext dbContext,
             IWebHelper webHelper)
         {
-            this._languageRepository = languageRepository;
-            this._customerRepository = customerRepository;
-            this._storeRepository = storeRepository;
             this._dbContext = dbContext;
+            this._fileProvider = fileProvider;
+            this._customerRepository = customerRepository;
+            this._languageRepository = languageRepository;
+            this._storeRepository = storeRepository;
             this._webHelper = webHelper;
         }
 
@@ -66,9 +61,11 @@ namespace Nop.Services.Installation
             var language = _languageRepository.Table.Single(l => l.Name == "English");
 
             //save resources
-            foreach (var filePath in System.IO.Directory.EnumerateFiles(CommonHelper.MapPath("~/App_Data/Localization/"), "*.nopres.xml", SearchOption.TopDirectoryOnly))
+            var directoryPath = _fileProvider.MapPath(NopInstallationDefaults.LocalizationResourcesPath);
+            var pattern = $"*.{NopInstallationDefaults.LocalizationResourcesFileExtension}";
+            foreach (var filePath in _fileProvider.EnumerateFiles(directoryPath, pattern))
             {
-                var localesXml = File.ReadAllText(filePath);
+                var localesXml = _fileProvider.ReadAllText(filePath, Encoding.UTF8);
                 var localizationService = EngineContext.Current.Resolve<ILocalizationService>();
                 localizationService.ImportResourcesFromXml(language, localesXml);
             }
@@ -116,8 +113,7 @@ namespace Nop.Services.Installation
         {
             var statements = new List<string>();
 
-            using (var stream = File.OpenRead(path))
-            using (var reader = new StreamReader(stream))
+            using (var reader = new StreamReader(path))
             {
                 string statement;
                 while ((statement = ReadNextStatementFromStream(reader)) != null)
@@ -169,14 +165,14 @@ namespace Nop.Services.Installation
         public virtual void InstallData(string defaultUserEmail,
             string defaultUserPassword, bool installSampleData = true)
         {
-            ExecuteSqlFile(CommonHelper.MapPath("~/App_Data/Install/Fast/create_required_data.sql"));
+            ExecuteSqlFile(_fileProvider.MapPath(NopInstallationDefaults.RequiredDataPath));
             InstallLocaleResources();
             UpdateDefaultCustomer(defaultUserEmail, defaultUserPassword);
             UpdateDefaultStoreUrl();
 
             if (installSampleData)
             {
-                ExecuteSqlFile(CommonHelper.MapPath("~/App_Data/Install/Fast/create_sample_data.sql"));
+                ExecuteSqlFile(_fileProvider.MapPath(NopInstallationDefaults.SampleDataPath));
             }
         }
 

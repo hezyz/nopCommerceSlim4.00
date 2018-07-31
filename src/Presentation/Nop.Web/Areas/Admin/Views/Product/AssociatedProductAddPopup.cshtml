@@ -1,18 +1,15 @@
-﻿@model ProductModel.AddAssociatedProductModel
-@inject AdminAreaSettings adminAreaSettings
+﻿@model AddAssociatedProductSearchModel
 
 @{
     Layout = "_AdminPopupLayout";
-
-    var popupGridPageSize = adminAreaSettings.PopupGridPageSize;
-
+    
     //page title
     ViewBag.Title = T("Admin.Catalog.Products.AssociatedProducts.AddNew").Text;
 }
 
 @if (ViewBag.RefreshPage == true)
 {
-    <script type="text/javascript">
+    <script>
         try {window.opener.document.forms['@(Context.Request.Query["formId"])'].@(Context.Request.Query["btnId"]).click();}
         catch (e){}
         window.close();
@@ -55,6 +52,14 @@
                                         <nop-select asp-for="SearchCategoryId" asp-items="Model.AvailableCategories" />
                                     </div>
                                 </div>
+                                <div class="form-group" @(Model.AvailableVendors.SelectionIsNotPossible() || Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+                                    <div class="col-sm-5">
+                                        <nop-label asp-for="SearchVendorId" />
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <nop-select asp-for="SearchVendorId" asp-items="Model.AvailableVendors" />
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-sm-6">
                                 <div class="form-group" @(Model.AvailableStores.SelectionIsNotPossible() ? Html.Raw("style=\"display:none\"") : null)>
@@ -71,6 +76,14 @@
                                     </div>
                                     <div class="col-sm-7">
                                         <nop-select asp-for="SearchProductTypeId" asp-items="Model.AvailableProductTypes" />
+                                    </div>
+                                </div>
+                                <div class="form-group" @(Model.AvailableManufacturers.SelectionIsNotPossible() ? Html.Raw("style=\"display:none\"") : null)>
+                                    <div class="col-sm-5">
+                                        <nop-label asp-for="SearchManufacturerId" />
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <nop-select asp-for="SearchManufacturerId" asp-items="Model.AvailableManufacturers" />
                                     </div>
                                 </div>
                             </div>
@@ -90,7 +103,7 @@
                     <div class="panel-body">
                         <div id="products-grid"></div>
 
-                        <script type="text/javascript">
+                        <script>
                             $(document).ready(function() {
                                 $("#products-grid").kendoGrid({
                                     dataSource: {
@@ -100,7 +113,18 @@
                                                 url: "@Html.Raw(Url.Action("AssociatedProductAddPopupList", "Product"))",
                                                 type: "POST",
                                                 dataType: "json",
-                                                data: additionalData
+                                                data: function() {
+                                                    var data = {
+                                                        SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
+                                                        SearchCategoryId: $('#SearchCategoryId').val(),
+                                                        SearchManufacturerId: $('#SearchManufacturerId').val(),
+                                                        SearchStoreId: $('#SearchStoreId').val(),
+                                                        SearchVendorId: $('#SearchVendorId').val(),
+                                                        SearchProductTypeId: $('#SearchProductTypeId').val()
+                                                    };
+                                                    addAntiForgeryToken(data);
+                                                    return data;
+                                                }
                                             }
                                         },
                                         schema: {
@@ -113,13 +137,14 @@
                                             // Cancel the changes
                                             this.cancelChanges();
                                         },
-                                        pageSize: @(popupGridPageSize),
+                                        pageSize: @(Model.PageSize),
                                         serverPaging: true,
                                         serverFiltering: true,
                                         serverSorting: true
                                     },
                                     pageable: {
                                         refresh: true,
+                                        pageSizes: [@(Model.AvailablePageSizes)],
                                         @await Html.PartialAsync("_GridPagerMessages")
                                     },
                                     editable: {
@@ -162,7 +187,7 @@
                     </div>
                 </div>
 
-                <script type="text/javascript">
+                <script>
                     $(document).ready(function() {
                         $('#search-products').click(function() {
                             var grid = $('#products-grid').data('kendoGrid');
@@ -189,17 +214,6 @@
                             updateMasterCheckbox();
                         });
                     });
-
-                    function additionalData() {
-                        var data = {
-                            SearchProductName: $('#@Html.IdFor(model => model.SearchProductName)').val(),
-                            SearchCategoryId: $('#SearchCategoryId').val(),
-                            SearchStoreId: $('#SearchStoreId').val(),
-                            SearchProductTypeId: $('#SearchProductTypeId').val()
-                        };
-                        addAntiForgeryToken(data);
-                        return data;
-                    }
 
                     function updateMasterCheckbox() {
                         var numChkBoxes = $('#products-grid input[type=checkbox][id!=mastercheckbox][class=checkboxGroups]').length;

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Hosting;
 using Nop.Core;
 using Nop.Core.Data;
 using Nop.Core.Domain;
@@ -9,6 +8,7 @@ using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Forums;
+using Nop.Core.Domain.Gdpr;
 using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.Logging;
 using Nop.Core.Domain.Media;
@@ -20,6 +20,7 @@ using Nop.Core.Domain.Seo;
 using Nop.Core.Domain.Stores;
 using Nop.Core.Domain.Tasks;
 using Nop.Core.Domain.Topics;
+using Nop.Core.Domain.Vendors;
 using Nop.Core.Infrastructure;
 using Nop.Services.Common;
 using Nop.Services.Configuration;
@@ -30,8 +31,8 @@ using Nop.Services.Media;
 using Nop.Services.Seo;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Nop.Services.Installation
 {
@@ -42,114 +43,152 @@ namespace Nop.Services.Installation
     {
         #region Fields
 
-        private readonly IRepository<Store> _storeRepository;
-        private readonly IRepository<Language> _languageRepository;
+        private readonly IGenericAttributeService _genericAttributeService;
+        private readonly INopFileProvider _fileProvider;
+        private readonly IRepository<ActivityLog> _activityLogRepository;
+        private readonly IRepository<ActivityLogType> _activityLogTypeRepository;
+        private readonly IRepository<Address> _addressRepository;
+        private readonly IRepository<BlogPost> _blogPostRepository;
+        private readonly IRepository<Category> _categoryRepository;
+        private readonly IRepository<CategoryTemplate> _categoryTemplateRepository;
+        private readonly IRepository<Country> _countryRepository;
         private readonly IRepository<Customer> _customerRepository;
         private readonly IRepository<CustomerPassword> _customerPasswordRepository;
         private readonly IRepository<CustomerRole> _customerRoleRepository;
-        private readonly IRepository<Category> _categoryRepository;
-        private readonly IRepository<Product> _productRepository;
-        private readonly IRepository<UrlRecord> _urlRecordRepository;
-        private readonly IRepository<RelatedProduct> _relatedProductRepository;
         private readonly IRepository<EmailAccount> _emailAccountRepository;
-        private readonly IRepository<MessageTemplate> _messageTemplateRepository;
-        private readonly IRepository<ForumGroup> _forumGroupRepository;
         private readonly IRepository<Forum> _forumRepository;
-        private readonly IRepository<Country> _countryRepository;
-        private readonly IRepository<StateProvince> _stateProvinceRepository;
-        private readonly IRepository<BlogPost> _blogPostRepository;
-        private readonly IRepository<Topic> _topicRepository;
+        private readonly IRepository<ForumGroup> _forumGroupRepository;
+        private readonly IRepository<Language> _languageRepository;
+        private readonly IRepository<MessageTemplate> _messageTemplateRepository;
         private readonly IRepository<NewsItem> _newsItemRepository;
         private readonly IRepository<Poll> _pollRepository;
-        private readonly IRepository<ActivityLogType> _activityLogTypeRepository;
-        private readonly IRepository<ActivityLog> _activityLogRepository;
+        private readonly IRepository<Product> _productRepository;
         private readonly IRepository<ProductTag> _productTagRepository;
         private readonly IRepository<ProductTemplate> _productTemplateRepository;
-        private readonly IRepository<CategoryTemplate> _categoryTemplateRepository;
-        private readonly IRepository<TopicTemplate> _topicTemplateRepository;
+        private readonly IRepository<RelatedProduct> _relatedProductRepository;
         private readonly IRepository<ScheduleTask> _scheduleTaskRepository;
-        private readonly IRepository<Address> _addressRepository;
         private readonly IRepository<SearchTerm> _searchTermRepository;
-        private readonly IGenericAttributeService _genericAttributeService;
+        private readonly IRepository<StateProvince> _stateProvinceRepository;
+        private readonly IRepository<Store> _storeRepository;
+        private readonly IRepository<Topic> _topicRepository;
+        private readonly IRepository<TopicTemplate> _topicTemplateRepository;
+        private readonly IRepository<UrlRecord> _urlRecordRepository;
+        private readonly IRepository<Vendor> _vendorRepository;
         private readonly IWebHelper _webHelper;
-        private readonly IHostingEnvironment _hostingEnvironment;
 
         #endregion
 
         #region Ctor
 
-        public CodeFirstInstallationService(IRepository<Store> storeRepository,
-            IRepository<Language> languageRepository,
+        public CodeFirstInstallationService(IGenericAttributeService genericAttributeService,
+            INopFileProvider fileProvider,
+            IRepository<ActivityLog> activityLogRepository,
+            IRepository<ActivityLogType> activityLogTypeRepository,
+            IRepository<Address> addressRepository,
+            IRepository<BlogPost> blogPostRepository,
+            IRepository<Category> categoryRepository,
+            IRepository<CategoryTemplate> categoryTemplateRepository,
+            IRepository<Country> countryRepository,
             IRepository<Customer> customerRepository,
             IRepository<CustomerPassword> customerPasswordRepository,
             IRepository<CustomerRole> customerRoleRepository,
-            IRepository<Category> categoryRepository,
-            IRepository<Product> productRepository,
-            IRepository<UrlRecord> urlRecordRepository,
-            IRepository<RelatedProduct> relatedProductRepository,
             IRepository<EmailAccount> emailAccountRepository,
-            IRepository<MessageTemplate> messageTemplateRepository,
-            IRepository<ForumGroup> forumGroupRepository,
             IRepository<Forum> forumRepository,
-            IRepository<Country> countryRepository,
-            IRepository<StateProvince> stateProvinceRepository,
-            IRepository<BlogPost> blogPostRepository,
-            IRepository<Topic> topicRepository,
+            IRepository<ForumGroup> forumGroupRepository,
+            IRepository<Language> languageRepository,
+            IRepository<MessageTemplate> messageTemplateRepository,
             IRepository<NewsItem> newsItemRepository,
             IRepository<Poll> pollRepository,
-            IRepository<ActivityLogType> activityLogTypeRepository,
-            IRepository<ActivityLog> activityLogRepository,
+            IRepository<Product> productRepository,
             IRepository<ProductTag> productTagRepository,
             IRepository<ProductTemplate> productTemplateRepository,
-            IRepository<CategoryTemplate> categoryTemplateRepository,
-            IRepository<TopicTemplate> topicTemplateRepository,
+            IRepository<RelatedProduct> relatedProductRepository,
             IRepository<ScheduleTask> scheduleTaskRepository,
-            IRepository<Address> addressRepository,
             IRepository<SearchTerm> searchTermRepository,
-            IGenericAttributeService genericAttributeService,
-            IWebHelper webHelper,
-            IHostingEnvironment hostingEnvironment)
+            IRepository<StateProvince> stateProvinceRepository,
+            IRepository<Store> storeRepository,
+            IRepository<Topic> topicRepository,
+            IRepository<TopicTemplate> topicTemplateRepository,
+            IRepository<UrlRecord> urlRecordRepository,
+            IRepository<Vendor> vendorRepository,
+            IWebHelper webHelper)
         {
-            this._storeRepository = storeRepository;
-            this._languageRepository = languageRepository;
-            this._customerRepository = customerRepository;
-            this._customerPasswordRepository = customerPasswordRepository;
-            this._customerRoleRepository = customerRoleRepository;
+            this._genericAttributeService = genericAttributeService;
+            this._fileProvider = fileProvider;
+            this._activityLogRepository = activityLogRepository;
+            this._activityLogTypeRepository = activityLogTypeRepository;
+            this._addressRepository = addressRepository;
+            this._blogPostRepository = blogPostRepository;
             this._categoryRepository = categoryRepository;
-            this._productRepository = productRepository;
-            this._urlRecordRepository = urlRecordRepository;
-            this._relatedProductRepository = relatedProductRepository;
+            this._categoryTemplateRepository = categoryTemplateRepository;
+            this._countryRepository = countryRepository;
+            this._customerPasswordRepository = customerPasswordRepository;
+            this._customerRepository = customerRepository;
+            this._customerRoleRepository = customerRoleRepository;
             this._emailAccountRepository = emailAccountRepository;
-            this._messageTemplateRepository = messageTemplateRepository;
             this._forumGroupRepository = forumGroupRepository;
             this._forumRepository = forumRepository;
-            this._countryRepository = countryRepository;
-            this._stateProvinceRepository = stateProvinceRepository;
-            this._blogPostRepository = blogPostRepository;
-            this._topicRepository = topicRepository;
+            this._languageRepository = languageRepository;
+            this._messageTemplateRepository = messageTemplateRepository;
             this._newsItemRepository = newsItemRepository;
             this._pollRepository = pollRepository;
-            this._activityLogTypeRepository = activityLogTypeRepository;
-            this._activityLogRepository = activityLogRepository;
+            this._productRepository = productRepository;
             this._productTagRepository = productTagRepository;
             this._productTemplateRepository = productTemplateRepository;
-            this._categoryTemplateRepository = categoryTemplateRepository;
-            this._topicTemplateRepository = topicTemplateRepository;
+            this._relatedProductRepository = relatedProductRepository;
             this._scheduleTaskRepository = scheduleTaskRepository;
-            this._addressRepository = addressRepository;
             this._searchTermRepository = searchTermRepository;
-            this._genericAttributeService = genericAttributeService;
+            this._stateProvinceRepository = stateProvinceRepository;
+            this._storeRepository = storeRepository;
+            this._topicRepository = topicRepository;
+            this._topicTemplateRepository = topicTemplateRepository;
+            this._urlRecordRepository = urlRecordRepository;
+            this._vendorRepository = vendorRepository;
             this._webHelper = webHelper;
-            this._hostingEnvironment = hostingEnvironment;
         }
 
         #endregion
 
         #region Utilities
 
+        protected virtual string ValidateSeName<T>(T entity, string name) where T : BaseEntity
+        {
+            //simplified and very fast (no DB calls) version of "ValidateSeName" method of UrlRecordService
+            //we know that there's no same names of entities in sample data
+
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            //validation
+            var okChars = "abcdefghijklmnopqrstuvwxyz1234567890 _-";
+            name = name.Trim().ToLowerInvariant();
+
+            var sb = new StringBuilder();
+            foreach (var c in name.ToCharArray())
+            {
+                var c2 = c.ToString();
+                if (okChars.Contains(c2))
+                {
+                    sb.Append(c2);
+                }
+            }
+
+            name = sb.ToString();
+            name = name.Replace(" ", "-");
+            while (name.Contains("--"))
+                name = name.Replace("--", "-");
+            while (name.Contains("__"))
+                name = name.Replace("__", "_");
+
+            //max length
+            name = CommonHelper.EnsureMaximumLength(name, NopSeoDefaults.SearchEngineNameLength);
+
+            return name;
+        }
+
         protected virtual string GetSamplesPath()
         {
-            return Path.Combine(_hostingEnvironment.WebRootPath, "images\\samples\\");
+            return _fileProvider.GetAbsolutePath(NopInstallationDefaults.SampleImagesPath);
         }
 
         protected virtual void InstallStores()
@@ -169,8 +208,8 @@ namespace Nop.Services.Installation
                     CompanyName = "Your company name",
                     CompanyAddress = "your company country, state, zip, street, etc",
                     CompanyPhoneNumber = "(123) 456-78901",
-                    CompanyVat = null,
-                },
+                    CompanyVat = null
+                }
             };
 
             _storeRepository.Insert(stores);
@@ -196,13 +235,14 @@ namespace Nop.Services.Installation
             var language = _languageRepository.Table.Single(l => l.Name == "English");
 
             //save resources
-            foreach (var filePath in System.IO.Directory.EnumerateFiles(CommonHelper.MapPath("~/App_Data/Localization/"), "*.nopres.xml", SearchOption.TopDirectoryOnly))
+            var directoryPath = _fileProvider.MapPath(NopInstallationDefaults.LocalizationResourcesPath);
+            var pattern = $"*.{NopInstallationDefaults.LocalizationResourcesFileExtension}";
+            foreach (var filePath in _fileProvider.EnumerateFiles(directoryPath, pattern))
             {
-                var localesXml = File.ReadAllText(filePath);
+                var localesXml = _fileProvider.ReadAllText(filePath, Encoding.UTF8);
                 var localizationService = EngineContext.Current.Resolve<ILocalizationService>();
                 localizationService.ImportResourcesFromXml(language, localesXml);
             }
-
         }
 
         protected virtual void InstallCountriesAndStates()
@@ -210,551 +250,548 @@ namespace Nop.Services.Installation
             var cUsa = new Country
             {
                 Name = "United States",
-               
-                
                 TwoLetterIsoCode = "US",
                 ThreeLetterIsoCode = "USA",
                 NumericIsoCode = 840,
-                
                 DisplayOrder = 1,
-                Published = true,
+                Published = true
             };
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "AA (Armed Forces Americas)",
                 Abbreviation = "AA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "AE (Armed Forces Europe)",
                 Abbreviation = "AE",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Alabama",
                 Abbreviation = "AL",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Alaska",
                 Abbreviation = "AK",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "American Samoa",
                 Abbreviation = "AS",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "AP (Armed Forces Pacific)",
                 Abbreviation = "AP",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Arizona",
                 Abbreviation = "AZ",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Arkansas",
                 Abbreviation = "AR",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "California",
                 Abbreviation = "CA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Colorado",
                 Abbreviation = "CO",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Connecticut",
                 Abbreviation = "CT",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Delaware",
                 Abbreviation = "DE",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "District of Columbia",
                 Abbreviation = "DC",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Federated States of Micronesia",
                 Abbreviation = "FM",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Florida",
                 Abbreviation = "FL",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Georgia",
                 Abbreviation = "GA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Guam",
                 Abbreviation = "GU",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Hawaii",
                 Abbreviation = "HI",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Idaho",
                 Abbreviation = "ID",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Illinois",
                 Abbreviation = "IL",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Indiana",
                 Abbreviation = "IN",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Iowa",
                 Abbreviation = "IA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Kansas",
                 Abbreviation = "KS",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Kentucky",
                 Abbreviation = "KY",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Louisiana",
                 Abbreviation = "LA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Maine",
                 Abbreviation = "ME",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Marshall Islands",
                 Abbreviation = "MH",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Maryland",
                 Abbreviation = "MD",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Massachusetts",
                 Abbreviation = "MA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Michigan",
                 Abbreviation = "MI",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Minnesota",
                 Abbreviation = "MN",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Mississippi",
                 Abbreviation = "MS",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Missouri",
                 Abbreviation = "MO",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Montana",
                 Abbreviation = "MT",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Nebraska",
                 Abbreviation = "NE",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Nevada",
                 Abbreviation = "NV",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "New Hampshire",
                 Abbreviation = "NH",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "New Jersey",
                 Abbreviation = "NJ",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "New Mexico",
                 Abbreviation = "NM",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "New York",
                 Abbreviation = "NY",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "North Carolina",
                 Abbreviation = "NC",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "North Dakota",
                 Abbreviation = "ND",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Northern Mariana Islands",
                 Abbreviation = "MP",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Ohio",
                 Abbreviation = "OH",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Oklahoma",
                 Abbreviation = "OK",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Oregon",
                 Abbreviation = "OR",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Palau",
                 Abbreviation = "PW",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Pennsylvania",
                 Abbreviation = "PA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Puerto Rico",
                 Abbreviation = "PR",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Rhode Island",
                 Abbreviation = "RI",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "South Carolina",
                 Abbreviation = "SC",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "South Dakota",
                 Abbreviation = "SD",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Tennessee",
                 Abbreviation = "TN",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Texas",
                 Abbreviation = "TX",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Utah",
                 Abbreviation = "UT",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Vermont",
                 Abbreviation = "VT",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Virgin Islands",
                 Abbreviation = "VI",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Virginia",
                 Abbreviation = "VA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Washington",
                 Abbreviation = "WA",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "West Virginia",
                 Abbreviation = "WV",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Wisconsin",
                 Abbreviation = "WI",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cUsa.StateProvinces.Add(new StateProvince
             {
                 Name = "Wyoming",
                 Abbreviation = "WY",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             var cCanada = new Country
             {
                 Name = "Canada",
-               
+                
                 
                 TwoLetterIsoCode = "CA",
                 ThreeLetterIsoCode = "CAN",
                 NumericIsoCode = 124,
                 
                 DisplayOrder = 100,
-                Published = true,
+                Published = true
             };
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Alberta",
                 Abbreviation = "AB",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "British Columbia",
                 Abbreviation = "BC",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Manitoba",
                 Abbreviation = "MB",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "New Brunswick",
                 Abbreviation = "NB",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Newfoundland and Labrador",
                 Abbreviation = "NL",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Northwest Territories",
                 Abbreviation = "NT",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Nova Scotia",
                 Abbreviation = "NS",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Nunavut",
                 Abbreviation = "NU",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Ontario",
                 Abbreviation = "ON",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Prince Edward Island",
                 Abbreviation = "PE",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Quebec",
                 Abbreviation = "QC",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Saskatchewan",
                 Abbreviation = "SK",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             cCanada.StateProvinces.Add(new StateProvince
             {
                 Name = "Yukon Territory",
                 Abbreviation = "YT",
                 Published = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             var countries = new List<Country>
             {
@@ -764,8 +801,6 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Argentina",
-                   
-                    
                     TwoLetterIsoCode = "AR",
                     ThreeLetterIsoCode = "ARG",
                     NumericIsoCode = 32,
@@ -776,8 +811,6 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Armenia",
-                   
-                    
                     TwoLetterIsoCode = "AM",
                     ThreeLetterIsoCode = "ARM",
                     NumericIsoCode = 51,
@@ -788,7 +821,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Aruba",
-                   
+                    
                     
                     TwoLetterIsoCode = "AW",
                     ThreeLetterIsoCode = "ABW",
@@ -800,7 +833,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Australia",
-                   
+                    
                     
                     TwoLetterIsoCode = "AU",
                     ThreeLetterIsoCode = "AUS",
@@ -812,7 +845,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Austria",
-                   
+                    
                     
                     TwoLetterIsoCode = "AT",
                     ThreeLetterIsoCode = "AUT",
@@ -824,7 +857,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Azerbaijan",
-                   
+                    
                     
                     TwoLetterIsoCode = "AZ",
                     ThreeLetterIsoCode = "AZE",
@@ -836,7 +869,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bahamas",
-                   
+                    
                     
                     TwoLetterIsoCode = "BS",
                     ThreeLetterIsoCode = "BHS",
@@ -848,7 +881,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bangladesh",
-                   
+                    
                     
                     TwoLetterIsoCode = "BD",
                     ThreeLetterIsoCode = "BGD",
@@ -860,7 +893,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Belarus",
-                   
+                    
                     
                     TwoLetterIsoCode = "BY",
                     ThreeLetterIsoCode = "BLR",
@@ -872,7 +905,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Belgium",
-                   
+                    
                     
                     TwoLetterIsoCode = "BE",
                     ThreeLetterIsoCode = "BEL",
@@ -884,7 +917,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Belize",
-                   
+                    
                     
                     TwoLetterIsoCode = "BZ",
                     ThreeLetterIsoCode = "BLZ",
@@ -896,7 +929,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bermuda",
-                   
+                    
                     
                     TwoLetterIsoCode = "BM",
                     ThreeLetterIsoCode = "BMU",
@@ -908,7 +941,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bolivia",
-                   
+                    
                     
                     TwoLetterIsoCode = "BO",
                     ThreeLetterIsoCode = "BOL",
@@ -920,7 +953,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bosnia and Herzegowina",
-                   
+                    
                     
                     TwoLetterIsoCode = "BA",
                     ThreeLetterIsoCode = "BIH",
@@ -932,7 +965,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Brazil",
-                   
+                    
                     
                     TwoLetterIsoCode = "BR",
                     ThreeLetterIsoCode = "BRA",
@@ -944,7 +977,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bulgaria",
-                   
+                    
                     
                     TwoLetterIsoCode = "BG",
                     ThreeLetterIsoCode = "BGR",
@@ -956,7 +989,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cayman Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "KY",
                     ThreeLetterIsoCode = "CYM",
@@ -968,7 +1001,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Chile",
-                   
+                    
                     
                     TwoLetterIsoCode = "CL",
                     ThreeLetterIsoCode = "CHL",
@@ -980,7 +1013,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "China",
-                   
+                    
                     
                     TwoLetterIsoCode = "CN",
                     ThreeLetterIsoCode = "CHN",
@@ -992,7 +1025,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Colombia",
-                   
+                    
                     
                     TwoLetterIsoCode = "CO",
                     ThreeLetterIsoCode = "COL",
@@ -1004,7 +1037,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Costa Rica",
-                   
+                    
                     
                     TwoLetterIsoCode = "CR",
                     ThreeLetterIsoCode = "CRI",
@@ -1016,7 +1049,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Croatia",
-                   
+                    
                     
                     TwoLetterIsoCode = "HR",
                     ThreeLetterIsoCode = "HRV",
@@ -1028,7 +1061,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cuba",
-                   
+                    
                     
                     TwoLetterIsoCode = "CU",
                     ThreeLetterIsoCode = "CUB",
@@ -1040,7 +1073,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cyprus",
-                   
+                    
                     
                     TwoLetterIsoCode = "CY",
                     ThreeLetterIsoCode = "CYP",
@@ -1052,7 +1085,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Czech Republic",
-                   
+                    
                     
                     TwoLetterIsoCode = "CZ",
                     ThreeLetterIsoCode = "CZE",
@@ -1064,7 +1097,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Denmark",
-                   
+                    
                     
                     TwoLetterIsoCode = "DK",
                     ThreeLetterIsoCode = "DNK",
@@ -1076,7 +1109,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Dominican Republic",
-                   
+                    
                     
                     TwoLetterIsoCode = "DO",
                     ThreeLetterIsoCode = "DOM",
@@ -1088,7 +1121,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "East Timor",
-                   
+                    
                     
                     TwoLetterIsoCode = "TL",
                     ThreeLetterIsoCode = "TLS",
@@ -1100,7 +1133,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Ecuador",
-                   
+                    
                     
                     TwoLetterIsoCode = "EC",
                     ThreeLetterIsoCode = "ECU",
@@ -1112,7 +1145,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Egypt",
-                   
+                    
                     
                     TwoLetterIsoCode = "EG",
                     ThreeLetterIsoCode = "EGY",
@@ -1124,7 +1157,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Finland",
-                   
+                    
                     
                     TwoLetterIsoCode = "FI",
                     ThreeLetterIsoCode = "FIN",
@@ -1136,7 +1169,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "France",
-                   
+                    
                     
                     TwoLetterIsoCode = "FR",
                     ThreeLetterIsoCode = "FRA",
@@ -1148,7 +1181,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Georgia",
-                   
+                    
                     
                     TwoLetterIsoCode = "GE",
                     ThreeLetterIsoCode = "GEO",
@@ -1160,7 +1193,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Germany",
-                   
+                    
                     
                     TwoLetterIsoCode = "DE",
                     ThreeLetterIsoCode = "DEU",
@@ -1172,7 +1205,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Gibraltar",
-                   
+                    
                     
                     TwoLetterIsoCode = "GI",
                     ThreeLetterIsoCode = "GIB",
@@ -1184,7 +1217,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Greece",
-                   
+                    
                     
                     TwoLetterIsoCode = "GR",
                     ThreeLetterIsoCode = "GRC",
@@ -1196,7 +1229,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Guatemala",
-                   
+                    
                     
                     TwoLetterIsoCode = "GT",
                     ThreeLetterIsoCode = "GTM",
@@ -1208,7 +1241,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Hong Kong",
-                   
+                    
                     
                     TwoLetterIsoCode = "HK",
                     ThreeLetterIsoCode = "HKG",
@@ -1220,7 +1253,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Hungary",
-                   
+                    
                     
                     TwoLetterIsoCode = "HU",
                     ThreeLetterIsoCode = "HUN",
@@ -1232,7 +1265,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "India",
-                   
+                    
                     
                     TwoLetterIsoCode = "IN",
                     ThreeLetterIsoCode = "IND",
@@ -1244,7 +1277,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Indonesia",
-                   
+                    
                     
                     TwoLetterIsoCode = "ID",
                     ThreeLetterIsoCode = "IDN",
@@ -1256,7 +1289,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Ireland",
-                   
+                    
                     
                     TwoLetterIsoCode = "IE",
                     ThreeLetterIsoCode = "IRL",
@@ -1268,7 +1301,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Israel",
-                   
+                    
                     
                     TwoLetterIsoCode = "IL",
                     ThreeLetterIsoCode = "ISR",
@@ -1280,7 +1313,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Italy",
-                   
+                    
                     
                     TwoLetterIsoCode = "IT",
                     ThreeLetterIsoCode = "ITA",
@@ -1292,7 +1325,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Jamaica",
-                   
+                    
                     
                     TwoLetterIsoCode = "JM",
                     ThreeLetterIsoCode = "JAM",
@@ -1304,7 +1337,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Japan",
-                   
+                    
                     
                     TwoLetterIsoCode = "JP",
                     ThreeLetterIsoCode = "JPN",
@@ -1316,7 +1349,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Jordan",
-                   
+                    
                     
                     TwoLetterIsoCode = "JO",
                     ThreeLetterIsoCode = "JOR",
@@ -1328,7 +1361,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Kazakhstan",
-                   
+                    
                     
                     TwoLetterIsoCode = "KZ",
                     ThreeLetterIsoCode = "KAZ",
@@ -1340,7 +1373,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Korea, Democratic People's Republic of",
-                   
+                    
                     
                     TwoLetterIsoCode = "KP",
                     ThreeLetterIsoCode = "PRK",
@@ -1352,7 +1385,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Kuwait",
-                   
+                    
                     
                     TwoLetterIsoCode = "KW",
                     ThreeLetterIsoCode = "KWT",
@@ -1364,7 +1397,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Malaysia",
-                   
+                    
                     
                     TwoLetterIsoCode = "MY",
                     ThreeLetterIsoCode = "MYS",
@@ -1376,7 +1409,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Mexico",
-                   
+                    
                     
                     TwoLetterIsoCode = "MX",
                     ThreeLetterIsoCode = "MEX",
@@ -1388,7 +1421,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Netherlands",
-                   
+                    
                     
                     TwoLetterIsoCode = "NL",
                     ThreeLetterIsoCode = "NLD",
@@ -1400,7 +1433,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "New Zealand",
-                   
+                    
                     
                     TwoLetterIsoCode = "NZ",
                     ThreeLetterIsoCode = "NZL",
@@ -1412,7 +1445,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Norway",
-                   
+                    
                     
                     TwoLetterIsoCode = "NO",
                     ThreeLetterIsoCode = "NOR",
@@ -1424,7 +1457,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Pakistan",
-                   
+                    
                     
                     TwoLetterIsoCode = "PK",
                     ThreeLetterIsoCode = "PAK",
@@ -1436,7 +1469,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Palestine",
-                   
+                    
                     
                     TwoLetterIsoCode = "PS",
                     ThreeLetterIsoCode = "PSE",
@@ -1448,7 +1481,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Paraguay",
-                   
+                    
                     
                     TwoLetterIsoCode = "PY",
                     ThreeLetterIsoCode = "PRY",
@@ -1460,7 +1493,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Peru",
-                   
+                    
                     
                     TwoLetterIsoCode = "PE",
                     ThreeLetterIsoCode = "PER",
@@ -1472,7 +1505,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Philippines",
-                   
+                    
                     
                     TwoLetterIsoCode = "PH",
                     ThreeLetterIsoCode = "PHL",
@@ -1484,7 +1517,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Poland",
-                   
+                    
                     
                     TwoLetterIsoCode = "PL",
                     ThreeLetterIsoCode = "POL",
@@ -1496,7 +1529,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Portugal",
-                   
+                    
                     
                     TwoLetterIsoCode = "PT",
                     ThreeLetterIsoCode = "PRT",
@@ -1508,7 +1541,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Puerto Rico",
-                   
+                    
                     
                     TwoLetterIsoCode = "PR",
                     ThreeLetterIsoCode = "PRI",
@@ -1520,7 +1553,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Qatar",
-                   
+                    
                     
                     TwoLetterIsoCode = "QA",
                     ThreeLetterIsoCode = "QAT",
@@ -1532,7 +1565,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Romania",
-                   
+                    
                     
                     TwoLetterIsoCode = "RO",
                     ThreeLetterIsoCode = "ROM",
@@ -1544,7 +1577,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Russian Federation",
-                   
+                    
                     
                     TwoLetterIsoCode = "RU",
                     ThreeLetterIsoCode = "RUS",
@@ -1556,7 +1589,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Saudi Arabia",
-                   
+                    
                     
                     TwoLetterIsoCode = "SA",
                     ThreeLetterIsoCode = "SAU",
@@ -1568,7 +1601,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Singapore",
-                   
+                    
                     
                     TwoLetterIsoCode = "SG",
                     ThreeLetterIsoCode = "SGP",
@@ -1580,7 +1613,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Slovakia (Slovak Republic)",
-                   
+                    
                     
                     TwoLetterIsoCode = "SK",
                     ThreeLetterIsoCode = "SVK",
@@ -1592,7 +1625,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Slovenia",
-                   
+                    
                     
                     TwoLetterIsoCode = "SI",
                     ThreeLetterIsoCode = "SVN",
@@ -1604,7 +1637,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "South Africa",
-                   
+                    
                     
                     TwoLetterIsoCode = "ZA",
                     ThreeLetterIsoCode = "ZAF",
@@ -1616,7 +1649,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Spain",
-                   
+                    
                     
                     TwoLetterIsoCode = "ES",
                     ThreeLetterIsoCode = "ESP",
@@ -1628,7 +1661,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Sweden",
-                   
+                    
                     
                     TwoLetterIsoCode = "SE",
                     ThreeLetterIsoCode = "SWE",
@@ -1640,7 +1673,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Switzerland",
-                   
+                    
                     
                     TwoLetterIsoCode = "CH",
                     ThreeLetterIsoCode = "CHE",
@@ -1652,7 +1685,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Taiwan",
-                   
+                    
                     
                     TwoLetterIsoCode = "TW",
                     ThreeLetterIsoCode = "TWN",
@@ -1664,7 +1697,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Thailand",
-                   
+                    
                     
                     TwoLetterIsoCode = "TH",
                     ThreeLetterIsoCode = "THA",
@@ -1676,7 +1709,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Turkey",
-                   
+                    
                     
                     TwoLetterIsoCode = "TR",
                     ThreeLetterIsoCode = "TUR",
@@ -1688,7 +1721,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Ukraine",
-                   
+                    
                     
                     TwoLetterIsoCode = "UA",
                     ThreeLetterIsoCode = "UKR",
@@ -1700,7 +1733,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "United Arab Emirates",
-                   
+                    
                     
                     TwoLetterIsoCode = "AE",
                     ThreeLetterIsoCode = "ARE",
@@ -1712,7 +1745,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "United Kingdom",
-                   
+                    
                     
                     TwoLetterIsoCode = "GB",
                     ThreeLetterIsoCode = "GBR",
@@ -1724,7 +1757,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "United States minor outlying islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "UM",
                     ThreeLetterIsoCode = "UMI",
@@ -1736,7 +1769,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Uruguay",
-                   
+                    
                     
                     TwoLetterIsoCode = "UY",
                     ThreeLetterIsoCode = "URY",
@@ -1748,7 +1781,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Uzbekistan",
-                   
+                    
                     
                     TwoLetterIsoCode = "UZ",
                     ThreeLetterIsoCode = "UZB",
@@ -1760,7 +1793,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Venezuela",
-                   
+                    
                     
                     TwoLetterIsoCode = "VE",
                     ThreeLetterIsoCode = "VEN",
@@ -1772,7 +1805,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Serbia",
-                   
+                    
                     
                     TwoLetterIsoCode = "RS",
                     ThreeLetterIsoCode = "SRB",
@@ -1784,7 +1817,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Afghanistan",
-                   
+                    
                     
                     TwoLetterIsoCode = "AF",
                     ThreeLetterIsoCode = "AFG",
@@ -1796,7 +1829,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Albania",
-                   
+                    
                     
                     TwoLetterIsoCode = "AL",
                     ThreeLetterIsoCode = "ALB",
@@ -1808,7 +1841,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Algeria",
-                   
+                    
                     
                     TwoLetterIsoCode = "DZ",
                     ThreeLetterIsoCode = "DZA",
@@ -1820,7 +1853,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "American Samoa",
-                   
+                    
                     
                     TwoLetterIsoCode = "AS",
                     ThreeLetterIsoCode = "ASM",
@@ -1832,7 +1865,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Andorra",
-                   
+                    
                     
                     TwoLetterIsoCode = "AD",
                     ThreeLetterIsoCode = "AND",
@@ -1844,7 +1877,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Angola",
-                   
+                    
                     
                     TwoLetterIsoCode = "AO",
                     ThreeLetterIsoCode = "AGO",
@@ -1856,7 +1889,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Anguilla",
-                   
+                    
                     
                     TwoLetterIsoCode = "AI",
                     ThreeLetterIsoCode = "AIA",
@@ -1868,7 +1901,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Antarctica",
-                   
+                    
                     
                     TwoLetterIsoCode = "AQ",
                     ThreeLetterIsoCode = "ATA",
@@ -1880,7 +1913,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Antigua and Barbuda",
-                   
+                    
                     
                     TwoLetterIsoCode = "AG",
                     ThreeLetterIsoCode = "ATG",
@@ -1892,7 +1925,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bahrain",
-                   
+                    
                     
                     TwoLetterIsoCode = "BH",
                     ThreeLetterIsoCode = "BHR",
@@ -1904,7 +1937,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Barbados",
-                   
+                    
                     
                     TwoLetterIsoCode = "BB",
                     ThreeLetterIsoCode = "BRB",
@@ -1916,7 +1949,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Benin",
-                   
+                    
                     
                     TwoLetterIsoCode = "BJ",
                     ThreeLetterIsoCode = "BEN",
@@ -1928,7 +1961,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bhutan",
-                   
+                    
                     
                     TwoLetterIsoCode = "BT",
                     ThreeLetterIsoCode = "BTN",
@@ -1940,7 +1973,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Botswana",
-                   
+                    
                     
                     TwoLetterIsoCode = "BW",
                     ThreeLetterIsoCode = "BWA",
@@ -1952,7 +1985,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Bouvet Island",
-                   
+                    
                     
                     TwoLetterIsoCode = "BV",
                     ThreeLetterIsoCode = "BVT",
@@ -1964,7 +1997,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "British Indian Ocean Territory",
-                   
+                    
                     
                     TwoLetterIsoCode = "IO",
                     ThreeLetterIsoCode = "IOT",
@@ -1976,7 +2009,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Brunei Darussalam",
-                   
+                    
                     
                     TwoLetterIsoCode = "BN",
                     ThreeLetterIsoCode = "BRN",
@@ -1988,7 +2021,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Burkina Faso",
-                   
+                    
                     
                     TwoLetterIsoCode = "BF",
                     ThreeLetterIsoCode = "BFA",
@@ -2000,7 +2033,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Burundi",
-                   
+                    
                     
                     TwoLetterIsoCode = "BI",
                     ThreeLetterIsoCode = "BDI",
@@ -2012,7 +2045,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cambodia",
-                   
+                    
                     
                     TwoLetterIsoCode = "KH",
                     ThreeLetterIsoCode = "KHM",
@@ -2024,7 +2057,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cameroon",
-                   
+                    
                     
                     TwoLetterIsoCode = "CM",
                     ThreeLetterIsoCode = "CMR",
@@ -2036,7 +2069,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cape Verde",
-                   
+                    
                     
                     TwoLetterIsoCode = "CV",
                     ThreeLetterIsoCode = "CPV",
@@ -2048,7 +2081,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Central African Republic",
-                   
+                    
                     
                     TwoLetterIsoCode = "CF",
                     ThreeLetterIsoCode = "CAF",
@@ -2060,7 +2093,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Chad",
-                   
+                    
                     
                     TwoLetterIsoCode = "TD",
                     ThreeLetterIsoCode = "TCD",
@@ -2072,7 +2105,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Christmas Island",
-                   
+                    
                     
                     TwoLetterIsoCode = "CX",
                     ThreeLetterIsoCode = "CXR",
@@ -2084,7 +2117,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cocos (Keeling) Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "CC",
                     ThreeLetterIsoCode = "CCK",
@@ -2096,7 +2129,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Comoros",
-                   
+                    
                     
                     TwoLetterIsoCode = "KM",
                     ThreeLetterIsoCode = "COM",
@@ -2108,7 +2141,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Congo",
-                   
+                    
                     
                     TwoLetterIsoCode = "CG",
                     ThreeLetterIsoCode = "COG",
@@ -2120,7 +2153,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Congo (Democratic Republic of the)",
-                   
+                    
                     
                     TwoLetterIsoCode = "CD",
                     ThreeLetterIsoCode = "COD",
@@ -2132,7 +2165,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cook Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "CK",
                     ThreeLetterIsoCode = "COK",
@@ -2144,7 +2177,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Cote D'Ivoire",
-                   
+                    
                     
                     TwoLetterIsoCode = "CI",
                     ThreeLetterIsoCode = "CIV",
@@ -2156,7 +2189,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Djibouti",
-                   
+                    
                     
                     TwoLetterIsoCode = "DJ",
                     ThreeLetterIsoCode = "DJI",
@@ -2168,7 +2201,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Dominica",
-                   
+                    
                     
                     TwoLetterIsoCode = "DM",
                     ThreeLetterIsoCode = "DMA",
@@ -2180,7 +2213,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "El Salvador",
-                   
+                    
                     
                     TwoLetterIsoCode = "SV",
                     ThreeLetterIsoCode = "SLV",
@@ -2192,7 +2225,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Equatorial Guinea",
-                   
+                    
                     
                     TwoLetterIsoCode = "GQ",
                     ThreeLetterIsoCode = "GNQ",
@@ -2204,7 +2237,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Eritrea",
-                   
+                    
                     
                     TwoLetterIsoCode = "ER",
                     ThreeLetterIsoCode = "ERI",
@@ -2216,7 +2249,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Estonia",
-                   
+                    
                     
                     TwoLetterIsoCode = "EE",
                     ThreeLetterIsoCode = "EST",
@@ -2228,7 +2261,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Ethiopia",
-                   
+                    
                     
                     TwoLetterIsoCode = "ET",
                     ThreeLetterIsoCode = "ETH",
@@ -2240,7 +2273,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Falkland Islands (Malvinas)",
-                   
+                    
                     
                     TwoLetterIsoCode = "FK",
                     ThreeLetterIsoCode = "FLK",
@@ -2252,7 +2285,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Faroe Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "FO",
                     ThreeLetterIsoCode = "FRO",
@@ -2264,7 +2297,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Fiji",
-                   
+                    
                     
                     TwoLetterIsoCode = "FJ",
                     ThreeLetterIsoCode = "FJI",
@@ -2276,7 +2309,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "French Guiana",
-                   
+                    
                     
                     TwoLetterIsoCode = "GF",
                     ThreeLetterIsoCode = "GUF",
@@ -2288,7 +2321,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "French Polynesia",
-                   
+                    
                     
                     TwoLetterIsoCode = "PF",
                     ThreeLetterIsoCode = "PYF",
@@ -2300,7 +2333,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "French Southern Territories",
-                   
+                    
                     
                     TwoLetterIsoCode = "TF",
                     ThreeLetterIsoCode = "ATF",
@@ -2312,7 +2345,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Gabon",
-                   
+                    
                     
                     TwoLetterIsoCode = "GA",
                     ThreeLetterIsoCode = "GAB",
@@ -2324,7 +2357,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Gambia",
-                   
+                    
                     
                     TwoLetterIsoCode = "GM",
                     ThreeLetterIsoCode = "GMB",
@@ -2336,7 +2369,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Ghana",
-                   
+                    
                     
                     TwoLetterIsoCode = "GH",
                     ThreeLetterIsoCode = "GHA",
@@ -2348,7 +2381,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Greenland",
-                   
+                    
                     
                     TwoLetterIsoCode = "GL",
                     ThreeLetterIsoCode = "GRL",
@@ -2360,7 +2393,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Grenada",
-                   
+                    
                     
                     TwoLetterIsoCode = "GD",
                     ThreeLetterIsoCode = "GRD",
@@ -2372,7 +2405,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Guadeloupe",
-                   
+                    
                     
                     TwoLetterIsoCode = "GP",
                     ThreeLetterIsoCode = "GLP",
@@ -2384,7 +2417,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Guam",
-                   
+                    
                     
                     TwoLetterIsoCode = "GU",
                     ThreeLetterIsoCode = "GUM",
@@ -2396,7 +2429,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Guinea",
-                   
+                    
                     
                     TwoLetterIsoCode = "GN",
                     ThreeLetterIsoCode = "GIN",
@@ -2408,7 +2441,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Guinea-bissau",
-                   
+                    
                     
                     TwoLetterIsoCode = "GW",
                     ThreeLetterIsoCode = "GNB",
@@ -2420,7 +2453,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Guyana",
-                   
+                    
                     
                     TwoLetterIsoCode = "GY",
                     ThreeLetterIsoCode = "GUY",
@@ -2432,7 +2465,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Haiti",
-                   
+                    
                     
                     TwoLetterIsoCode = "HT",
                     ThreeLetterIsoCode = "HTI",
@@ -2444,7 +2477,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Heard and Mc Donald Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "HM",
                     ThreeLetterIsoCode = "HMD",
@@ -2456,7 +2489,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Honduras",
-                   
+                    
                     
                     TwoLetterIsoCode = "HN",
                     ThreeLetterIsoCode = "HND",
@@ -2468,7 +2501,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Iceland",
-                   
+                    
                     
                     TwoLetterIsoCode = "IS",
                     ThreeLetterIsoCode = "ISL",
@@ -2480,7 +2513,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Iran (Islamic Republic of)",
-                   
+                    
                     
                     TwoLetterIsoCode = "IR",
                     ThreeLetterIsoCode = "IRN",
@@ -2492,7 +2525,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Iraq",
-                   
+                    
                     
                     TwoLetterIsoCode = "IQ",
                     ThreeLetterIsoCode = "IRQ",
@@ -2504,7 +2537,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Kenya",
-                   
+                    
                     
                     TwoLetterIsoCode = "KE",
                     ThreeLetterIsoCode = "KEN",
@@ -2516,7 +2549,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Kiribati",
-                   
+                    
                     
                     TwoLetterIsoCode = "KI",
                     ThreeLetterIsoCode = "KIR",
@@ -2528,7 +2561,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Korea",
-                   
+                    
                     
                     TwoLetterIsoCode = "KR",
                     ThreeLetterIsoCode = "KOR",
@@ -2540,7 +2573,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Kyrgyzstan",
-                   
+                    
                     
                     TwoLetterIsoCode = "KG",
                     ThreeLetterIsoCode = "KGZ",
@@ -2552,7 +2585,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Lao People's Democratic Republic",
-                   
+                    
                     
                     TwoLetterIsoCode = "LA",
                     ThreeLetterIsoCode = "LAO",
@@ -2564,7 +2597,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Latvia",
-                   
+                    
                     
                     TwoLetterIsoCode = "LV",
                     ThreeLetterIsoCode = "LVA",
@@ -2576,7 +2609,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Lebanon",
-                   
+                    
                     
                     TwoLetterIsoCode = "LB",
                     ThreeLetterIsoCode = "LBN",
@@ -2588,7 +2621,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Lesotho",
-                   
+                    
                     
                     TwoLetterIsoCode = "LS",
                     ThreeLetterIsoCode = "LSO",
@@ -2600,7 +2633,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Liberia",
-                   
+                    
                     
                     TwoLetterIsoCode = "LR",
                     ThreeLetterIsoCode = "LBR",
@@ -2612,7 +2645,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Libyan Arab Jamahiriya",
-                   
+                    
                     
                     TwoLetterIsoCode = "LY",
                     ThreeLetterIsoCode = "LBY",
@@ -2624,7 +2657,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Liechtenstein",
-                   
+                    
                     
                     TwoLetterIsoCode = "LI",
                     ThreeLetterIsoCode = "LIE",
@@ -2636,7 +2669,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Lithuania",
-                   
+                    
                     
                     TwoLetterIsoCode = "LT",
                     ThreeLetterIsoCode = "LTU",
@@ -2648,7 +2681,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Luxembourg",
-                   
+                    
                     
                     TwoLetterIsoCode = "LU",
                     ThreeLetterIsoCode = "LUX",
@@ -2660,7 +2693,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Macau",
-                   
+                    
                     
                     TwoLetterIsoCode = "MO",
                     ThreeLetterIsoCode = "MAC",
@@ -2672,7 +2705,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Macedonia",
-                   
+                    
                     
                     TwoLetterIsoCode = "MK",
                     ThreeLetterIsoCode = "MKD",
@@ -2684,7 +2717,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Madagascar",
-                   
+                    
                     
                     TwoLetterIsoCode = "MG",
                     ThreeLetterIsoCode = "MDG",
@@ -2696,7 +2729,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Malawi",
-                   
+                    
                     
                     TwoLetterIsoCode = "MW",
                     ThreeLetterIsoCode = "MWI",
@@ -2708,7 +2741,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Maldives",
-                   
+                    
                     
                     TwoLetterIsoCode = "MV",
                     ThreeLetterIsoCode = "MDV",
@@ -2720,7 +2753,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Mali",
-                   
+                    
                     
                     TwoLetterIsoCode = "ML",
                     ThreeLetterIsoCode = "MLI",
@@ -2732,7 +2765,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Malta",
-                   
+                    
                     
                     TwoLetterIsoCode = "MT",
                     ThreeLetterIsoCode = "MLT",
@@ -2744,7 +2777,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Marshall Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "MH",
                     ThreeLetterIsoCode = "MHL",
@@ -2756,7 +2789,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Martinique",
-                   
+                    
                     
                     TwoLetterIsoCode = "MQ",
                     ThreeLetterIsoCode = "MTQ",
@@ -2768,7 +2801,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Mauritania",
-                   
+                    
                     
                     TwoLetterIsoCode = "MR",
                     ThreeLetterIsoCode = "MRT",
@@ -2780,7 +2813,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Mauritius",
-                   
+                    
                     
                     TwoLetterIsoCode = "MU",
                     ThreeLetterIsoCode = "MUS",
@@ -2792,7 +2825,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Mayotte",
-                   
+                    
                     
                     TwoLetterIsoCode = "YT",
                     ThreeLetterIsoCode = "MYT",
@@ -2804,7 +2837,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Micronesia",
-                   
+                    
                     
                     TwoLetterIsoCode = "FM",
                     ThreeLetterIsoCode = "FSM",
@@ -2816,7 +2849,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Moldova",
-                   
+                    
                     
                     TwoLetterIsoCode = "MD",
                     ThreeLetterIsoCode = "MDA",
@@ -2828,7 +2861,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Monaco",
-                   
+                    
                     
                     TwoLetterIsoCode = "MC",
                     ThreeLetterIsoCode = "MCO",
@@ -2840,7 +2873,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Mongolia",
-                   
+                    
                     
                     TwoLetterIsoCode = "MN",
                     ThreeLetterIsoCode = "MNG",
@@ -2852,7 +2885,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Montenegro",
-                   
+                    
                     
                     TwoLetterIsoCode = "ME",
                     ThreeLetterIsoCode = "MNE",
@@ -2864,7 +2897,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Montserrat",
-                   
+                    
                     
                     TwoLetterIsoCode = "MS",
                     ThreeLetterIsoCode = "MSR",
@@ -2876,7 +2909,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Morocco",
-                   
+                    
                     
                     TwoLetterIsoCode = "MA",
                     ThreeLetterIsoCode = "MAR",
@@ -2888,7 +2921,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Mozambique",
-                   
+                    
                     
                     TwoLetterIsoCode = "MZ",
                     ThreeLetterIsoCode = "MOZ",
@@ -2900,7 +2933,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Myanmar",
-                   
+                    
                     
                     TwoLetterIsoCode = "MM",
                     ThreeLetterIsoCode = "MMR",
@@ -2912,7 +2945,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Namibia",
-                   
+                    
                     
                     TwoLetterIsoCode = "NA",
                     ThreeLetterIsoCode = "NAM",
@@ -2924,7 +2957,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Nauru",
-                   
+                    
                     
                     TwoLetterIsoCode = "NR",
                     ThreeLetterIsoCode = "NRU",
@@ -2936,7 +2969,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Nepal",
-                   
+                    
                     
                     TwoLetterIsoCode = "NP",
                     ThreeLetterIsoCode = "NPL",
@@ -2948,7 +2981,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Netherlands Antilles",
-                   
+                    
                     
                     TwoLetterIsoCode = "AN",
                     ThreeLetterIsoCode = "ANT",
@@ -2960,7 +2993,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "New Caledonia",
-                   
+                    
                     
                     TwoLetterIsoCode = "NC",
                     ThreeLetterIsoCode = "NCL",
@@ -2972,7 +3005,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Nicaragua",
-                   
+                    
                     
                     TwoLetterIsoCode = "NI",
                     ThreeLetterIsoCode = "NIC",
@@ -2984,7 +3017,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Niger",
-                   
+                    
                     
                     TwoLetterIsoCode = "NE",
                     ThreeLetterIsoCode = "NER",
@@ -2996,7 +3029,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Nigeria",
-                   
+                    
                     
                     TwoLetterIsoCode = "NG",
                     ThreeLetterIsoCode = "NGA",
@@ -3008,7 +3041,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Niue",
-                   
+                    
                     
                     TwoLetterIsoCode = "NU",
                     ThreeLetterIsoCode = "NIU",
@@ -3020,7 +3053,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Norfolk Island",
-                   
+                    
                     
                     TwoLetterIsoCode = "NF",
                     ThreeLetterIsoCode = "NFK",
@@ -3032,7 +3065,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Northern Mariana Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "MP",
                     ThreeLetterIsoCode = "MNP",
@@ -3044,7 +3077,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Oman",
-                   
+                    
                     
                     TwoLetterIsoCode = "OM",
                     ThreeLetterIsoCode = "OMN",
@@ -3056,7 +3089,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Palau",
-                   
+                    
                     
                     TwoLetterIsoCode = "PW",
                     ThreeLetterIsoCode = "PLW",
@@ -3068,7 +3101,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Panama",
-                   
+                    
                     
                     TwoLetterIsoCode = "PA",
                     ThreeLetterIsoCode = "PAN",
@@ -3080,7 +3113,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Papua New Guinea",
-                   
+                    
                     
                     TwoLetterIsoCode = "PG",
                     ThreeLetterIsoCode = "PNG",
@@ -3092,7 +3125,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Pitcairn",
-                   
+                    
                     
                     TwoLetterIsoCode = "PN",
                     ThreeLetterIsoCode = "PCN",
@@ -3104,7 +3137,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Reunion",
-                   
+                    
                     
                     TwoLetterIsoCode = "RE",
                     ThreeLetterIsoCode = "REU",
@@ -3116,7 +3149,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Rwanda",
-                   
+                    
                     
                     TwoLetterIsoCode = "RW",
                     ThreeLetterIsoCode = "RWA",
@@ -3128,7 +3161,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Saint Kitts and Nevis",
-                   
+                    
                     
                     TwoLetterIsoCode = "KN",
                     ThreeLetterIsoCode = "KNA",
@@ -3140,7 +3173,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Saint Lucia",
-                   
+                    
                     
                     TwoLetterIsoCode = "LC",
                     ThreeLetterIsoCode = "LCA",
@@ -3152,7 +3185,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Saint Vincent and the Grenadines",
-                   
+                    
                     
                     TwoLetterIsoCode = "VC",
                     ThreeLetterIsoCode = "VCT",
@@ -3164,7 +3197,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Samoa",
-                   
+                    
                     
                     TwoLetterIsoCode = "WS",
                     ThreeLetterIsoCode = "WSM",
@@ -3176,7 +3209,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "San Marino",
-                   
+                    
                     
                     TwoLetterIsoCode = "SM",
                     ThreeLetterIsoCode = "SMR",
@@ -3188,7 +3221,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Sao Tome and Principe",
-                   
+                    
                     
                     TwoLetterIsoCode = "ST",
                     ThreeLetterIsoCode = "STP",
@@ -3200,7 +3233,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Senegal",
-                   
+                    
                     
                     TwoLetterIsoCode = "SN",
                     ThreeLetterIsoCode = "SEN",
@@ -3212,7 +3245,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Seychelles",
-                   
+                    
                     
                     TwoLetterIsoCode = "SC",
                     ThreeLetterIsoCode = "SYC",
@@ -3224,7 +3257,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Sierra Leone",
-                   
+                    
                     
                     TwoLetterIsoCode = "SL",
                     ThreeLetterIsoCode = "SLE",
@@ -3236,7 +3269,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Solomon Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "SB",
                     ThreeLetterIsoCode = "SLB",
@@ -3248,7 +3281,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Somalia",
-                   
+                    
                     
                     TwoLetterIsoCode = "SO",
                     ThreeLetterIsoCode = "SOM",
@@ -3260,7 +3293,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "South Georgia & South Sandwich Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "GS",
                     ThreeLetterIsoCode = "SGS",
@@ -3272,7 +3305,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "South Sudan",
-                   
+                    
                     
                     TwoLetterIsoCode = "SS",
                     ThreeLetterIsoCode = "SSD",
@@ -3284,7 +3317,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Sri Lanka",
-                   
+                    
                     
                     TwoLetterIsoCode = "LK",
                     ThreeLetterIsoCode = "LKA",
@@ -3296,7 +3329,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "St. Helena",
-                   
+                    
                     
                     TwoLetterIsoCode = "SH",
                     ThreeLetterIsoCode = "SHN",
@@ -3308,7 +3341,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "St. Pierre and Miquelon",
-                   
+                    
                     
                     TwoLetterIsoCode = "PM",
                     ThreeLetterIsoCode = "SPM",
@@ -3320,7 +3353,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Sudan",
-                   
+                    
                     
                     TwoLetterIsoCode = "SD",
                     ThreeLetterIsoCode = "SDN",
@@ -3332,7 +3365,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Suriname",
-                   
+                    
                     
                     TwoLetterIsoCode = "SR",
                     ThreeLetterIsoCode = "SUR",
@@ -3344,7 +3377,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Svalbard and Jan Mayen Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "SJ",
                     ThreeLetterIsoCode = "SJM",
@@ -3356,7 +3389,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Swaziland",
-                   
+                    
                     
                     TwoLetterIsoCode = "SZ",
                     ThreeLetterIsoCode = "SWZ",
@@ -3368,7 +3401,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Syrian Arab Republic",
-                   
+                    
                     
                     TwoLetterIsoCode = "SY",
                     ThreeLetterIsoCode = "SYR",
@@ -3380,7 +3413,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Tajikistan",
-                   
+                    
                     
                     TwoLetterIsoCode = "TJ",
                     ThreeLetterIsoCode = "TJK",
@@ -3392,7 +3425,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Tanzania",
-                   
+                    
                     
                     TwoLetterIsoCode = "TZ",
                     ThreeLetterIsoCode = "TZA",
@@ -3404,7 +3437,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Togo",
-                   
+                    
                     
                     TwoLetterIsoCode = "TG",
                     ThreeLetterIsoCode = "TGO",
@@ -3416,7 +3449,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Tokelau",
-                   
+                    
                     
                     TwoLetterIsoCode = "TK",
                     ThreeLetterIsoCode = "TKL",
@@ -3428,7 +3461,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Tonga",
-                   
+                    
                     
                     TwoLetterIsoCode = "TO",
                     ThreeLetterIsoCode = "TON",
@@ -3440,7 +3473,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Trinidad and Tobago",
-                   
+                    
                     
                     TwoLetterIsoCode = "TT",
                     ThreeLetterIsoCode = "TTO",
@@ -3452,7 +3485,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Tunisia",
-                   
+                    
                     
                     TwoLetterIsoCode = "TN",
                     ThreeLetterIsoCode = "TUN",
@@ -3464,7 +3497,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Turkmenistan",
-                   
+                    
                     
                     TwoLetterIsoCode = "TM",
                     ThreeLetterIsoCode = "TKM",
@@ -3476,7 +3509,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Turks and Caicos Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "TC",
                     ThreeLetterIsoCode = "TCA",
@@ -3488,7 +3521,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Tuvalu",
-                   
+                    
                     
                     TwoLetterIsoCode = "TV",
                     ThreeLetterIsoCode = "TUV",
@@ -3500,7 +3533,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Uganda",
-                   
+                    
                     
                     TwoLetterIsoCode = "UG",
                     ThreeLetterIsoCode = "UGA",
@@ -3512,7 +3545,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Vanuatu",
-                   
+                    
                     
                     TwoLetterIsoCode = "VU",
                     ThreeLetterIsoCode = "VUT",
@@ -3524,7 +3557,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Vatican City State (Holy See)",
-                   
+                    
                     
                     TwoLetterIsoCode = "VA",
                     ThreeLetterIsoCode = "VAT",
@@ -3536,7 +3569,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Viet Nam",
-                   
+                    
                     
                     TwoLetterIsoCode = "VN",
                     ThreeLetterIsoCode = "VNM",
@@ -3548,7 +3581,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Virgin Islands (British)",
-                   
+                    
                     
                     TwoLetterIsoCode = "VG",
                     ThreeLetterIsoCode = "VGB",
@@ -3560,7 +3593,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Virgin Islands (U.S.)",
-                   
+                    
                     
                     TwoLetterIsoCode = "VI",
                     ThreeLetterIsoCode = "VIR",
@@ -3572,7 +3605,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Wallis and Futuna Islands",
-                   
+                    
                     
                     TwoLetterIsoCode = "WF",
                     ThreeLetterIsoCode = "WLF",
@@ -3584,7 +3617,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Western Sahara",
-                   
+                    
                     
                     TwoLetterIsoCode = "EH",
                     ThreeLetterIsoCode = "ESH",
@@ -3596,7 +3629,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Yemen",
-                   
+                    
                     
                     TwoLetterIsoCode = "YE",
                     ThreeLetterIsoCode = "YEM",
@@ -3608,7 +3641,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Zambia",
-                   
+                    
                     
                     TwoLetterIsoCode = "ZM",
                     ThreeLetterIsoCode = "ZMB",
@@ -3620,7 +3653,7 @@ namespace Nop.Services.Installation
                 new Country
                 {
                     Name = "Zimbabwe",
-                   
+                    
                     
                     TwoLetterIsoCode = "ZW",
                     ThreeLetterIsoCode = "ZWE",
@@ -3628,7 +3661,7 @@ namespace Nop.Services.Installation
                     
                     DisplayOrder = 100,
                     Published = true
-                },
+                }
             };
             _countryRepository.Insert(countries);
         }
@@ -3640,28 +3673,35 @@ namespace Nop.Services.Installation
                 Name = "Administrators",
                 Active = true,
                 IsSystemRole = true,
-                SystemName = SystemCustomerRoleNames.Administrators,
+                SystemName = NopCustomerDefaults.AdministratorsRoleName
             };
             var crForumModerators = new CustomerRole
             {
                 Name = "Forum Moderators",
                 Active = true,
                 IsSystemRole = true,
-                SystemName = SystemCustomerRoleNames.ForumModerators,
+                SystemName = NopCustomerDefaults.ForumModeratorsRoleName
             };
             var crRegistered = new CustomerRole
             {
                 Name = "Registered",
                 Active = true,
                 IsSystemRole = true,
-                SystemName = SystemCustomerRoleNames.Registered,
+                SystemName = NopCustomerDefaults.RegisteredRoleName
             };
             var crGuests = new CustomerRole
             {
                 Name = "Guests",
                 Active = true,
                 IsSystemRole = true,
-                SystemName = SystemCustomerRoleNames.Guests,
+                SystemName = NopCustomerDefaults.GuestsRoleName
+            };
+            var crVendors = new CustomerRole
+            {
+                Name = "Vendors",
+                Active = true,
+                IsSystemRole = true,
+                SystemName = NopCustomerDefaults.VendorsRoleName
             };
             var customerRoles = new List<CustomerRole>
             {
@@ -3669,6 +3709,7 @@ namespace Nop.Services.Installation
                 crForumModerators,
                 crRegistered,
                 crGuests,
+                crVendors
             };
             _customerRoleRepository.Insert(customerRoles);
 
@@ -3698,26 +3739,30 @@ namespace Nop.Services.Installation
                 LastName = "Smith",
                 PhoneNumber = "12345678",
                 Email = defaultUserEmail,
-                FaxNumber = "",
+                FaxNumber = string.Empty,
                 Company = "Nop Solutions Ltd",
                 Address1 = "21 West 52nd Street",
-                Address2 = "",
+                Address2 = string.Empty,
                 City = "New York",
                 StateProvince = _stateProvinceRepository.Table.FirstOrDefault(sp => sp.Name == "New York"),
                 Country = _countryRepository.Table.FirstOrDefault(c => c.ThreeLetterIsoCode == "USA"),
                 ZipPostalCode = "10021",
-                CreatedOnUtc = DateTime.UtcNow,
+                CreatedOnUtc = DateTime.UtcNow
             };
-            adminUser.Addresses.Add(defaultAdminUserAddress);
+            //adminUser.Addresses.Add(defaultAdminUserAddress);
+            adminUser.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = defaultAdminUserAddress });
 
-            adminUser.CustomerRoles.Add(crAdministrators);
-            adminUser.CustomerRoles.Add(crForumModerators);
-            adminUser.CustomerRoles.Add(crRegistered);
+            //adminUser.CustomerRoles.Add(crAdministrators);
+            //adminUser.CustomerRoles.Add(crForumModerators);
+            //adminUser.CustomerRoles.Add(crRegistered);
+            adminUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crAdministrators });
+            adminUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crForumModerators });
+            adminUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crRegistered });
 
             _customerRepository.Insert(adminUser);
             //set default customer name
-            _genericAttributeService.SaveAttribute(adminUser, SystemCustomerAttributeNames.FirstName, "John");
-            _genericAttributeService.SaveAttribute(adminUser, SystemCustomerAttributeNames.LastName, "Smith");
+            _genericAttributeService.SaveAttribute(adminUser, NopCustomerDefaults.FirstNameAttribute, "John");
+            _genericAttributeService.SaveAttribute(adminUser, NopCustomerDefaults.LastNameAttribute, "Smith");
 
             //set hashed admin password
             var customerRegistrationService = EngineContext.Current.Resolve<ICustomerRegistrationService>();
@@ -3742,24 +3787,26 @@ namespace Nop.Services.Installation
                 LastName = "Gates",
                 PhoneNumber = "87654321",
                 Email = secondUserEmail,
-                FaxNumber = "",
+                FaxNumber = string.Empty,
                 Company = "Steve Company",
                 Address1 = "750 Bel Air Rd.",
-                Address2 = "",
+                Address2 = string.Empty,
                 City = "Los Angeles",
                 StateProvince = _stateProvinceRepository.Table.FirstOrDefault(sp => sp.Name == "California"),
                 Country = _countryRepository.Table.FirstOrDefault(c => c.ThreeLetterIsoCode == "USA"),
                 ZipPostalCode = "90077",
-                CreatedOnUtc = DateTime.UtcNow,
+                CreatedOnUtc = DateTime.UtcNow
             };
-            secondUser.Addresses.Add(defaultSecondUserAddress);
+            //secondUser.Addresses.Add(defaultSecondUserAddress);
+            secondUser.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = defaultSecondUserAddress });
 
-            secondUser.CustomerRoles.Add(crRegistered);
+            //secondUser.CustomerRoles.Add(crRegistered);
+            secondUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crRegistered });
 
             _customerRepository.Insert(secondUser);
             //set default customer name
-            _genericAttributeService.SaveAttribute(secondUser, SystemCustomerAttributeNames.FirstName, defaultSecondUserAddress.FirstName);
-            _genericAttributeService.SaveAttribute(secondUser, SystemCustomerAttributeNames.LastName, defaultSecondUserAddress.LastName);
+            _genericAttributeService.SaveAttribute(secondUser, NopCustomerDefaults.FirstNameAttribute, defaultSecondUserAddress.FirstName);
+            _genericAttributeService.SaveAttribute(secondUser, NopCustomerDefaults.LastNameAttribute, defaultSecondUserAddress.LastName);
 
             //set customer password
             _customerPasswordRepository.Insert(new CustomerPassword
@@ -3789,23 +3836,25 @@ namespace Nop.Services.Installation
                 LastName = "Holmes",
                 PhoneNumber = "111222333",
                 Email = thirdUserEmail,
-                FaxNumber = "",
+                FaxNumber = string.Empty,
                 Company = "Holmes Company",
                 Address1 = "221B Baker Street",
-                Address2 = "",
+                Address2 = string.Empty,
                 City = "London",
                 Country = _countryRepository.Table.FirstOrDefault(c => c.ThreeLetterIsoCode == "GBR"),
                 ZipPostalCode = "NW1 6XE",
-                CreatedOnUtc = DateTime.UtcNow,
+                CreatedOnUtc = DateTime.UtcNow
             };
-            thirdUser.Addresses.Add(defaultThirdUserAddress);
+            //thirdUser.Addresses.Add(defaultThirdUserAddress);
+            thirdUser.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = defaultThirdUserAddress });
 
-            thirdUser.CustomerRoles.Add(crRegistered);
+            //thirdUser.CustomerRoles.Add(crRegistered);
+            thirdUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crRegistered });
 
             _customerRepository.Insert(thirdUser);
             //set default customer name
-            _genericAttributeService.SaveAttribute(thirdUser, SystemCustomerAttributeNames.FirstName, defaultThirdUserAddress.FirstName);
-            _genericAttributeService.SaveAttribute(thirdUser, SystemCustomerAttributeNames.LastName, defaultThirdUserAddress.LastName);
+            _genericAttributeService.SaveAttribute(thirdUser, NopCustomerDefaults.FirstNameAttribute, defaultThirdUserAddress.FirstName);
+            _genericAttributeService.SaveAttribute(thirdUser, NopCustomerDefaults.LastNameAttribute, defaultThirdUserAddress.LastName);
 
             //set customer password
             _customerPasswordRepository.Insert(new CustomerPassword
@@ -3835,23 +3884,25 @@ namespace Nop.Services.Installation
                 LastName = "Pan",
                 PhoneNumber = "369258147",
                 Email = fourthUserEmail,
-                FaxNumber = "",
+                FaxNumber = string.Empty,
                 Company = "Pan Company",
                 Address1 = "St Katharine’s West 16",
-                Address2 = "",
+                Address2 = string.Empty,
                 City = "St Andrews",
                 Country = _countryRepository.Table.FirstOrDefault(c => c.ThreeLetterIsoCode == "GBR"),
                 ZipPostalCode = "KY16 9AX",
-                CreatedOnUtc = DateTime.UtcNow,
+                CreatedOnUtc = DateTime.UtcNow
             };
-            fourthUser.Addresses.Add(defaultFourthUserAddress);
+            //fourthUser.Addresses.Add(defaultFourthUserAddress);
+            fourthUser.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = defaultFourthUserAddress });
 
-            fourthUser.CustomerRoles.Add(crRegistered);
+            //fourthUser.CustomerRoles.Add(crRegistered);
+            fourthUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crRegistered });
 
             _customerRepository.Insert(fourthUser);
             //set default customer name
-            _genericAttributeService.SaveAttribute(fourthUser, SystemCustomerAttributeNames.FirstName, defaultFourthUserAddress.FirstName);
-            _genericAttributeService.SaveAttribute(fourthUser, SystemCustomerAttributeNames.LastName, defaultFourthUserAddress.LastName);
+            _genericAttributeService.SaveAttribute(fourthUser, NopCustomerDefaults.FirstNameAttribute, defaultFourthUserAddress.FirstName);
+            _genericAttributeService.SaveAttribute(fourthUser, NopCustomerDefaults.LastNameAttribute, defaultFourthUserAddress.LastName);
 
             //set customer password
             _customerPasswordRepository.Insert(new CustomerPassword
@@ -3881,24 +3932,26 @@ namespace Nop.Services.Installation
                 LastName = "Lindgren",
                 PhoneNumber = "14785236",
                 Email = fifthUserEmail,
-                FaxNumber = "",
+                FaxNumber = string.Empty,
                 Company = "Brenda Company",
                 Address1 = "1249 Tongass Avenue, Suite B",
-                Address2 = "",
+                Address2 = string.Empty,
                 City = "Ketchikan",
                 StateProvince = _stateProvinceRepository.Table.FirstOrDefault(sp => sp.Name == "Alaska"),
                 Country = _countryRepository.Table.FirstOrDefault(c => c.ThreeLetterIsoCode == "USA"),
                 ZipPostalCode = "99901",
-                CreatedOnUtc = DateTime.UtcNow,
+                CreatedOnUtc = DateTime.UtcNow
             };
-            fifthUser.Addresses.Add(defaultFifthUserAddress);
+            //fifthUser.Addresses.Add(defaultFifthUserAddress);
+            fifthUser.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = defaultFifthUserAddress });
 
-            fifthUser.CustomerRoles.Add(crRegistered);
+            //fifthUser.CustomerRoles.Add(crRegistered);
+            fifthUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crRegistered });
 
             _customerRepository.Insert(fifthUser);
             //set default customer name
-            _genericAttributeService.SaveAttribute(fifthUser, SystemCustomerAttributeNames.FirstName, defaultFifthUserAddress.FirstName);
-            _genericAttributeService.SaveAttribute(fifthUser, SystemCustomerAttributeNames.LastName, defaultFifthUserAddress.LastName);
+            _genericAttributeService.SaveAttribute(fifthUser, NopCustomerDefaults.FirstNameAttribute, defaultFifthUserAddress.FirstName);
+            _genericAttributeService.SaveAttribute(fifthUser, NopCustomerDefaults.LastNameAttribute, defaultFifthUserAddress.LastName);
 
             //set customer password
             _customerPasswordRepository.Insert(new CustomerPassword
@@ -3928,24 +3981,26 @@ namespace Nop.Services.Installation
                 LastName = "Terces",
                 PhoneNumber = "45612378",
                 Email = sixthUserEmail,
-                FaxNumber = "",
+                FaxNumber = string.Empty,
                 Company = "Terces Company",
                 Address1 = "201 1st Avenue South",
-                Address2 = "",
+                Address2 = string.Empty,
                 City = "Saskatoon",
                 StateProvince = _stateProvinceRepository.Table.FirstOrDefault(sp => sp.Name == "Saskatchewan"),
                 Country = _countryRepository.Table.FirstOrDefault(c => c.ThreeLetterIsoCode == "CAN"),
                 ZipPostalCode = "S7K 1J9",
-                CreatedOnUtc = DateTime.UtcNow,
+                CreatedOnUtc = DateTime.UtcNow
             };
-            sixthUser.Addresses.Add(defaultSixthUserAddress);
+            //sixthUser.Addresses.Add(defaultSixthUserAddress);
+            sixthUser.CustomerAddressMappings.Add(new CustomerAddressMapping { Address = defaultSixthUserAddress });
 
-            sixthUser.CustomerRoles.Add(crRegistered);
+            //sixthUser.CustomerRoles.Add(crRegistered);
+            sixthUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crRegistered });
 
             _customerRepository.Insert(sixthUser);
             //set default customer name
-            _genericAttributeService.SaveAttribute(sixthUser, SystemCustomerAttributeNames.FirstName, defaultSixthUserAddress.FirstName);
-            _genericAttributeService.SaveAttribute(sixthUser, SystemCustomerAttributeNames.LastName, defaultSixthUserAddress.LastName);
+            _genericAttributeService.SaveAttribute(sixthUser, NopCustomerDefaults.FirstNameAttribute, defaultSixthUserAddress.FirstName);
+            _genericAttributeService.SaveAttribute(sixthUser, NopCustomerDefaults.LastNameAttribute, defaultSixthUserAddress.LastName);
 
             //set customer password
             _customerPasswordRepository.Insert(new CustomerPassword
@@ -3965,15 +4020,15 @@ namespace Nop.Services.Installation
                 AdminComment = "Built-in system guest record used for requests from search engines.",
                 Active = true,
                 IsSystemAccount = true,
-                SystemName = SystemCustomerNames.SearchEngine,
+                SystemName = NopCustomerDefaults.SearchEngineCustomerName,
                 CreatedOnUtc = DateTime.UtcNow,
                 LastActivityDateUtc = DateTime.UtcNow,
                 RegisteredInStoreId = storeId
             };
-            searchEngineUser.CustomerRoles.Add(crGuests);
+            //searchEngineUser.CustomerRoles.Add(crGuests);
+            searchEngineUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crGuests });
             _customerRepository.Insert(searchEngineUser);
-
-
+            
             //built-in user for background tasks
             var backgroundTaskUser = new Customer
             {
@@ -3982,12 +4037,13 @@ namespace Nop.Services.Installation
                 AdminComment = "Built-in system record used for background tasks.",
                 Active = true,
                 IsSystemAccount = true,
-                SystemName = SystemCustomerNames.BackgroundTask,
+                SystemName = NopCustomerDefaults.BackgroundTaskCustomerName,
                 CreatedOnUtc = DateTime.UtcNow,
                 LastActivityDateUtc = DateTime.UtcNow,
                 RegisteredInStoreId = storeId
             };
-            backgroundTaskUser.CustomerRoles.Add(crGuests);
+            //backgroundTaskUser.CustomerRoles.Add(crGuests);
+            backgroundTaskUser.CustomerCustomerRoleMappings.Add(new CustomerCustomerRoleMapping { CustomerRole = crGuests });
             _customerRepository.Insert(backgroundTaskUser);
         }
 
@@ -3998,7 +4054,7 @@ namespace Nop.Services.Installation
             if (defaultCustomer == null)
                 throw new Exception("Cannot load default customer");
 
-            _activityLogRepository.Insert(new ActivityLog()
+            _activityLogRepository.Insert(new ActivityLog
             {
                 ActivityLogType = _activityLogTypeRepository.Table.First(alt => alt.SystemKeyword.Equals("EditCategory")),
                 Comment = "Edited a category ('Computers')",
@@ -4015,34 +4071,40 @@ namespace Nop.Services.Installation
             if (defaultStore == null)
                 throw new Exception("No default store could be loaded");
 
-            _searchTermRepository.Insert(new SearchTerm()
+            _searchTermRepository.Insert(new SearchTerm
             {
                 Count = 34,
                 Keyword = "computer",
                 StoreId = defaultStore.Id
             });
-            _searchTermRepository.Insert(new SearchTerm()
+            _searchTermRepository.Insert(new SearchTerm
             {
                 Count = 30,
                 Keyword = "camera",
                 StoreId = defaultStore.Id
             });
-            _searchTermRepository.Insert(new SearchTerm()
+            _searchTermRepository.Insert(new SearchTerm
             {
                 Count = 27,
                 Keyword = "jewelry",
                 StoreId = defaultStore.Id
             });
-            _searchTermRepository.Insert(new SearchTerm()
+            _searchTermRepository.Insert(new SearchTerm
             {
                 Count = 26,
                 Keyword = "shoes",
                 StoreId = defaultStore.Id
             });
-            _searchTermRepository.Insert(new SearchTerm()
+            _searchTermRepository.Insert(new SearchTerm
             {
                 Count = 19,
                 Keyword = "jeans",
+                StoreId = defaultStore.Id
+            });
+            _searchTermRepository.Insert(new SearchTerm
+            {
+                Count = 10,
+                Keyword = "gift",
                 StoreId = defaultStore.Id
             });
         }
@@ -4061,7 +4123,7 @@ namespace Nop.Services.Installation
                     Password = "123",
                     EnableSsl = false,
                     UseDefaultCredentials = false
-                },
+                }
             };
             _emailAccountRepository.Insert(emailAccounts);
         }
@@ -4080,7 +4142,15 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. New blog comment.",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}A new blog comment has been created for blog post \"%BlogComment.BlogPostTitle%\".{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
+                },
+                new MessageTemplate
+                {
+                    Name = MessageTemplateSystemNames.BackInStockNotification,
+                    Subject = "%Store.Name%. Back in stock notification",
+                    Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Hello %Customer.FullName%,{Environment.NewLine}<br />{Environment.NewLine}Product <a target=\"_blank\" href=\"%BackInStockSubscription.ProductUrl%\">%BackInStockSubscription.ProductName%</a> is in stock.{Environment.NewLine}</p>{Environment.NewLine}",
+                    IsActive = true,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4088,7 +4158,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. Email validation",
                     Body = $"<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}To activate your account <a href=\"%Customer.AccountActivationURL%\">click here</a>.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}%Store.Name%{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4096,7 +4166,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. Email validation",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Hello %Customer.FullName%!{Environment.NewLine}<br />{Environment.NewLine}To validate your new email address <a href=\"%Customer.EmailRevalidationURL%\">click here</a>.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}%Store.Name%{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4104,7 +4174,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. You have received a new private message",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}You have received a new private message.{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4112,7 +4182,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. Password recovery",
                     Body = $"<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}To change your password <a href=\"%Customer.PasswordRecoveryURL%\">click here</a>.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}%Store.Name%{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4120,7 +4190,7 @@ namespace Nop.Services.Installation
                     Subject = "Welcome to %Store.Name%",
                     Body = $"We welcome you to <a href=\"%Store.URL%\"> %Store.Name%</a>.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}You can now take part in the various services we have to offer you. Some of these services include:{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Permanent Cart - Any products added to your online cart remain there until you remove them, or check them out.{Environment.NewLine}<br />{Environment.NewLine}Address Book - We can now deliver your products to another address other than yours! This is perfect to send birthday gifts direct to the birthday-person themselves.{Environment.NewLine}<br />{Environment.NewLine}Order History - View your history of purchases that you have made with us.{Environment.NewLine}<br />{Environment.NewLine}Products Reviews - Share your opinions on products with our other customers.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}For help with any of our online services, please email the store-owner: <a href=\"mailto:%Store.Email%\">%Store.Email%</a>.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Note: This email address was provided on our registration page. If you own the email and did not register on our site, please send an email to <a href=\"mailto:%Store.Email%\">%Store.Email%</a>.{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4128,7 +4198,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. New Post Notification.",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}A new post has been created in the topic <a href=\"%Forums.TopicURL%\">\"%Forums.TopicName%\"</a> at <a href=\"%Forums.ForumURL%\">\"%Forums.ForumName%\"</a> forum.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Click <a href=\"%Forums.TopicURL%\">here</a> for more info.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Post author: %Forums.PostAuthor%{Environment.NewLine}<br />{Environment.NewLine}Post body: %Forums.PostBody%{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4136,7 +4206,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. New Topic Notification.",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}A new topic <a href=\"%Forums.TopicURL%\">\"%Forums.TopicName%\"</a> has been created at <a href=\"%Forums.ForumURL%\">\"%Forums.ForumName%\"</a> forum.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Click <a href=\"%Forums.TopicURL%\">here</a> for more info.{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4144,7 +4214,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. New customer registration",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}A new customer registered with your store. Below are the customer's details:{Environment.NewLine}<br />{Environment.NewLine}Full name: %Customer.FullName%{Environment.NewLine}<br />{Environment.NewLine}Email: %Customer.Email%{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4152,7 +4222,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. New news comment.",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}A new news comment has been created for news \"%NewsComment.NewsTitle%\".{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4160,7 +4230,7 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. Subscription activation message.",
                     Body = $"<p>{Environment.NewLine}<a href=\"%NewsLetterSubscription.ActivationUrl%\">Click here to confirm your subscription to our list.</a>{Environment.NewLine}</p>{Environment.NewLine}<p>{Environment.NewLine}If you received this email by mistake, simply delete it.{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4168,15 +4238,23 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. Subscription deactivation message.",
                     Body = $"<p>{Environment.NewLine}<a href=\"%NewsLetterSubscription.DeactivationUrl%\">Click here to unsubscribe from our newsletter.</a>{Environment.NewLine}</p>{Environment.NewLine}<p>{Environment.NewLine}If you received this email by mistake, simply delete it.{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
-                    Name = MessageTemplateSystemNames.ProductReviewNotification,
+                    Name = MessageTemplateSystemNames.ProductReviewStoreOwnerNotification,
                     Subject = "%Store.Name%. New product review.",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}A new product review has been written for product \"%ProductReview.ProductName%\".{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
+                },
+                new MessageTemplate
+                {
+                    Name = MessageTemplateSystemNames.ProductReviewReplyCustomerNotification,
+                    Subject = "%Store.Name%. Product review reply.",
+                    Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Hello %Customer.FullName%,{Environment.NewLine}<br />{Environment.NewLine}You received a reply from the store administration to your review for product \"%ProductReview.ProductName%\".{Environment.NewLine}</p>{Environment.NewLine}",
+                    IsActive = false,
+                    EmailAccountId = eaGeneral.Id
                 },
                 new MessageTemplate
                 {
@@ -4184,16 +4262,40 @@ namespace Nop.Services.Installation
                     Subject = "%Store.Name%. Referred Item",
                     Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\"> %Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}%EmailAFriend.Email% was shopping on %Store.Name% and wanted to share the following item with you.{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}<b><a target=\"_blank\" href=\"%Product.ProductURLForCustomer%\">%Product.Name%</a></b>{Environment.NewLine}<br />{Environment.NewLine}%Product.ShortDescription%{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}For more info click <a target=\"_blank\" href=\"%Product.ProductURLForCustomer%\">here</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}%EmailAFriend.PersonalMessage%{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}%Store.Name%{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
-                },             
+                    EmailAccountId = eaGeneral.Id
+                },
+                new MessageTemplate
+                {
+                    Name = MessageTemplateSystemNames.NewVendorAccountApplyStoreOwnerNotification,
+                    Subject = "%Store.Name%. New vendor account submitted.",
+                    Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}%Customer.FullName% (%Customer.Email%) has just submitted for a vendor account. Details are below:{Environment.NewLine}<br />{Environment.NewLine}Vendor name: %Vendor.Name%{Environment.NewLine}<br />{Environment.NewLine}Vendor email: %Vendor.Email%{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}You can activate it in admin area.{Environment.NewLine}</p>{Environment.NewLine}",
+                    IsActive = true,
+                    EmailAccountId = eaGeneral.Id
+                },
+                new MessageTemplate
+                {
+                    Name = MessageTemplateSystemNames.VendorInformationChangeNotification,
+                    Subject = "%Store.Name%. Vendor information change.",
+                    Body = $"<p>{Environment.NewLine}<a href=\"%Store.URL%\">%Store.Name%</a>{Environment.NewLine}<br />{Environment.NewLine}<br />{Environment.NewLine}Vendor %Vendor.Name% (%Vendor.Email%) has just changed information about itself.{Environment.NewLine}</p>{Environment.NewLine}",
+                    IsActive = true,
+                    EmailAccountId = eaGeneral.Id
+                },
                 new MessageTemplate
                 {
                     Name = MessageTemplateSystemNames.ContactUsMessage,
                     Subject = "%Store.Name%. Contact us",
                     Body = $"<p>{Environment.NewLine}%ContactUs.Body%{Environment.NewLine}</p>{Environment.NewLine}",
                     IsActive = true,
-                    EmailAccountId = eaGeneral.Id,
+                    EmailAccountId = eaGeneral.Id
                 },
+                 new MessageTemplate
+                {
+                    Name = MessageTemplateSystemNames.ContactVendorMessage,
+                    Subject = "%Store.Name%. Contact us",
+                    Body = $"<p>{Environment.NewLine}%ContactUs.Body%{Environment.NewLine}</p>{Environment.NewLine}",
+                    IsActive = true,
+                    EmailAccountId = eaGeneral.Id
+                }
             };
             _messageTemplateRepository.Insert(messageTemplates);
         }
@@ -4222,6 +4324,18 @@ namespace Nop.Services.Installation
                 },
                 new Topic
                 {
+                    SystemName = "CheckoutAsGuestOrRegister",
+                    IncludeInSitemap = false,
+                    IsPasswordProtected = false,
+                    DisplayOrder = 1,
+                    Published = true,
+                    Title = string.Empty,
+                    Body =
+                        "<p><strong>Register and save time!</strong><br />Register with us for future convenience:</p><ul><li>Fast and easy check out</li><li>Easy access to your order history and status</li></ul>",
+                    TopicTemplateId = defaultTopicTemplate.Id
+                },
+                new Topic
+                {
                     SystemName = "ConditionsOfUse",
                     IncludeInSitemap = false,
                     IsPasswordProtected = false,
@@ -4239,7 +4353,7 @@ namespace Nop.Services.Installation
                     IsPasswordProtected = false,
                     DisplayOrder = 1,
                     Published = true,
-                    Title = "",
+                    Title = string.Empty,
                     Body = "<p>Put your contact information here. You can edit this in the admin site.</p>",
                     TopicTemplateId = defaultTopicTemplate.Id
                 },
@@ -4297,9 +4411,45 @@ namespace Nop.Services.Installation
                     IsPasswordProtected = false,
                     DisplayOrder = 1,
                     Published = true,
-                    Title = "",
+                    Title = string.Empty,
                     Body =
                         "<p><strong>The page you requested was not found, and we have a fine guess why.</strong></p><ul><li>If you typed the URL directly, please make sure the spelling is correct.</li><li>The page no longer exists. In this case, we profusely apologize for the inconvenience and for any damage this may cause.</li></ul>",
+                    TopicTemplateId = defaultTopicTemplate.Id
+                },
+                new Topic
+                {
+                    SystemName = "ShippingInfo",
+                    IncludeInSitemap = false,
+                    IsPasswordProtected = false,
+                    IncludeInFooterColumn1 = true,
+                    DisplayOrder = 5,
+                    Published = true,
+                    Title = "Shipping & returns",
+                    Body =
+                        "<p>Put your shipping &amp; returns information here. You can edit this in the admin site.</p>",
+                    TopicTemplateId = defaultTopicTemplate.Id
+                },
+                new Topic
+                {
+                    SystemName = "ApplyVendor",
+                    IncludeInSitemap = false,
+                    IsPasswordProtected = false,
+                    DisplayOrder = 1,
+                    Published = true,
+                    Title = string.Empty,
+                    Body = "<p>Put your apply vendor instructions here. You can edit this in the admin site.</p>",
+                    TopicTemplateId = defaultTopicTemplate.Id
+                },
+                new Topic
+                {
+                    SystemName = "VendorTermsOfService",
+                    IncludeInSitemap = false,
+                    IsPasswordProtected = false,
+                    IncludeInFooterColumn1 = true,
+                    DisplayOrder = 1,
+                    Published = true,
+                    Title = string.Empty,
+                    Body = "<p>Put your terms of service information here. You can edit this in the admin site.</p>",
                     TopicTemplateId = defaultTopicTemplate.Id
                 }
             };
@@ -4311,10 +4461,10 @@ namespace Nop.Services.Installation
                 _urlRecordRepository.Insert(new UrlRecord
                 {
                     EntityId = topic.Id,
-                    EntityName = "Topic",
+                    EntityName = typeof(Topic).Name,
                     LanguageId = 0,
                     IsActive = true,
-                    Slug = topic.ValidateSeName("", !string.IsNullOrEmpty(topic.Title) ? topic.Title : topic.SystemName, true)
+                    Slug = ValidateSeName(topic, !string.IsNullOrEmpty(topic.Title) ? topic.Title : topic.SystemName)
                 });
             }
         }
@@ -4322,13 +4472,13 @@ namespace Nop.Services.Installation
         protected virtual void InstallSettings(bool installSampleData)
         {
             var settingService = EngineContext.Current.Resolve<ISettingService>();
-            
+
             settingService.SaveSetting(new CommonSettings
             {
                 UseSystemEmailForContactUsForm = true,
-                UseStoredProceduresIfSupported = true,
-                UseStoredProcedureForLoadingCategories = false,
+                UseStoredProcedureForLoadingCategories = true,
                 SitemapEnabled = true,
+                SitemapPageSize = 200,
                 SitemapIncludeCategories = true,
                 SitemapIncludeProducts = false,
                 SitemapIncludeProductTags = false,
@@ -4340,7 +4490,11 @@ namespace Nop.Services.Installation
                 RenderXuaCompatible = false,
                 XuaCompatibleValue = "IE=edge",
                 BbcodeEditorOpenLinksInNewWindow = false,
-                PopupForTermsOfServiceLinks = true
+                PopupForTermsOfServiceLinks = true,
+                JqueryMigrateScriptLoggingActive = false,
+                SupportPreviousNopcommerceVersions = true,
+                UseResponseCompression = false,
+                StaticFilesCacheControl = "public,max-age=604800"
             });
 
             settingService.SaveSetting(new SeoSettings
@@ -4348,8 +4502,8 @@ namespace Nop.Services.Installation
                 PageTitleSeparator = ". ",
                 PageTitleSeoAdjustment = PageTitleSeoAdjustment.PagenameAfterStorename,
                 DefaultTitle = "Your store",
-                DefaultMetaKeywords = "",
-                DefaultMetaDescription = "",
+                DefaultMetaKeywords = string.Empty,
+                DefaultMetaDescription = string.Empty,
                 GenerateProductMetaDescription = true,
                 ConvertNonWesternChars = false,
                 AllowUnicodeCharsInUrls = true,
@@ -4408,7 +4562,7 @@ namespace Nop.Services.Installation
                     "prn",
                     "aux"
                 },
-                CustomHeadTags = ""
+                CustomHeadTags = string.Empty
             });
 
             settingService.SaveSetting(new AdminAreaSettings
@@ -4418,9 +4572,18 @@ namespace Nop.Services.Installation
                 GridPageSizes = "10, 15, 20, 50, 100",
                 RichEditorAdditionalSettings = null,
                 RichEditorAllowJavaScript = false,
+                RichEditorAllowStyleTag = false,
                 UseRichEditorInMessageTemplates = false,
-                UseIsoDateTimeConverterInJson = true,
+                CheckCopyrightRemovalKey = true,
+                UseIsoDateFormatInJsonResult = true,
                 UseNestedSetting = true
+            });
+
+            settingService.SaveSetting(new GdprSettings
+            {
+                GdprEnabled = false,
+                LogPrivacyPolicyConsent = true,
+                LogNewsletterConsent = true
             });
 
             settingService.SaveSetting(new CatalogSettings
@@ -4435,11 +4598,12 @@ namespace Nop.Services.Installation
                 ShowCategoryProductNumberIncludingSubcategories = false,
                 CategoryBreadcrumbEnabled = true,
                 ShowShareButton = true,
-                PageShareCode = "<!-- AddThis Button BEGIN --><div class=\"addthis_toolbox addthis_default_style \"><a class=\"addthis_button_preferred_1\"></a><a class=\"addthis_button_preferred_2\"></a><a class=\"addthis_button_preferred_3\"></a><a class=\"addthis_button_preferred_4\"></a><a class=\"addthis_button_compact\"></a><a class=\"addthis_counter addthis_bubble_style\"></a></div><script type=\"text/javascript\" src=\"http://s7.addthis.com/js/250/addthis_widget.js#pubid=nopsolutions\"></script><!-- AddThis Button END -->",
+                PageShareCode = "<!-- AddThis Button BEGIN --><div class=\"addthis_toolbox addthis_default_style \"><a class=\"addthis_button_preferred_1\"></a><a class=\"addthis_button_preferred_2\"></a><a class=\"addthis_button_preferred_3\"></a><a class=\"addthis_button_preferred_4\"></a><a class=\"addthis_button_compact\"></a><a class=\"addthis_counter addthis_bubble_style\"></a></div><script src=\"http://s7.addthis.com/js/250/addthis_widget.js#pubid=nopsolutions\"></script><!-- AddThis Button END -->",
                 ProductReviewsMustBeApproved = false,
                 DefaultProductRatingValue = 5,
                 AllowAnonymousUsersToReviewProduct = false,
                 NotifyStoreOwnerAboutNewProductReviews = false,
+                NotifyCustomerAboutProductReviewReply = false,
                 EmailAFriendEnabled = true,
                 AllowAnonymousUsersToEmailAFriend = false,
                 RecentlyViewedProductsNumber = 3,
@@ -4448,15 +4612,16 @@ namespace Nop.Services.Installation
                 NewProductsEnabled = true,
                 ProductSearchAutoCompleteEnabled = true,
                 ProductSearchAutoCompleteNumberOfProducts = 10,
+                ShowLinkToAllResultInSearchAutoComplete = false,
                 ProductSearchTermMinimumLength = 3,
                 ShowProductImagesInSearchAutoComplete = false,
                 SearchPageProductsPerPage = 6,
                 SearchPageAllowCustomersToSelectPageSize = true,
                 SearchPagePageSizeOptions = "6, 3, 9, 18",
-                AjaxProcessAttributeChange = true,
                 NumberOfProductTags = 15,
                 ProductsByTagPageSize = 6,
                 IncludeFeaturedProductsInNormalLists = false,
+                UseLinksInRequiredProductWarnings = true,
                 IgnoreFeaturedProducts = false,
                 IgnoreAcl = true,
                 IgnoreStoreLimitations = true,
@@ -4466,7 +4631,12 @@ namespace Nop.Services.Installation
                 DefaultCategoryPageSize = 6,
                 ShowProductReviewsTabOnAccountPage = true,
                 ProductReviewsPageSizeOnAccountPage = 10,
-                ExportImportUseDropdownlistsForAssociatedEntities = true
+                ProductReviewsSortByCreatedDateAscending = false,
+                ExportImportUseDropdownlistsForAssociatedEntities = true,
+                ExportImportProductsCountInOneFile = 500,
+                ExportImportSplitProductsFile = false,
+                ExportImportRelatedEntitiesByName = true,
+                CountDisplayedYearsDatePicker = 1
             });
 
             settingService.SaveSetting(new LocalizationSettings
@@ -4512,6 +4682,8 @@ namespace Nop.Services.Installation
                 StreetAddress2Enabled = false,
                 ZipPostalCodeEnabled = false,
                 CityEnabled = false,
+                CountyEnabled = false,
+                CountyRequired = false,
                 CountryEnabled = false,
                 CountryRequired = false,
                 StateProvinceEnabled = false,
@@ -4528,6 +4700,7 @@ namespace Nop.Services.Installation
                 StoreIpAddresses = true,
                 SuffixDeletedCustomers = false,
                 EnteringEmailTwice = false,
+                RequireRegistrationForDownloadableProducts = false,
                 DeleteGuestTaskOlderThanMinutes = 1440
             });
 
@@ -4541,11 +4714,13 @@ namespace Nop.Services.Installation
                 ZipPostalCodeRequired = true,
                 CityEnabled = true,
                 CityRequired = true,
+                CountyEnabled = false,
+                CountyRequired = false,
                 CountryEnabled = true,
                 StateProvinceEnabled = true,
                 PhoneEnabled = true,
                 PhoneRequired = true,
-                FaxEnabled = true,
+                FaxEnabled = true
             });
 
             settingService.SaveSetting(new MediaSettings
@@ -4556,6 +4731,7 @@ namespace Nop.Services.Installation
                 ProductThumbPictureSizeOnProductDetailsPage = 100,
                 AssociatedProductPictureSize = 220,
                 CategoryThumbPictureSize = 450,
+                VendorThumbPictureSize = 450,
                 AutoCompleteSearchThumbPictureSize = 20,
                 ImageSquarePictureSize = 32,
                 MaximumImageSize = 1980,
@@ -4592,7 +4768,7 @@ namespace Nop.Services.Installation
                 CaseInvariantReplacement = false,
                 Color1 = "#b9babe",
                 Color2 = "#ebecee",
-                Color3 = "#dde2e6",
+                Color3 = "#dde2e6"
             });
 
             settingService.SaveSetting(new SecuritySettings
@@ -4603,12 +4779,13 @@ namespace Nop.Services.Installation
                 EnableXsrfProtectionForAdminArea = true,
                 EnableXsrfProtectionForPublicStore = true,
                 HoneypotEnabled = false,
-                HoneypotInputName = "hpinput"
+                HoneypotInputName = "hpinput",
+                AllowNonAsciiCharactersInHeaders = true
             });
 
             settingService.SaveSetting(new DateTimeSettings
             {
-                DefaultStoreTimeZoneId = "",
+                DefaultStoreTimeZoneId = string.Empty,
                 AllowCustomersToSetTimeZone = false
             });
 
@@ -4670,7 +4847,21 @@ namespace Nop.Services.Installation
                 ActiveDiscussionsFeedCount = 25,
                 ForumFeedsEnabled = false,
                 ForumFeedCount = 10,
-                ForumSearchTermMinimumLength = 3,
+                ForumSearchTermMinimumLength = 3
+            });
+
+            settingService.SaveSetting(new VendorSettings
+            {
+                DefaultVendorPageSizeOptions = "6, 3, 9",
+                VendorsBlockItemsToDisplay = 0,
+                ShowVendorOnProductDetailsPage = true,
+                AllowCustomersToContactVendors = true,
+                AllowCustomersToApplyForVendorAccount = true,
+                TermsOfServiceEnabled = false,
+                AllowVendorsToEditInfo = false,
+                NotifyStoreOwnerAboutVendorInformationChange = true,
+                MaximumProductNumber = 3000,
+                AllowVendorsToImportProducts = true
             });
 
             var eaGeneral = _emailAccountRepository.Table.FirstOrDefault();
@@ -4683,7 +4874,7 @@ namespace Nop.Services.Installation
 
             settingService.SaveSetting(new WidgetSettings
             {
-                ActiveWidgetSystemNames = new List<string> { "Widgets.NivoSlider" },
+                ActiveWidgetSystemNames = new List<string> { "Widgets.NivoSlider" }
             });
 
             settingService.SaveSetting(new DisplayDefaultMenuItemSettings
@@ -4695,6 +4886,27 @@ namespace Nop.Services.Installation
                 DisplayBlogMenuItem = !installSampleData,
                 DisplayForumsMenuItem = !installSampleData,
                 DisplayContactUsMenuItem = !installSampleData
+            });
+
+            settingService.SaveSetting(new DisplayDefaultFooterItemSettings
+            {
+                DisplaySitemapFooterItem = true,
+                DisplayContactUsFooterItem = true,
+                DisplayProductSearchFooterItem = true,
+                DisplayNewsFooterItem = true,
+                DisplayBlogFooterItem = true,
+                DisplayForumsFooterItem = true,
+                DisplayRecentlyViewedProductsFooterItem = true,
+                DisplayNewProductsFooterItem = true,
+                DisplayCustomerInfoFooterItem = true,
+                DisplayCustomerAddressesFooterItem = true,
+                DisplayApplyVendorAccountFooterItem = true
+            });
+
+            settingService.SaveSetting(new CaptchaSettings
+            {
+                ReCaptchaDefaultLanguage = string.Empty,
+                AutomaticallyChooseLanguage = true
             });
         }
 
@@ -4708,8 +4920,7 @@ namespace Nop.Services.Installation
                 .Table.FirstOrDefault(pt => pt.Name == "Products in Grid or Lines");
             if (categoryTemplateInGridAndLines == null)
                 throw new Exception("Category template cannot be loaded");
-
-
+            
             //categories
             var allCategories = new List<Category>();
             var categoryComputers = new Category
@@ -4719,7 +4930,7 @@ namespace Nop.Services.Installation
                 PageSize = 6,
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_computers.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Computers")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_computers.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Computers")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 1,
@@ -4737,7 +4948,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryComputers.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_desktops.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Desktops")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_desktops.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Desktops")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 1,
@@ -4755,7 +4966,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryComputers.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_notebooks.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Notebooks")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_notebooks.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Notebooks")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 2,
@@ -4773,7 +4984,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryComputers.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_software.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Software")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_software.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Software")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 3,
@@ -4790,7 +5001,7 @@ namespace Nop.Services.Installation
                 PageSize = 6,
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_electronics.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Electronics")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_electronics.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Electronics")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 ShowOnHomePage = true,
@@ -4809,7 +5020,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryElectronics.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_camera_photo.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Camera, photo")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_camera_photo.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Camera, photo")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 1,
@@ -4827,7 +5038,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryElectronics.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_cell_phones.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Cell phones")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_cell_phones.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Cell phones")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 2,
@@ -4845,7 +5056,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryElectronics.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_accessories.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Accessories")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_accessories.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Accessories")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 3,
@@ -4862,7 +5073,7 @@ namespace Nop.Services.Installation
                 PageSize = 6,
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_apparel.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Apparel")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_apparel.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Apparel")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 ShowOnHomePage = true,
@@ -4881,7 +5092,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryApparel.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_shoes.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Shoes")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_shoes.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Shoes")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 1,
@@ -4899,7 +5110,7 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryApparel.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_clothing.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Clothing")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_clothing.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Clothing")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 2,
@@ -4917,9 +5128,9 @@ namespace Nop.Services.Installation
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
                 ParentCategoryId = categoryApparel.Id,
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_apparel_accessories.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Apparel Accessories")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_apparel_accessories.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName("Apparel Accessories")).Id,
                 IncludeInTopMenu = true,
-                Published = true,
+               Published = true,
                 DisplayOrder = 3,
                 CreatedOnUtc = DateTime.UtcNow,
                 UpdatedOnUtc = DateTime.UtcNow
@@ -4934,7 +5145,7 @@ namespace Nop.Services.Installation
                 PageSize = 6,
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_digital_downloads.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Digital downloads")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_digital_downloads.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Digital downloads")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 ShowOnHomePage = true,
@@ -4954,7 +5165,7 @@ namespace Nop.Services.Installation
                 PageSize = 6,
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_book.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Book")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_book.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Book")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 5,
@@ -4971,7 +5182,7 @@ namespace Nop.Services.Installation
                 PageSize = 6,
                 AllowCustomersToSelectPageSize = true,
                 PageSizeOptions = "6, 3, 9",
-                PictureId = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "category_jewelry.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Jewelry")).Id,
+                PictureId = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "category_jewelry.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Jewelry")).Id,
                 IncludeInTopMenu = true,
                 Published = true,
                 DisplayOrder = 6,
@@ -4987,12 +5198,1744 @@ namespace Nop.Services.Installation
                 _urlRecordRepository.Insert(new UrlRecord
                 {
                     EntityId = category.Id,
-                    EntityName = "Category",
+                    EntityName = typeof(Category).Name,
                     LanguageId = 0,
                     IsActive = true,
-                    Slug = category.ValidateSeName("", category.Name, true)
+                    Slug = ValidateSeName(category, category.Name)
                 });
             }
+        }
+
+
+        protected virtual void InstallComputers(ProductTemplate productTemplateSimple, List<Product> allProducts, string sampleImagesPath, IPictureService pictureService, List<RelatedProduct> relatedProducts)
+        {
+            var productBuildComputer = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Build your own computer",
+                ShortDescription = "Build it",
+                FullDescription = "<p>Fight back against cluttered workspaces with the stylish IBM zBC12 All-in-One desktop PC, featuring powerful computing resources and a stunning 20.1-inch widescreen display with stunning XBRITE-HiColor LCD technology. The black IBM zBC12 has a built-in microphone and MOTION EYE camera with face-tracking technology that allows for easy communication with friends and family. And it has a built-in DVD burner and Sony's Movie Store software so you can create a digital entertainment library for personal viewing at your convenience. Easy to setup and even easier to use, this JS-series All-in-One includes an elegantly designed keyboard and a USB mouse.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "build-your-own-computer",
+                AllowCustomerReviews = true,
+                Published = true,
+                ShowOnHomePage = true,
+                MarkAsNew = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Desktops"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productBuildComputer);
+            productBuildComputer.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Desktops_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBuildComputer.Name)),
+                DisplayOrder = 1
+            });
+            productBuildComputer.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Desktops_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBuildComputer.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productBuildComputer);
+
+            AddProductTag(productBuildComputer, "awesome");
+            AddProductTag(productBuildComputer, "computer");
+
+            var productDigitalStorm = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Digital Storm VANQUISH 3 Custom Performance PC",
+                ShortDescription = "Digital Storm Vanquish 3 Desktop PC",
+                FullDescription = "<p>Blow the doors off today’s most demanding games with maximum detail, speed, and power for an immersive gaming experience without breaking the bank.</p><p>Stay ahead of the competition, VANQUISH 3 is fully equipped to easily handle future upgrades, keeping your system on the cutting edge for years to come.</p><p>Each system is put through an extensive stress test, ensuring you experience zero bottlenecks and get the maximum performance from your hardware.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "compaq-presario-sr1519x-pentium-4-desktop-pc-with-cdrw",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Desktops"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productDigitalStorm);
+            productDigitalStorm.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_DigitalStorm.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productDigitalStorm.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productDigitalStorm);
+
+            AddProductTag(productDigitalStorm, "cool");
+            AddProductTag(productDigitalStorm, "computer");
+
+            var productLenovoIdeaCentre = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Lenovo IdeaCentre 600 All-in-One PC",
+                ShortDescription = string.Empty,
+                FullDescription = "<p>The A600 features a 21.5in screen, DVD or optional Blu-Ray drive, support for the full beans 1920 x 1080 HD, Dolby Home Cinema certification and an optional hybrid analogue/digital TV tuner.</p><p>Connectivity is handled by 802.11a/b/g - 802.11n is optional - and an ethernet port. You also get four USB ports, a Firewire slot, a six-in-one card reader and a 1.3- or two-megapixel webcam.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "hp-iq506-touchsmart-desktop-pc",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Desktops"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productLenovoIdeaCentre);
+            productLenovoIdeaCentre.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_LenovoIdeaCentre.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productLenovoIdeaCentre.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productLenovoIdeaCentre);
+
+            AddProductTag(productLenovoIdeaCentre, "awesome");
+            AddProductTag(productLenovoIdeaCentre, "computer");
+
+            var productAppleMacBookPro = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Apple MacBook Pro 13-inch",
+                ShortDescription = "A groundbreaking Retina display. A new force-sensing trackpad. All-flash architecture. Powerful dual-core and quad-core Intel processors. Together, these features take the notebook to a new level of performance. And they will do the same for you in everything you create.",
+                FullDescription = "<p>With fifth-generation Intel Core processors, the latest graphics, and faster flash storage, the incredibly advanced MacBook Pro with Retina display moves even further ahead in performance and battery life.* *Compared with the previous generation.</p><p>Retina display with 2560-by-1600 resolution</p><p>Fifth-generation dual-core Intel Core i5 processor</p><p>Intel Iris Graphics</p><p>Up to 9 hours of battery life1</p><p>Faster flash storage2</p><p>802.11ac Wi-Fi</p><p>Two Thunderbolt 2 ports for connecting high-performance devices and transferring data at lightning speed</p><p>Two USB 3 ports (compatible with USB 2 devices) and HDMI</p><p>FaceTime HD camera</p><p>Pages, Numbers, Keynote, iPhoto, iMovie, GarageBand included</p><p>OS X, the world's most advanced desktop operating system</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "asus-eee-pc-1000ha-10-inch-netbook",
+                AllowCustomerReviews = true,
+                Published = true,
+                ShowOnHomePage = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productAppleMacBookPro);
+            productAppleMacBookPro.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_macbook_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAppleMacBookPro.Name)),
+                DisplayOrder = 1
+            });
+            productAppleMacBookPro.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_macbook_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAppleMacBookPro.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productAppleMacBookPro);
+
+            AddProductTag(productAppleMacBookPro, "compact");
+            AddProductTag(productAppleMacBookPro, "awesome");
+            AddProductTag(productAppleMacBookPro, "computer");
+
+            var productAsusN551JK = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Asus N551JK-XO076H Laptop",
+                ShortDescription = "Laptop Asus N551JK Intel Core i7-4710HQ 2.5 GHz, RAM 16GB, HDD 1TB, Video NVidia GTX 850M 4GB, BluRay, 15.6, Full HD, Win 8.1",
+                FullDescription = "<p>The ASUS N550JX combines cutting-edge audio and visual technology to deliver an unsurpassed multimedia experience. A full HD wide-view IPS panel is tailor-made for watching movies and the intuitive touchscreen makes for easy, seamless navigation. ASUS has paired the N550JX’s impressive display with SonicMaster Premium, co-developed with Bang & Olufsen ICEpower® audio experts, for true surround sound. A quad-speaker array and external subwoofer combine for distinct vocals and a low bass that you can feel.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "asus-eee-pc-900ha-89-inch-netbook-black",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productAsusN551JK);
+            productAsusN551JK.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_asuspc_N551JK.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAsusN551JK.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productAsusN551JK);
+
+            AddProductTag(productAsusN551JK, "compact");
+            AddProductTag(productAsusN551JK, "awesome");
+            AddProductTag(productAsusN551JK, "computer");
+
+            var productSamsungSeries = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Samsung Series 9 NP900X4C Premium Ultrabook",
+                ShortDescription = "Samsung Series 9 NP900X4C-A06US 15-Inch Ultrabook (1.70 GHz Intel Core i5-3317U Processor, 8GB DDR3, 128GB SSD, Windows 8) Ash Black",
+                FullDescription = "<p>Designed with mobility in mind, Samsung's durable, ultra premium, lightweight Series 9 laptop (model NP900X4C-A01US) offers mobile professionals and power users a sophisticated laptop equally suited for work and entertainment. Featuring a minimalist look that is both simple and sophisticated, its polished aluminum uni-body design offers an iconic look and feel that pushes the envelope with an edge just 0.58 inches thin. This Series 9 laptop also includes a brilliant 15-inch SuperBright Plus display with HD+ technology, 128 GB Solid State Drive (SSD), 8 GB of system memory, and up to 10 hours of battery life.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "hp-pavilion-artist-edition-dv2890nr-141-inch-laptop",
+                AllowCustomerReviews = true,
+                Published = true,
+                //ShowOnHomePage = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productSamsungSeries);
+            productSamsungSeries.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_SamsungNP900X4C.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productSamsungSeries.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productSamsungSeries);
+
+            AddProductTag(productSamsungSeries, "nice");
+            AddProductTag(productSamsungSeries, "computer");
+            AddProductTag(productSamsungSeries, "compact");
+
+            var productHpSpectre = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "HP Spectre XT Pro UltraBook",
+                ShortDescription = "HP Spectre XT Pro UltraBook / Intel Core i5-2467M / 13.3 / 4GB / 128GB / Windows 7 Professional / Laptop",
+                FullDescription = "<p>Introducing HP ENVY Spectre XT, the Ultrabook designed for those who want style without sacrificing substance. It's sleek. It's thin. And with Intel. Corer i5 processor and premium materials, it's designed to go anywhere from the bistro to the boardroom, it's unlike anything you've ever seen from HP.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "hp-pavilion-elite-m9150f-desktop-pc",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productHpSpectre);
+            productHpSpectre.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_HPSpectreXT_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHpSpectre.Name)),
+                DisplayOrder = 1
+            });
+            productHpSpectre.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_HPSpectreXT_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHpSpectre.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productHpSpectre);
+
+            AddProductTag(productHpSpectre, "nice");
+            AddProductTag(productHpSpectre, "computer");
+
+            var productHpEnvy = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "HP Envy 6-1180ca 15.6-Inch Sleekbook",
+                ShortDescription = "HP ENVY 6-1202ea Ultrabook Beats Audio, 3rd generation Intel® CoreTM i7-3517U processor, 8GB RAM, 500GB HDD, Microsoft Windows 8, AMD Radeon HD 8750M (2 GB DDR3 dedicated)",
+                FullDescription = "The UltrabookTM that's up for anything. Thin and light, the HP ENVY is the large screen UltrabookTM with Beats AudioTM. With a soft-touch base that makes it easy to grab and go, it's a laptop that's up for anything.<br /><br /><b>Features</b><br /><br />- Windows 8 or other operating systems available<br /><br /><b>Top performance. Stylish design. Take notice.</b><br /><br />- At just 19.8 mm (0.78 in) thin, the HP ENVY UltrabookTM is slim and light enough to take anywhere. It's the laptop that gets you noticed with the power to get it done.<br />- With an eye-catching metal design, it's a laptop that you want to carry with you. The soft-touch, slip-resistant base gives you the confidence to carry it with ease.<br /><br /><b>More entertaining. More gaming. More fun.</b><br /><br />- Own the UltrabookTM with Beats AudioTM, dual speakers, a subwoofer, and an awesome display. Your music, movies and photo slideshows will always look and sound their best.<br />- Tons of video memory let you experience incredible gaming and multimedia without slowing down. Create and edit videos in a flash. And enjoy more of what you love to the fullest.<br />- The HP ENVY UltrabookTM is loaded with the ports you'd expect on a world-class laptop, but on a Sleekbook instead. Like HDMI, USB, RJ-45, and a headphone jack. You get all the right connections without compromising size.<br /><br /><b>Only from HP.</b><br /><br />- Life heats up. That's why there's HP CoolSense technology, which automatically adjusts your notebook's temperature based on usage and conditions. It stays cool. You stay comfortable.<br />- With HP ProtectSmart, your notebook's data stays safe from accidental bumps and bruises. It senses motion and plans ahead, stopping your hard drive and protecting your entire digital life.<br />- Keep playing even in dimly lit rooms or on red eye flights. The optional backlit keyboard[1] is full-size so you don't compromise comfort. Backlit keyboard. Another bright idea.<br /><br />",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "hp-pavilion-g60-230us-160-inch-laptop",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productHpEnvy);
+            productHpEnvy.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_HpEnvy6.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHpEnvy.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productHpEnvy);
+
+            AddProductTag(productHpEnvy, "computer");
+            AddProductTag(productHpEnvy, "cool");
+            AddProductTag(productHpEnvy, "compact");
+
+            var productLenovoThinkpad = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Lenovo Thinkpad X1 Carbon Laptop",
+                ShortDescription = "Lenovo Thinkpad X1 Carbon Touch Intel Core i7 14 Ultrabook",
+                FullDescription = "<p>The X1 Carbon brings a new level of quality to the ThinkPad legacy of high standards and innovation. It starts with the durable, carbon fiber-reinforced roll cage, making for the best Ultrabook construction available, and adds a host of other new features on top of the old favorites. Because for 20 years, we haven't stopped innovating. And you shouldn't stop benefiting from that.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "toshiba-satellite-a305-s6908-154-inch-laptop",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productLenovoThinkpad);
+            productLenovoThinkpad.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_LenovoThinkpad.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productLenovoThinkpad.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productLenovoThinkpad);
+
+            AddProductTag(productLenovoThinkpad, "awesome");
+            AddProductTag(productLenovoThinkpad, "computer");
+            AddProductTag(productLenovoThinkpad, "compact");
+
+            var productAdobePhotoshop = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Adobe Photoshop CS4",
+                ShortDescription = "Easily find and view all your photos",
+                FullDescription = "<p>Adobe Photoshop CS4 software combines power and simplicity so you can make ordinary photos extraordinary; tell engaging stories in beautiful, personalized creations for print and web; and easily find and view all your photos. New Photoshop.com membership* works with Photoshop CS4 so you can protect your photos with automatic online backup and 2 GB of storage; view your photos anywhere you are; and share your photos in fun, interactive ways with invitation-only Online Albums.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "adobe-photoshop-elements-7",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Software"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productAdobePhotoshop);
+            productAdobePhotoshop.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_AdobePhotoshop.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAdobePhotoshop.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productAdobePhotoshop);
+
+            AddProductTag(productAdobePhotoshop, "computer");
+            AddProductTag(productAdobePhotoshop, "awesome");
+
+            var productWindows8Pro = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Windows 8 Pro",
+                ShortDescription = "Windows 8 is a Microsoft operating system that was released in 2012 as part of the company's Windows NT OS family. ",
+                FullDescription = "<p>Windows 8 Pro is comparable to Windows 7 Professional and Ultimate and is targeted towards enthusiasts and business users; it includes all the features of Windows 8. Additional features include the ability to receive Remote Desktop connections, the ability to participate in a Windows Server domain, Encrypting File System, Hyper-V, and Virtual Hard Disk Booting, Group Policy as well as BitLocker and BitLocker To Go. Windows Media Center functionality is available only for Windows 8 Pro as a separate software package.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "corel-paint-shop-pro-photo-x2",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Software"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productWindows8Pro);
+            productWindows8Pro.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Windows8.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productWindows8Pro.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productWindows8Pro);
+
+            AddProductTag(productWindows8Pro, "awesome");
+            AddProductTag(productWindows8Pro, "computer");
+
+            var productSoundForge = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Sound Forge Pro 11 (recurring)",
+                ShortDescription = "Advanced audio waveform editor.",
+                FullDescription = "<p>Sound Forge™ Pro is the application of choice for a generation of creative and prolific artists, producers, and editors. Record audio quickly on a rock-solid platform, address sophisticated audio processing tasks with surgical precision, and render top-notch master files with ease. New features include one-touch recording, metering for the new critical standards, more repair and restoration tools, and exclusive round-trip interoperability with SpectraLayers Pro. Taken together, these enhancements make this edition of Sound Forge Pro the deepest and most advanced audio editing platform available.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "major-league-baseball-2k9",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Software"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productSoundForge);
+            productSoundForge.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_SoundForge.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productSoundForge.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productSoundForge);
+
+            AddProductTag(productSoundForge, "game");
+            AddProductTag(productSoundForge, "computer");
+            AddProductTag(productSoundForge, "cool");
+
+            relatedProducts.AddRange(new[]
+            {
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoIdeaCentre.Id,
+                    ProductId2 = productDigitalStorm.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productDigitalStorm.Id,
+                    ProductId2 = productBuildComputer.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productDigitalStorm.Id,
+                    ProductId2 = productLenovoIdeaCentre.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productDigitalStorm.Id,
+                    ProductId2 = productLenovoThinkpad.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productDigitalStorm.Id,
+                    ProductId2 = productAppleMacBookPro.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoIdeaCentre.Id,
+                    ProductId2 = productBuildComputer.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAsusN551JK.Id,
+                    ProductId2 = productLenovoThinkpad.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAsusN551JK.Id,
+                    ProductId2 = productAppleMacBookPro.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAsusN551JK.Id,
+                    ProductId2 = productSamsungSeries.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAsusN551JK.Id,
+                    ProductId2 = productHpSpectre.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoThinkpad.Id,
+                    ProductId2 = productAsusN551JK.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoThinkpad.Id,
+                    ProductId2 = productAppleMacBookPro.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoThinkpad.Id,
+                    ProductId2 = productSamsungSeries.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoThinkpad.Id,
+                    ProductId2 = productHpEnvy.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAppleMacBookPro.Id,
+                    ProductId2 = productLenovoThinkpad.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAppleMacBookPro.Id,
+                    ProductId2 = productSamsungSeries.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAppleMacBookPro.Id,
+                    ProductId2 = productAsusN551JK.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productAppleMacBookPro.Id,
+                    ProductId2 = productHpSpectre.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpSpectre.Id,
+                    ProductId2 = productLenovoThinkpad.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpSpectre.Id,
+                    ProductId2 = productSamsungSeries.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpSpectre.Id,
+                    ProductId2 = productAsusN551JK.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpSpectre.Id,
+                    ProductId2 = productHpEnvy.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpEnvy.Id,
+                    ProductId2 = productAsusN551JK.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpEnvy.Id,
+                    ProductId2 = productAppleMacBookPro.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpEnvy.Id,
+                    ProductId2 = productHpSpectre.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productHpEnvy.Id,
+                    ProductId2 = productSamsungSeries.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productSamsungSeries.Id,
+                    ProductId2 = productAsusN551JK.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productSamsungSeries.Id,
+                    ProductId2 = productAppleMacBookPro.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productSamsungSeries.Id,
+                    ProductId2 = productHpEnvy.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productSamsungSeries.Id,
+                    ProductId2 = productHpSpectre.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoIdeaCentre.Id,
+                    ProductId2 = productLenovoThinkpad.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productLenovoIdeaCentre.Id,
+                    ProductId2 = productAppleMacBookPro.Id
+                }
+            });
+        }
+
+        protected virtual void InstallElectronics(ProductTemplate productTemplateSimple, ProductTemplate productTemplateGrouped, List<Product> allProducts, string sampleImagesPath, IPictureService pictureService, List<RelatedProduct> relatedProducts)
+        {
+            //this one is a grouped product with two associated ones
+            var productNikonD5500DSLR = new Product
+            {
+                ProductType = ProductType.GroupedProduct,
+                VisibleIndividually = true,
+                Name = "Nikon D5500 DSLR",
+                ShortDescription = "Slim, lightweight Nikon D5500 packs a vari-angle touchscreen",
+                FullDescription = "Nikon has announced its latest DSLR, the D5500. A lightweight, compact DX-format camera with a 24.2MP sensor, it’s the first of its type to offer a vari-angle touchscreen. The D5500 replaces the D5300 in Nikon’s range, and while it offers much the same features the company says it’s a much slimmer and lighter prospect. There’s a deep grip for easier handling and built-in Wi-Fi that lets you transfer and share shots via your phone or tablet.",
+                ProductTemplateId = productTemplateGrouped.Id,
+                //SeName = "canon-digital-slr-camera",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Camera & photo"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productNikonD5500DSLR);
+            productNikonD5500DSLR.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikonCamera_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productNikonD5500DSLR.Name)),
+                DisplayOrder = 1
+            });
+            productNikonD5500DSLR.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikonCamera_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productNikonD5500DSLR.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productNikonD5500DSLR);
+
+            AddProductTag(productNikonD5500DSLR, "cool");
+            AddProductTag(productNikonD5500DSLR, "camera");
+
+            var productNikonD5500DSLR_associated_1 = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = false, //hide this products
+                ParentGroupedProductId = productNikonD5500DSLR.Id,
+                Name = "Nikon D5500 DSLR - Black",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "canon-digital-slr-camera-black",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow
+            };
+            allProducts.Add(productNikonD5500DSLR_associated_1);
+            productNikonD5500DSLR_associated_1.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikonCamera_black.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Canon Digital SLR Camera - Black")),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productNikonD5500DSLR_associated_1);
+            var productNikonD5500DSLR_associated_2 = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = false, //hide this products
+                ParentGroupedProductId = productNikonD5500DSLR.Id,
+                Name = "Nikon D5500 DSLR - Red",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "canon-digital-slr-camera-silver",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow
+            };
+            allProducts.Add(productNikonD5500DSLR_associated_2);
+            productNikonD5500DSLR_associated_2.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikonCamera_red.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Canon Digital SLR Camera - Silver")),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productNikonD5500DSLR_associated_2);
+
+            var productLeica = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Leica T Mirrorless Digital Camera",
+                ShortDescription = "Leica T (Typ 701) Silver",
+                FullDescription = "<p>The new Leica T offers a minimalist design that's crafted from a single block of aluminum.  Made in Germany and assembled by hand, this 16.3 effective mega pixel camera is easy to use.  With a massive 3.7 TFT LCD intuitive touch screen control, the user is able to configure and save their own menu system.  The Leica T has outstanding image quality and also has 16GB of built in memory.  This is Leica's first system camera to use Wi-Fi.  Add the T-App to your portable iOS device and be able to transfer and share your images (free download from the Apple App Store)</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "canon-vixia-hf100-camcorder",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Camera & photo"),
+                        DisplayOrder = 3
+                    }
+                }
+            };
+            allProducts.Add(productLeica);
+            productLeica.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_LeicaT.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productLeica.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productLeica);
+
+            AddProductTag(productLeica, "camera");
+            AddProductTag(productLeica, "cool");
+
+            var productAppleICam = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Apple iCam",
+                ShortDescription = "Photography becomes smart",
+                FullDescription = "<p>A few months ago we featured the amazing WVIL camera, by many considered the future of digital photography. This is another very good looking concept, iCam is the vision of Italian designer Antonio DeRosa, the idea is to have a device that attaches to the iPhone 5, which then allows the user to have a camera with interchangeable lenses. The device would also feature a front-touch screen and a projector. Would be great if apple picked up on this and made it reality.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "panasonic-hdc-sdt750k-high-definition-3d-camcorder",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Camera & photo"),
+                        DisplayOrder = 2
+                    }
+                },
+            };
+            allProducts.Add(productAppleICam);
+            productAppleICam.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_iCam.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAppleICam.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productAppleICam);
+
+            var productHtcOne = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "HTC One M8 Android L 5.0 Lollipop",
+                ShortDescription = "HTC - One (M8) 4G LTE Cell Phone with 32GB Memory - Gunmetal (Sprint)",
+                FullDescription = "<p><b>HTC One (M8) Cell Phone for Sprint:</b> With its brushed-metal design and wrap-around unibody frame, the HTC One (M8) is designed to fit beautifully in your hand. It's fun to use with amped up sound and a large Full HD touch screen, and intuitive gesture controls make it seem like your phone almost knows what you need before you do. <br /><br />Sprint Easy Pay option available in store.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "blackberry-bold-9000-phone-black-att",
+                AllowCustomerReviews = true,
+                Published = true,
+                ShowOnHomePage = true,
+                MarkAsNew = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Cell phones"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productHtcOne);
+            productHtcOne.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_HTC_One_M8.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHtcOne.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productHtcOne);
+
+            AddProductTag(productHtcOne, "cell");
+            AddProductTag(productHtcOne, "compact");
+            AddProductTag(productHtcOne, "awesome");
+
+            var productHtcOneMini = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "HTC One Mini Blue",
+                ShortDescription = "HTC One and HTC One Mini now available in bright blue hue",
+                FullDescription = "<p>HTC One mini smartphone with 4.30-inch 720x1280 display powered by 1.4GHz processor alongside 1GB RAM and 4-Ultrapixel rear camera.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "samsung-rugby-a837-phone-black-att",
+                AllowCustomerReviews = true,
+                Published = true,
+                MarkAsNew = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Cell phones"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productHtcOneMini);
+            productHtcOneMini.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_HTC_One_Mini_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHtcOneMini.Name)),
+                DisplayOrder = 1
+            });
+            productHtcOneMini.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_HTC_One_Mini_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHtcOneMini.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productHtcOneMini);
+
+            AddProductTag(productHtcOneMini, "awesome");
+            AddProductTag(productHtcOneMini, "compact");
+            AddProductTag(productHtcOneMini, "cell");
+
+            var productNokiaLumia = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Nokia Lumia 1020",
+                ShortDescription = "Nokia Lumia 1020 4G Cell Phone (Unlocked)",
+                FullDescription = "<p>Capture special moments for friends and family with this Nokia Lumia 1020 32GB WHITE cell phone that features an easy-to-use 41.0MP rear-facing camera and a 1.2MP front-facing camera. The AMOLED touch screen offers 768 x 1280 resolution for crisp visuals.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "sony-dcr-sr85-1mp-60gb-hard-drive-handycam-camcorder",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Cell phones"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productNokiaLumia);
+            productNokiaLumia.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Lumia1020.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productNokiaLumia.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productNokiaLumia);
+
+            AddProductTag(productNokiaLumia, "awesome");
+            AddProductTag(productNokiaLumia, "cool");
+            AddProductTag(productNokiaLumia, "camera");
+
+            var productBeatsPill = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Beats Pill 2.0 Wireless Speaker",
+                ShortDescription = "<b>Pill 2.0 Portable Bluetooth Speaker (1-Piece):</b> Watch your favorite movies and listen to music with striking sound quality. This lightweight, portable speaker is easy to take with you as you travel to any destination, keeping you entertained wherever you are. ",
+                FullDescription = "<ul><li>Pair and play with your Bluetooth® device with 30 foot range</li><li>Built-in speakerphone</li><li>7 hour rechargeable battery</li><li>Power your other devices with USB charge out</li><li>Tap two Beats Pills™ together for twice the sound with Beats Bond™</li></ul>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "acer-aspire-one-89-mini-notebook-case-black",
+                AllowCustomerReviews = true,
+                Published = true,
+                MarkAsNew = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Others"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productBeatsPill);
+            productBeatsPill.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_PillBeats_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBeatsPill.Name)),
+                DisplayOrder = 1
+            });
+            productBeatsPill.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_PillBeats_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBeatsPill.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productBeatsPill);
+
+            AddProductTag(productBeatsPill, "computer");
+            AddProductTag(productBeatsPill, "cool");
+
+            var productUniversalTabletCover = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Universal 7-8 Inch Tablet Cover",
+                ShortDescription = "Universal protection for 7-inch & 8-inch tablets",
+                FullDescription = "<p>Made of durable polyurethane, our Universal Cover is slim, lightweight, and strong, with protective corners that stretch to hold most 7 and 8-inch tablets securely. This tough case helps protects your tablet from bumps, scuffs, and dings.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "apc-back-ups-rs-800va-ups-800-va-ups-battery-lead-acid-br800blk",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Others"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productUniversalTabletCover);
+            productUniversalTabletCover.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_TabletCover.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productUniversalTabletCover.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productUniversalTabletCover);
+
+            AddProductTag(productUniversalTabletCover, "computer");
+            AddProductTag(productUniversalTabletCover, "cool");
+
+            var productPortableSoundSpeakers = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Portable Sound Speakers",
+                ShortDescription = "Universall portable sound speakers",
+                FullDescription = "<p>Your phone cut the cord, now it's time for you to set your music free and buy a Bluetooth speaker. Thankfully, there's one suited for everyone out there.</p><p>Some Bluetooth speakers excel at packing in as much functionality as the unit can handle while keeping the price down. Other speakers shuck excess functionality in favor of premium build materials instead. Whatever path you choose to go down, you'll be greeted with many options to suit your personal tastes.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "microsoft-bluetooth-notebook-mouse-5000-macwindows",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Others"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productPortableSoundSpeakers);
+            productPortableSoundSpeakers.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Speakers.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productPortableSoundSpeakers.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productPortableSoundSpeakers);
+
+            relatedProducts.AddRange(new[]
+            {
+                new RelatedProduct
+                {
+                     ProductId1 = productLeica.Id,
+                     ProductId2 = productHtcOneMini.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productLeica.Id,
+                     ProductId2 = productNikonD5500DSLR.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productLeica.Id,
+                     ProductId2 = productAppleICam.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productLeica.Id,
+                     ProductId2 = productNokiaLumia.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOne.Id,
+                     ProductId2 = productHtcOneMini.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOne.Id,
+                     ProductId2 = productNokiaLumia.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOne.Id,
+                     ProductId2 = productBeatsPill.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOne.Id,
+                     ProductId2 = productPortableSoundSpeakers.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOneMini.Id,
+                     ProductId2 = productHtcOne.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOneMini.Id,
+                     ProductId2 = productNokiaLumia.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOneMini.Id,
+                     ProductId2 = productBeatsPill.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productHtcOneMini.Id,
+                     ProductId2 = productPortableSoundSpeakers.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productNokiaLumia.Id,
+                     ProductId2 = productHtcOne.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productNokiaLumia.Id,
+                     ProductId2 = productHtcOneMini.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productNokiaLumia.Id,
+                     ProductId2 = productBeatsPill.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productNokiaLumia.Id,
+                     ProductId2 = productPortableSoundSpeakers.Id
+                }
+            });
+        }
+
+        protected virtual void InstallApparel(ProductTemplate productTemplateSimple, List<Product> allProducts, string sampleImagesPath, IPictureService pictureService, List<RelatedProduct> relatedProducts)
+        {
+            var productNikeFloral = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Nike Floral Roshe Customized Running Shoes",
+                ShortDescription = "When you ran across these shoes, you will immediately fell in love and needed a pair of these customized beauties.",
+                FullDescription = "<p>Each Rosh Run is personalized and exclusive, handmade in our workshop Custom. Run Your Rosh creations born from the hand of an artist specialized in sneakers, more than 10 years of experience.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "adidas-womens-supernova-csh-7-running-shoe",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Shoes"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productNikeFloral);
+            productNikeFloral.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikeFloralShoe_1.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeFloral.Name)),
+                DisplayOrder = 1
+            });
+            productNikeFloral.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikeFloralShoe_2.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeFloral.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productNikeFloral);
+
+            AddProductTag(productNikeFloral, "cool");
+            AddProductTag(productNikeFloral, "shoes");
+            AddProductTag(productNikeFloral, "apparel");
+            _productRepository.Update(productNikeFloral);
+
+            var productAdidas = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "adidas Consortium Campus 80s Running Shoes",
+                ShortDescription = "adidas Consortium Campus 80s Primeknit Light Maroon/Running Shoes",
+                FullDescription = "<p>One of three colorways of the adidas Consortium Campus 80s Primeknit set to drop alongside each other. This pair comes in light maroon and running white. Featuring a maroon-based primeknit upper with white accents. A limited release, look out for these at select adidas Consortium accounts worldwide.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "etnies-mens-digit-sneaker",
+                AllowCustomerReviews = true,
+                Published = true,
+                //ShowOnHomePage = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Shoes"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productAdidas);
+            productAdidas.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_adidas.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productAdidas.Name)),
+                DisplayOrder = 1
+            });
+            productAdidas.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_adidas_2.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productAdidas.Name)),
+                DisplayOrder = 2
+            });
+            productAdidas.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_adidas_3.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productAdidas.Name)),
+                DisplayOrder = 3
+            });
+
+            _productRepository.Insert(productAdidas);
+
+            AddProductTag(productAdidas, "cool");
+            AddProductTag(productAdidas, "shoes");
+            AddProductTag(productAdidas, "apparel");
+
+            _productRepository.Update(productAdidas);
+
+            var productNikeZoom = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Nike SB Zoom Stefan Janoski \"Medium Mint\"",
+                ShortDescription = "Nike SB Zoom Stefan Janoski Dark Grey Medium Mint Teal ...",
+                FullDescription = "The newly Nike SB Zoom Stefan Janoski gets hit with a \"Medium Mint\" accents that sits atop a Dark Grey suede. Expected to drop in October.",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "v-blue-juniors-cuffed-denim-short-with-rhinestones",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Shoes"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+
+            allProducts.Add(productNikeZoom);
+            productNikeZoom.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikeZoom.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeZoom.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productNikeZoom);
+
+            AddProductTag(productNikeZoom, "jeans");
+            AddProductTag(productNikeZoom, "cool");
+            AddProductTag(productNikeZoom, "apparel");
+
+            var productNikeTailwind = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Nike Tailwind Loose Short-Sleeve Running Shirt",
+                ShortDescription = string.Empty,
+                FullDescription = "<p>Boost your adrenaline with the Nike® Women's Tailwind Running Shirt. The lightweight, slouchy fit is great for layering, and moisture-wicking fabrics keep you feeling at your best. This tee has a notched hem for an enhanced range of motion, while flat seams with reinforcement tape lessen discomfort and irritation over longer distances. Put your keys and card in the side zip pocket and take off in your Nike® running t-shirt.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "50s-rockabilly-polka-dot-top-jr-plus-size",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
+                        DisplayOrder = 1
+                    }
+                },
+            };
+            allProducts.Add(productNikeTailwind);
+            productNikeTailwind.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_NikeShirt.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeTailwind.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productNikeTailwind);
+
+            AddProductTag(productNikeTailwind, "cool");
+            AddProductTag(productNikeTailwind, "apparel");
+            AddProductTag(productNikeTailwind, "shirt");
+
+            var productOversizedWomenTShirt = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Oversized Women T-Shirt",
+                ShortDescription = string.Empty,
+                FullDescription = "<p>This oversized women t-Shirt needs minimum ironing. It is a great product at a great value!</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "arrow-mens-wrinkle-free-pinpoint-solid-long-sleeve",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productOversizedWomenTShirt);
+            productOversizedWomenTShirt.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_WomenTShirt.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productOversizedWomenTShirt.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productOversizedWomenTShirt);
+
+            AddProductTag(productOversizedWomenTShirt, "cool");
+            AddProductTag(productOversizedWomenTShirt, "apparel");
+            AddProductTag(productOversizedWomenTShirt, "shirt");
+
+            var productCustomTShirt = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Custom T-Shirt",
+                ShortDescription = "T-Shirt - Add Your Content",
+                FullDescription = "<p>Comfort comes in all shapes and forms, yet this tee out does it all. Rising above the rest, our classic cotton crew provides the simple practicality you need to make it through the day. Tag-free, relaxed fit wears well under dress shirts or stands alone in laid-back style. Reinforced collar and lightweight feel give way to long-lasting shape and breathability. One less thing to worry about, rely on this tee to provide comfort and ease with every wear.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "custom-t-shirt",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productCustomTShirt);
+            productCustomTShirt.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_CustomTShirt.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productCustomTShirt.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productCustomTShirt);
+
+            AddProductTag(productCustomTShirt, "cool");
+            AddProductTag(productCustomTShirt, "shirt");
+            AddProductTag(productCustomTShirt, "apparel");
+
+            var productLeviJeans = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Levi's 511 Jeans",
+                ShortDescription = "Levi's Faded Black 511 Jeans ",
+                FullDescription = "<p>Between a skinny and straight fit, our 511&trade; slim fit jeans are cut close without being too restricting. Slim throughout the thigh and leg opening for a long and lean look.</p><ul><li>Slouch1y at top; sits below the waist</li><li>Slim through the leg, close at the thigh and straight to the ankle</li><li>Stretch for added comfort</li><li>Classic five-pocket styling</li><li>99% Cotton, 1% Spandex, 11.2 oz. - Imported</li></ul>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "levis-skinny-511-jeans",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productLeviJeans);
+
+            productLeviJeans.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_LeviJeans_1.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productLeviJeans.Name)),
+                DisplayOrder = 1
+            });
+            productLeviJeans.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_LeviJeans_2.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productLeviJeans.Name)),
+                DisplayOrder = 2
+            });
+            _productRepository.Insert(productLeviJeans);
+
+            AddProductTag(productLeviJeans, "cool");
+            AddProductTag(productLeviJeans, "jeans");
+            AddProductTag(productLeviJeans, "apparel");
+
+            var productObeyHat = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Obey Propaganda Hat",
+                ShortDescription = string.Empty,
+                FullDescription = "<p>Printed poplin 5 panel camp hat with debossed leather patch and web closure</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "indiana-jones-shapeable-wool-hat",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Accessories"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productObeyHat);
+            productObeyHat.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_hat.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productObeyHat.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productObeyHat);
+
+            AddProductTag(productObeyHat, "apparel");
+            AddProductTag(productObeyHat, "cool");
+
+            var productBelt = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Reversible Horseferry Check Belt",
+                ShortDescription = "Reversible belt in Horseferry check with smooth leather trim",
+                FullDescription = "<p>Reversible belt in Horseferry check with smooth leather trim</p><p>Leather lining, polished metal buckle</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "nike-golf-casual-belt",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Accessories"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productBelt);
+            productBelt.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Belt.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBelt.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productBelt);
+
+            var productSunglasses = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Ray Ban Aviator Sunglasses",
+                ShortDescription = "Aviator sunglasses are one of the first widely popularized styles of modern day sunwear.",
+                FullDescription = "<p>Since 1937, Ray-Ban can genuinely claim the title as the world's leading sunglasses and optical eyewear brand. Combining the best of fashion and sports performance, the Ray-Ban line of Sunglasses delivers a truly classic style that will have you looking great today and for years to come.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "ray-ban-aviator-sunglasses-rb-3025",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Accessories"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productSunglasses);
+            productSunglasses.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Sunglasses.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productSunglasses.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productSunglasses);
+
+            AddProductTag(productSunglasses, "apparel");
+            AddProductTag(productSunglasses, "cool");
+
+            relatedProducts.AddRange(new[]
+            {
+                 new RelatedProduct
+                {
+                     ProductId1 = productAdidas.Id,
+                     ProductId2 = productLeviJeans.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productAdidas.Id,
+                     ProductId2 = productNikeFloral.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productAdidas.Id,
+                     ProductId2 = productNikeZoom.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productAdidas.Id,
+                     ProductId2 = productNikeTailwind.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productLeviJeans.Id,
+                     ProductId2 = productAdidas.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productLeviJeans.Id,
+                     ProductId2 = productNikeFloral.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productLeviJeans.Id,
+                     ProductId2 = productNikeZoom.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productLeviJeans.Id,
+                     ProductId2 = productNikeTailwind.Id
+                },
+
+                new RelatedProduct
+                {
+                     ProductId1 = productCustomTShirt.Id,
+                     ProductId2 = productLeviJeans.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productCustomTShirt.Id,
+                     ProductId2 = productNikeTailwind.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productCustomTShirt.Id,
+                     ProductId2 = productOversizedWomenTShirt.Id
+                },
+                new RelatedProduct
+                {
+                     ProductId1 = productCustomTShirt.Id,
+                     ProductId2 = productObeyHat.Id
+                }
+            });
+        }
+
+        protected virtual void InstallBooks(ProductTemplate productTemplateSimple, List<Product> allProducts, string sampleImagesPath, IPictureService pictureService, List<RelatedProduct> relatedProducts)
+        {
+            var productFahrenheit = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Fahrenheit 451 by Ray Bradbury",
+                ShortDescription = "Fahrenheit 451 is a dystopian novel by Ray Bradbury published in 1953. It is regarded as one of his best works.",
+                FullDescription = "<p>The novel presents a future American society where books are outlawed and firemen burn any that are found. The title refers to the temperature that Bradbury understood to be the autoignition point of paper.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "best-grilling-recipes",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Books"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productFahrenheit);
+            productFahrenheit.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_Fahrenheit451.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productFahrenheit.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productFahrenheit);
+
+            AddProductTag(productFahrenheit, "awesome");
+            AddProductTag(productFahrenheit, "book");
+            AddProductTag(productFahrenheit, "nice");
+
+            var productFirstPrizePies = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "First Prize Pies",
+                ShortDescription = "Allison Kave made pies as a hobby, until one day her boyfriend convinced her to enter a Brooklyn pie-making contest. She won. In fact, her pies were such a hit that she turned pro.",
+                FullDescription = "<p>First Prize Pies, a boutique, made-to-order pie business that originated on New York's Lower East Side, has become synonymous with tempting and unusual confections. For the home baker who is passionate about seasonal ingredients and loves a creative approach to recipes, First Prize Pies serves up 52 weeks of seasonal and eclectic pastries in an interesting pie-a-week format. Clear instructions, technical tips and creative encouragement guide novice bakers as well as pie mavens. With its nostalgia-evoking photos of homemade pies fresh out of the oven, First Prize Pies will be as giftable as it is practical.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "eatingwell-in-season",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Books"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productFirstPrizePies);
+            productFirstPrizePies.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_FirstPrizePies.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productFirstPrizePies.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productFirstPrizePies);
+
+            AddProductTag(productFirstPrizePies, "book");
+
+            var productPrideAndPrejudice = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Pride and Prejudice",
+                ShortDescription = "Pride and Prejudice is a novel of manners by Jane Austen, first published in 1813.",
+                FullDescription = "<p>Set in England in the early 19th century, Pride and Prejudice tells the story of Mr and Mrs Bennet's five unmarried daughters after the rich and eligible Mr Bingley and his status-conscious friend, Mr Darcy, have moved into their neighbourhood. While Bingley takes an immediate liking to the eldest Bennet daughter, Jane, Darcy has difficulty adapting to local society and repeatedly clashes with the second-eldest Bennet daughter, Elizabeth.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "the-best-skillet-recipes",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Books"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productPrideAndPrejudice);
+            productPrideAndPrejudice.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_PrideAndPrejudice.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productPrideAndPrejudice.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productPrideAndPrejudice);
+
+            AddProductTag(productPrideAndPrejudice, "book");
+
+            relatedProducts.AddRange(new[]
+            {
+                new RelatedProduct
+                {
+                    ProductId1 = productPrideAndPrejudice.Id,
+                    ProductId2 = productFirstPrizePies.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productPrideAndPrejudice.Id,
+                    ProductId2 = productFahrenheit.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productFirstPrizePies.Id,
+                    ProductId2 = productPrideAndPrejudice.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productFirstPrizePies.Id,
+                    ProductId2 = productFahrenheit.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productFahrenheit.Id,
+                    ProductId2 = productFirstPrizePies.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productFahrenheit.Id,
+                    ProductId2 = productPrideAndPrejudice.Id
+                }
+            });
+        }
+
+        protected virtual void InstallJewelry(ProductTemplate productTemplateSimple, List<Product> allProducts, string sampleImagesPath, IPictureService pictureService, List<RelatedProduct> relatedProducts)
+        {
+            var productElegantGemstoneNecklace = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Elegant Gemstone Necklace (rental)",
+                ShortDescription = "Classic and elegant gemstone necklace now available in our store",
+                FullDescription = "<p>For those who like jewelry, creating their ownelegant jewelry from gemstone beads provides an economical way to incorporate genuine gemstones into your jewelry wardrobe. Manufacturers create beads from all kinds of precious gemstones and semi-precious gemstones, which are available in bead shops, craft stores, and online marketplaces.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "diamond-pave-earrings",
+                AllowCustomerReviews = true,
+                Published = true,
+                MarkAsNew = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Jewelry"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productElegantGemstoneNecklace);
+            productElegantGemstoneNecklace.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_GemstoneNecklaces.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productElegantGemstoneNecklace.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productElegantGemstoneNecklace);
+
+            AddProductTag(productElegantGemstoneNecklace, "jewelry");
+            AddProductTag(productElegantGemstoneNecklace, "awesome");
+
+            var productFlowerGirlBracelet = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Flower Girl Bracelet",
+                ShortDescription = "Personalised Flower Braceled",
+                FullDescription = "<p>This is a great gift for your flower girl to wear on your wedding day. A delicate bracelet that is made with silver plated soldered cable chain, gives this bracelet a dainty look for young wrist. A Swarovski heart, shown in Rose, hangs off a silver plated flower. Hanging alongside the heart is a silver plated heart charm with Flower Girl engraved on both sides. This is a great style for the younger flower girl.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "diamond-tennis-bracelet",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Jewelry"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productFlowerGirlBracelet);
+            productFlowerGirlBracelet.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_FlowerBracelet.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productFlowerGirlBracelet.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productFlowerGirlBracelet);
+
+            AddProductTag(productFlowerGirlBracelet, "awesome");
+            AddProductTag(productFlowerGirlBracelet, "jewelry");
+
+            var productEngagementRing = new Product
+            {
+                ProductType = ProductType.SimpleProduct,
+                VisibleIndividually = true,
+                Name = "Vintage Style Engagement Ring",
+                ShortDescription = "1.24 Carat (ctw) in 14K White Gold (Certified)",
+                FullDescription = "<p>Dazzle her with this gleaming 14 karat white gold vintage proposal. A ravishing collection of 11 decadent diamonds come together to invigorate a superbly ornate gold shank. Total diamond weight on this antique style engagement ring equals 1 1/4 carat (ctw). Item includes diamond certificate.</p>",
+                ProductTemplateId = productTemplateSimple.Id,
+                //SeName = "vintage-style-three-stone-diamond-engagement-ring",
+                AllowCustomerReviews = true,
+                Published = true,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                ProductCategories =
+                {
+                    new ProductCategory
+                    {
+                        Category = _categoryRepository.Table.Single(c => c.Name == "Jewelry"),
+                        DisplayOrder = 1
+                    }
+                }
+            };
+            allProducts.Add(productEngagementRing);
+            productEngagementRing.ProductPictures.Add(new ProductPicture
+            {
+                Picture = pictureService.InsertPicture(_fileProvider.ReadAllBytes(sampleImagesPath + "product_EngagementRing_1.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productEngagementRing.Name)),
+                DisplayOrder = 1
+            });
+            _productRepository.Insert(productEngagementRing);
+
+            AddProductTag(productEngagementRing, "jewelry");
+            AddProductTag(productEngagementRing, "awesome");
+
+            relatedProducts.AddRange(new[]
+            {
+                new RelatedProduct
+                {
+                    ProductId1 = productFlowerGirlBracelet.Id,
+                    ProductId2 = productEngagementRing.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productFlowerGirlBracelet.Id,
+                    ProductId2 = productElegantGemstoneNecklace.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productEngagementRing.Id,
+                    ProductId2 = productFlowerGirlBracelet.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productEngagementRing.Id,
+                    ProductId2 = productElegantGemstoneNecklace.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productElegantGemstoneNecklace.Id,
+                    ProductId2 = productFlowerGirlBracelet.Id
+                },
+                new RelatedProduct
+                {
+                    ProductId1 = productElegantGemstoneNecklace.Id,
+                    ProductId2 = productEngagementRing.Id
+                }
+            });
         }
 
         protected virtual void InstallProducts(string defaultUserEmail)
@@ -5018,1398 +6961,22 @@ namespace Nop.Services.Installation
             var pictureService = EngineContext.Current.Resolve<IPictureService>();
             var sampleImagesPath = GetSamplesPath();
 
-            //downloads
-            var downloadService = EngineContext.Current.Resolve<IDownloadService>();
-            var sampleDownloadsPath = GetSamplesPath();
-
             //products
             var allProducts = new List<Product>();
 
-            #region Desktops
-
-            var productBuildComputer = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Build your own computer",
-                ShortDescription = "Build it",
-                FullDescription = "<p>Fight back against cluttered workspaces with the stylish IBM zBC12 All-in-One desktop PC, featuring powerful computing resources and a stunning 20.1-inch widescreen display with stunning XBRITE-HiColor LCD technology. The black IBM zBC12 has a built-in microphone and MOTION EYE camera with face-tracking technology that allows for easy communication with friends and family. And it has a built-in DVD burner and Sony's Movie Store software so you can create a digital entertainment library for personal viewing at your convenience. Easy to setup and even easier to use, this JS-series All-in-One includes an elegantly designed keyboard and a USB mouse.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "build-your-own-computer",
-                AllowCustomerReviews = true,
-                Published = true,
-                ShowOnHomePage = true,
-                MarkAsNew = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Desktops"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productBuildComputer);
-            productBuildComputer.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Desktops_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBuildComputer.Name)),
-                DisplayOrder = 1,
-            });
-            productBuildComputer.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Desktops_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBuildComputer.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productBuildComputer);
-
-            var productDigitalStorm = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Digital Storm VANQUISH 3 Custom Performance PC",
-                ShortDescription = "Digital Storm Vanquish 3 Desktop PC",
-                FullDescription = "<p>Blow the doors off today’s most demanding games with maximum detail, speed, and power for an immersive gaming experience without breaking the bank.</p><p>Stay ahead of the competition, VANQUISH 3 is fully equipped to easily handle future upgrades, keeping your system on the cutting edge for years to come.</p><p>Each system is put through an extensive stress test, ensuring you experience zero bottlenecks and get the maximum performance from your hardware.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "compaq-presario-sr1519x-pentium-4-desktop-pc-with-cdrw",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Desktops"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productDigitalStorm);
-            productDigitalStorm.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_DigitalStorm.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productDigitalStorm.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productDigitalStorm);
-
-            var productLenovoIdeaCentre = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Lenovo IdeaCentre 600 All-in-One PC",
-                ShortDescription = "",
-                FullDescription = "<p>The A600 features a 21.5in screen, DVD or optional Blu-Ray drive, support for the full beans 1920 x 1080 HD, Dolby Home Cinema certification and an optional hybrid analogue/digital TV tuner.</p><p>Connectivity is handled by 802.11a/b/g - 802.11n is optional - and an ethernet port. You also get four USB ports, a Firewire slot, a six-in-one card reader and a 1.3- or two-megapixel webcam.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "hp-iq506-touchsmart-desktop-pc",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Desktops"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productLenovoIdeaCentre);
-            productLenovoIdeaCentre.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_LenovoIdeaCentre.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productLenovoIdeaCentre.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productLenovoIdeaCentre);
-
-            #endregion
-
-            #region Notebooks
-
-            var productAppleMacBookPro = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Apple MacBook Pro 13-inch",
-                ShortDescription = "A groundbreaking Retina display. A new force-sensing trackpad. All-flash architecture. Powerful dual-core and quad-core Intel processors. Together, these features take the notebook to a new level of performance. And they will do the same for you in everything you create.",
-                FullDescription = "<p>With fifth-generation Intel Core processors, the latest graphics, and faster flash storage, the incredibly advanced MacBook Pro with Retina display moves even further ahead in performance and battery life.* *Compared with the previous generation.</p><p>Retina display with 2560-by-1600 resolution</p><p>Fifth-generation dual-core Intel Core i5 processor</p><p>Intel Iris Graphics</p><p>Up to 9 hours of battery life1</p><p>Faster flash storage2</p><p>802.11ac Wi-Fi</p><p>Two Thunderbolt 2 ports for connecting high-performance devices and transferring data at lightning speed</p><p>Two USB 3 ports (compatible with USB 2 devices) and HDMI</p><p>FaceTime HD camera</p><p>Pages, Numbers, Keynote, iPhoto, iMovie, GarageBand included</p><p>OS X, the world's most advanced desktop operating system</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "asus-eee-pc-1000ha-10-inch-netbook",
-                AllowCustomerReviews = true,
-                Published = true,
-                ShowOnHomePage = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productAppleMacBookPro);
-            productAppleMacBookPro.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_macbook_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAppleMacBookPro.Name)),
-                DisplayOrder = 1,
-            });
-            productAppleMacBookPro.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_macbook_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAppleMacBookPro.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productAppleMacBookPro);
-
-            var productAsusN551JK = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Asus N551JK-XO076H Laptop",
-                ShortDescription = "Laptop Asus N551JK Intel Core i7-4710HQ 2.5 GHz, RAM 16GB, HDD 1TB, Video NVidia GTX 850M 4GB, BluRay, 15.6, Full HD, Win 8.1",
-                FullDescription = "<p>The ASUS N550JX combines cutting-edge audio and visual technology to deliver an unsurpassed multimedia experience. A full HD wide-view IPS panel is tailor-made for watching movies and the intuitive touchscreen makes for easy, seamless navigation. ASUS has paired the N550JX’s impressive display with SonicMaster Premium, co-developed with Bang & Olufsen ICEpower® audio experts, for true surround sound. A quad-speaker array and external subwoofer combine for distinct vocals and a low bass that you can feel.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "asus-eee-pc-900ha-89-inch-netbook-black",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productAsusN551JK);
-            productAsusN551JK.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_asuspc_N551JK.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAsusN551JK.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productAsusN551JK);
-
-            var productSamsungSeries = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Samsung Series 9 NP900X4C Premium Ultrabook",
-                ShortDescription = "Samsung Series 9 NP900X4C-A06US 15-Inch Ultrabook (1.70 GHz Intel Core i5-3317U Processor, 8GB DDR3, 128GB SSD, Windows 8) Ash Black",
-                FullDescription = "<p>Designed with mobility in mind, Samsung's durable, ultra premium, lightweight Series 9 laptop (model NP900X4C-A01US) offers mobile professionals and power users a sophisticated laptop equally suited for work and entertainment. Featuring a minimalist look that is both simple and sophisticated, its polished aluminum uni-body design offers an iconic look and feel that pushes the envelope with an edge just 0.58 inches thin. This Series 9 laptop also includes a brilliant 15-inch SuperBright Plus display with HD+ technology, 128 GB Solid State Drive (SSD), 8 GB of system memory, and up to 10 hours of battery life.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "hp-pavilion-artist-edition-dv2890nr-141-inch-laptop",
-                AllowCustomerReviews = true,
-                Published = true,
-                //ShowOnHomePage = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productSamsungSeries);
-            productSamsungSeries.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_SamsungNP900X4C.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productSamsungSeries.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productSamsungSeries);
-
-            var productHpSpectre = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "HP Spectre XT Pro UltraBook",
-                ShortDescription = "HP Spectre XT Pro UltraBook / Intel Core i5-2467M / 13.3 / 4GB / 128GB / Windows 7 Professional / Laptop",
-                FullDescription = "<p>Introducing HP ENVY Spectre XT, the Ultrabook designed for those who want style without sacrificing substance. It's sleek. It's thin. And with Intel. Corer i5 processor and premium materials, it's designed to go anywhere from the bistro to the boardroom, it's unlike anything you've ever seen from HP.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "hp-pavilion-elite-m9150f-desktop-pc",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productHpSpectre);
-            productHpSpectre.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_HPSpectreXT_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHpSpectre.Name)),
-                DisplayOrder = 1,
-            });
-            productHpSpectre.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_HPSpectreXT_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHpSpectre.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productHpSpectre);
-
-            var productHpEnvy = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "HP Envy 6-1180ca 15.6-Inch Sleekbook",
-                ShortDescription = "HP ENVY 6-1202ea Ultrabook Beats Audio, 3rd generation Intel® CoreTM i7-3517U processor, 8GB RAM, 500GB HDD, Microsoft Windows 8, AMD Radeon HD 8750M (2 GB DDR3 dedicated)",
-                FullDescription = "The UltrabookTM that's up for anything. Thin and light, the HP ENVY is the large screen UltrabookTM with Beats AudioTM. With a soft-touch base that makes it easy to grab and go, it's a laptop that's up for anything.<br /><br /><b>Features</b><br /><br />- Windows 8 or other operating systems available<br /><br /><b>Top performance. Stylish design. Take notice.</b><br /><br />- At just 19.8 mm (0.78 in) thin, the HP ENVY UltrabookTM is slim and light enough to take anywhere. It's the laptop that gets you noticed with the power to get it done.<br />- With an eye-catching metal design, it's a laptop that you want to carry with you. The soft-touch, slip-resistant base gives you the confidence to carry it with ease.<br /><br /><b>More entertaining. More gaming. More fun.</b><br /><br />- Own the UltrabookTM with Beats AudioTM, dual speakers, a subwoofer, and an awesome display. Your music, movies and photo slideshows will always look and sound their best.<br />- Tons of video memory let you experience incredible gaming and multimedia without slowing down. Create and edit videos in a flash. And enjoy more of what you love to the fullest.<br />- The HP ENVY UltrabookTM is loaded with the ports you'd expect on a world-class laptop, but on a Sleekbook instead. Like HDMI, USB, RJ-45, and a headphone jack. You get all the right connections without compromising size.<br /><br /><b>Only from HP.</b><br /><br />- Life heats up. That's why there's HP CoolSense technology, which automatically adjusts your notebook's temperature based on usage and conditions. It stays cool. You stay comfortable.<br />- With HP ProtectSmart, your notebook's data stays safe from accidental bumps and bruises. It senses motion and plans ahead, stopping your hard drive and protecting your entire digital life.<br />- Keep playing even in dimly lit rooms or on red eye flights. The optional backlit keyboard[1] is full-size so you don't compromise comfort. Backlit keyboard. Another bright idea.<br /><br />",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "hp-pavilion-g60-230us-160-inch-laptop",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productHpEnvy);
-            productHpEnvy.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_HpEnvy6.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHpEnvy.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productHpEnvy);
-
-            var productLenovoThinkpad = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Lenovo Thinkpad X1 Carbon Laptop",
-                ShortDescription = "Lenovo Thinkpad X1 Carbon Touch Intel Core i7 14 Ultrabook",
-                FullDescription = "<p>The X1 Carbon brings a new level of quality to the ThinkPad legacy of high standards and innovation. It starts with the durable, carbon fiber-reinforced roll cage, making for the best Ultrabook construction available, and adds a host of other new features on top of the old favorites. Because for 20 years, we haven't stopped innovating. And you shouldn't stop benefiting from that.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "toshiba-satellite-a305-s6908-154-inch-laptop",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Notebooks"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productLenovoThinkpad);
-            productLenovoThinkpad.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_LenovoThinkpad.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productLenovoThinkpad.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productLenovoThinkpad);
-
-            #endregion
-
-            #region Software
-
-            var productAdobePhotoshop = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Adobe Photoshop CS4",
-                ShortDescription = "Easily find and view all your photos",
-                FullDescription = "<p>Adobe Photoshop CS4 software combines power and simplicity so you can make ordinary photos extraordinary; tell engaging stories in beautiful, personalized creations for print and web; and easily find and view all your photos. New Photoshop.com membership* works with Photoshop CS4 so you can protect your photos with automatic online backup and 2 GB of storage; view your photos anywhere you are; and share your photos in fun, interactive ways with invitation-only Online Albums.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "adobe-photoshop-elements-7",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Software"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productAdobePhotoshop);
-            productAdobePhotoshop.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_AdobePhotoshop.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAdobePhotoshop.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productAdobePhotoshop);
-
-            var productWindows8Pro = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Windows 8 Pro",
-                ShortDescription = "Windows 8 is a Microsoft operating system that was released in 2012 as part of the company's Windows NT OS family. ",
-                FullDescription = "<p>Windows 8 Pro is comparable to Windows 7 Professional and Ultimate and is targeted towards enthusiasts and business users; it includes all the features of Windows 8. Additional features include the ability to receive Remote Desktop connections, the ability to participate in a Windows Server domain, Encrypting File System, Hyper-V, and Virtual Hard Disk Booting, Group Policy as well as BitLocker and BitLocker To Go. Windows Media Center functionality is available only for Windows 8 Pro as a separate software package.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "corel-paint-shop-pro-photo-x2",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Software"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productWindows8Pro);
-            productWindows8Pro.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Windows8.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productWindows8Pro.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productWindows8Pro);
-
-            var productSoundForge = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Sound Forge Pro 11 (recurring)",
-                ShortDescription = "Advanced audio waveform editor.",
-                FullDescription = "<p>Sound Forge™ Pro is the application of choice for a generation of creative and prolific artists, producers, and editors. Record audio quickly on a rock-solid platform, address sophisticated audio processing tasks with surgical precision, and render top-notch master files with ease. New features include one-touch recording, metering for the new critical standards, more repair and restoration tools, and exclusive round-trip interoperability with SpectraLayers Pro. Taken together, these enhancements make this edition of Sound Forge Pro the deepest and most advanced audio editing platform available.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "major-league-baseball-2k9",
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Software"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productSoundForge);
-            productSoundForge.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_SoundForge.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productSoundForge.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productSoundForge);
-
-            #endregion
-
-            #region Camera, Photo
-
-            //this one is a grouped product with two associated ones
-            var productNikonD5500DSLR = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Nikon D5500 DSLR",
-                ShortDescription = "Slim, lightweight Nikon D5500 packs a vari-angle touchscreen",
-                FullDescription = "Nikon has announced its latest DSLR, the D5500. A lightweight, compact DX-format camera with a 24.2MP sensor, it’s the first of its type to offer a vari-angle touchscreen. The D5500 replaces the D5300 in Nikon’s range, and while it offers much the same features the company says it’s a much slimmer and lighter prospect. There’s a deep grip for easier handling and built-in Wi-Fi that lets you transfer and share shots via your phone or tablet.",
-                ProductTemplateId = productTemplateGrouped.Id,
-                //SeName = "canon-digital-slr-camera",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Camera & photo"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productNikonD5500DSLR);
-            productNikonD5500DSLR.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikonCamera_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productNikonD5500DSLR.Name)),
-                DisplayOrder = 1,
-            });
-            productNikonD5500DSLR.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikonCamera_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productNikonD5500DSLR.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productNikonD5500DSLR);
-            var productNikonD5500DSLR_associated_1 = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = false, //hide this products
-                ParentGroupedProductId = productNikonD5500DSLR.Id,
-                Name = "Nikon D5500 DSLR - Black",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "canon-digital-slr-camera-black",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow
-            };
-            allProducts.Add(productNikonD5500DSLR_associated_1);
-            productNikonD5500DSLR_associated_1.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikonCamera_black.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Canon Digital SLR Camera - Black")),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productNikonD5500DSLR_associated_1);
-            var productNikonD5500DSLR_associated_2 = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = false, //hide this products
-                ParentGroupedProductId = productNikonD5500DSLR.Id,
-                Name = "Nikon D5500 DSLR - Red",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "canon-digital-slr-camera-silver",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow
-            };
-            allProducts.Add(productNikonD5500DSLR_associated_2);
-            productNikonD5500DSLR_associated_2.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikonCamera_red.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName("Canon Digital SLR Camera - Silver")),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productNikonD5500DSLR_associated_2);
-
-            var productLeica = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Leica T Mirrorless Digital Camera",
-                ShortDescription = "Leica T (Typ 701) Silver",
-                FullDescription = "<p>The new Leica T offers a minimalist design that's crafted from a single block of aluminum.  Made in Germany and assembled by hand, this 16.3 effective mega pixel camera is easy to use.  With a massive 3.7 TFT LCD intuitive touch screen control, the user is able to configure and save their own menu system.  The Leica T has outstanding image quality and also has 16GB of built in memory.  This is Leica's first system camera to use Wi-Fi.  Add the T-App to your portable iOS device and be able to transfer and share your images (free download from the Apple App Store)</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "canon-vixia-hf100-camcorder",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Camera & photo"),
-                        DisplayOrder = 3,
-                    }
-                }
-            };
-            allProducts.Add(productLeica);
-            productLeica.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_LeicaT.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productLeica.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productLeica);
-
-            var productAppleICam = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Apple iCam",
-                ShortDescription = "Photography becomes smart",
-                FullDescription = "<p>A few months ago we featured the amazing WVIL camera, by many considered the future of digital photography. This is another very good looking concept, iCam is the vision of Italian designer Antonio DeRosa, the idea is to have a device that attaches to the iPhone 5, which then allows the user to have a camera with interchangeable lenses. The device would also feature a front-touch screen and a projector. Would be great if apple picked up on this and made it reality.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "panasonic-hdc-sdt750k-high-definition-3d-camcorder",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Camera & photo"),
-                        DisplayOrder = 2,
-                    }
-                }
-            };
-            allProducts.Add(productAppleICam);
-            productAppleICam.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_iCam.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productAppleICam.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productAppleICam);
-
-            #endregion
-
-            #region Cell Phone
-
-            var productHtcOne = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "HTC One M8 Android L 5.0 Lollipop",
-                ShortDescription = "HTC - One (M8) 4G LTE Cell Phone with 32GB Memory - Gunmetal (Sprint)",
-                FullDescription = "<p><b>HTC One (M8) Cell Phone for Sprint:</b> With its brushed-metal design and wrap-around unibody frame, the HTC One (M8) is designed to fit beautifully in your hand. It's fun to use with amped up sound and a large Full HD touch screen, and intuitive gesture controls make it seem like your phone almost knows what you need before you do. <br /><br />Sprint Easy Pay option available in store.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "blackberry-bold-9000-phone-black-att",
-                AllowCustomerReviews = true,
-                Published = true,
-                ShowOnHomePage = true,
-                MarkAsNew = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Cell phones"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productHtcOne);
-            productHtcOne.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_HTC_One_M8.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHtcOne.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productHtcOne);
-
-            var productHtcOneMini = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "HTC One Mini Blue",
-                ShortDescription = "HTC One and HTC One Mini now available in bright blue hue",
-                FullDescription = "<p>HTC One mini smartphone with 4.30-inch 720x1280 display powered by 1.4GHz processor alongside 1GB RAM and 4-Ultrapixel rear camera.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "samsung-rugby-a837-phone-black-att",
-                AllowCustomerReviews = true,
-                Published = true,
-                MarkAsNew = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Cell phones"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productHtcOneMini);
-            productHtcOneMini.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_HTC_One_Mini_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHtcOneMini.Name)),
-                DisplayOrder = 1,
-            });
-            productHtcOneMini.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_HTC_One_Mini_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productHtcOneMini.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productHtcOneMini);
-
-            var productNokiaLumia = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Nokia Lumia 1020",
-                ShortDescription = "Nokia Lumia 1020 4G Cell Phone (Unlocked)",
-                FullDescription = "<p>Capture special moments for friends and family with this Nokia Lumia 1020 32GB WHITE cell phone that features an easy-to-use 41.0MP rear-facing camera and a 1.2MP front-facing camera. The AMOLED touch screen offers 768 x 1280 resolution for crisp visuals.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "sony-dcr-sr85-1mp-60gb-hard-drive-handycam-camcorder",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Cell phones"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productNokiaLumia);
-            productNokiaLumia.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Lumia1020.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productNokiaLumia.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productNokiaLumia);
-
-            #endregion
-
-            #region Others
-
-            var productBeatsPill = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Beats Pill 2.0 Wireless Speaker",
-                ShortDescription = "<b>Pill 2.0 Portable Bluetooth Speaker (1-Piece):</b> Watch your favorite movies and listen to music with striking sound quality. This lightweight, portable speaker is easy to take with you as you travel to any destination, keeping you entertained wherever you are. ",
-                FullDescription = "<ul><li>Pair and play with your Bluetooth® device with 30 foot range</li><li>Built-in speakerphone</li><li>7 hour rechargeable battery</li><li>Power your other devices with USB charge out</li><li>Tap two Beats Pills™ together for twice the sound with Beats Bond™</li></ul>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "acer-aspire-one-89-mini-notebook-case-black",
-                AllowCustomerReviews = true,
-                Published = true,
-                MarkAsNew = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Others"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productBeatsPill);
-            productBeatsPill.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_PillBeats_1.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBeatsPill.Name)),
-                DisplayOrder = 1,
-            });
-            productBeatsPill.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_PillBeats_2.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBeatsPill.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productBeatsPill);
-
-            var productUniversalTabletCover = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Universal 7-8 Inch Tablet Cover",
-                ShortDescription = "Universal protection for 7-inch & 8-inch tablets",
-                FullDescription = "<p>Made of durable polyurethane, our Universal Cover is slim, lightweight, and strong, with protective corners that stretch to hold most 7 and 8-inch tablets securely. This tough case helps protects your tablet from bumps, scuffs, and dings.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "apc-back-ups-rs-800va-ups-800-va-ups-battery-lead-acid-br800blk",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Others"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productUniversalTabletCover);
-            productUniversalTabletCover.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_TabletCover.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productUniversalTabletCover.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productUniversalTabletCover);
-
-            var productPortableSoundSpeakers = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Portable Sound Speakers",
-                ShortDescription = "Universall portable sound speakers",
-                FullDescription = "<p>Your phone cut the cord, now it's time for you to set your music free and buy a Bluetooth speaker. Thankfully, there's one suited for everyone out there.</p><p>Some Bluetooth speakers excel at packing in as much functionality as the unit can handle while keeping the price down. Other speakers shuck excess functionality in favor of premium build materials instead. Whatever path you choose to go down, you'll be greeted with many options to suit your personal tastes.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "microsoft-bluetooth-notebook-mouse-5000-macwindows",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Others"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productPortableSoundSpeakers);
-            productPortableSoundSpeakers.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Speakers.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productPortableSoundSpeakers.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productPortableSoundSpeakers);
-
-            #endregion
-
-            #region Shoes
-
-            var productNikeFloral = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Nike Floral Roshe Customized Running Shoes",
-                ShortDescription = "When you ran across these shoes, you will immediately fell in love and needed a pair of these customized beauties.",
-                FullDescription = "<p>Each Rosh Run is personalized and exclusive, handmade in our workshop Custom. Run Your Rosh creations born from the hand of an artist specialized in sneakers, more than 10 years of experience.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "adidas-womens-supernova-csh-7-running-shoe",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Shoes"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productNikeFloral);
-            productNikeFloral.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikeFloralShoe_1.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeFloral.Name)),
-                DisplayOrder = 1,
-            });
-            productNikeFloral.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikeFloralShoe_2.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeFloral.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productNikeFloral);
-            _productRepository.Update(productNikeFloral);
-
-            var productAdidas = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "adidas Consortium Campus 80s Running Shoes",
-                ShortDescription = "adidas Consortium Campus 80s Primeknit Light Maroon/Running Shoes",
-                FullDescription = "<p>One of three colorways of the adidas Consortium Campus 80s Primeknit set to drop alongside each other. This pair comes in light maroon and running white. Featuring a maroon-based primeknit upper with white accents. A limited release, look out for these at select adidas Consortium accounts worldwide.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "etnies-mens-digit-sneaker",
-                AllowCustomerReviews = true,
-                Published = true,
-                //ShowOnHomePage = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Shoes"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productAdidas);
-            productAdidas.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_adidas.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productAdidas.Name)),
-                DisplayOrder = 1,
-            });
-            productAdidas.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_adidas_2.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productAdidas.Name)),
-                DisplayOrder = 2,
-            });
-            productAdidas.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_adidas_3.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productAdidas.Name)),
-                DisplayOrder = 3,
-            });
-
-            _productRepository.Insert(productAdidas);
-            _productRepository.Update(productAdidas);
-
-            var productNikeZoom = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Nike SB Zoom Stefan Janoski \"Medium Mint\"",
-                ShortDescription = "Nike SB Zoom Stefan Janoski Dark Grey Medium Mint Teal ...",
-                FullDescription = "The newly Nike SB Zoom Stefan Janoski gets hit with a \"Medium Mint\" accents that sits atop a Dark Grey suede. Expected to drop in October.",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "v-blue-juniors-cuffed-denim-short-with-rhinestones",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Shoes"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-
-            allProducts.Add(productNikeZoom);
-            productNikeZoom.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikeZoom.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeZoom.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productNikeZoom);
-
-            #endregion
-
-            #region Clothing
-
-            var productNikeTailwind = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Nike Tailwind Loose Short-Sleeve Running Shirt",
-                ShortDescription = "",
-                FullDescription = "<p>Boost your adrenaline with the Nike® Women's Tailwind Running Shirt. The lightweight, slouchy fit is great for layering, and moisture-wicking fabrics keep you feeling at your best. This tee has a notched hem for an enhanced range of motion, while flat seams with reinforcement tape lessen discomfort and irritation over longer distances. Put your keys and card in the side zip pocket and take off in your Nike® running t-shirt.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "50s-rockabilly-polka-dot-top-jr-plus-size",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productNikeTailwind);
-            productNikeTailwind.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NikeShirt.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productNikeTailwind.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productNikeTailwind);
-
-            var productOversizedWomenTShirt = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Oversized Women T-Shirt",
-                ShortDescription = "",
-                FullDescription = "<p>This oversized women t-Shirt needs minimum ironing. It is a great product at a great value!</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "arrow-mens-wrinkle-free-pinpoint-solid-long-sleeve",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productOversizedWomenTShirt);
-            productOversizedWomenTShirt.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_WomenTShirt.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productOversizedWomenTShirt.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productOversizedWomenTShirt);
-
-            var productCustomTShirt = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Custom T-Shirt",
-                ShortDescription = "T-Shirt - Add Your Content",
-                FullDescription = "<p>Comfort comes in all shapes and forms, yet this tee out does it all. Rising above the rest, our classic cotton crew provides the simple practicality you need to make it through the day. Tag-free, relaxed fit wears well under dress shirts or stands alone in laid-back style. Reinforced collar and lightweight feel give way to long-lasting shape and breathability. One less thing to worry about, rely on this tee to provide comfort and ease with every wear.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "custom-t-shirt",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productCustomTShirt);
-            productCustomTShirt.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_CustomTShirt.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productCustomTShirt.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productCustomTShirt);
-
-            var productLeviJeans = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Levi's 511 Jeans",
-                ShortDescription = "Levi's Faded Black 511 Jeans ",
-                FullDescription = "<p>Between a skinny and straight fit, our 511&trade; slim fit jeans are cut close without being too restricting. Slim throughout the thigh and leg opening for a long and lean look.</p><ul><li>Slouch1y at top; sits below the waist</li><li>Slim through the leg, close at the thigh and straight to the ankle</li><li>Stretch for added comfort</li><li>Classic five-pocket styling</li><li>99% Cotton, 1% Spandex, 11.2 oz. - Imported</li></ul>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "levis-skinny-511-jeans",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Clothing"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productLeviJeans);
-
-            productLeviJeans.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_LeviJeans_1.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productLeviJeans.Name)),
-                DisplayOrder = 1,
-            });
-            productLeviJeans.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_LeviJeans_2.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productLeviJeans.Name)),
-                DisplayOrder = 2,
-            });
-            _productRepository.Insert(productLeviJeans);
-
-            #endregion
-
-            #region Accessories
-
-            var productObeyHat = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Obey Propaganda Hat",
-                ShortDescription = "",
-                FullDescription = "<p>Printed poplin 5 panel camp hat with debossed leather patch and web closure</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "indiana-jones-shapeable-wool-hat",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Accessories"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productObeyHat);
-            productObeyHat.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_hat.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productObeyHat.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productObeyHat);
-
-            var productBelt = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Reversible Horseferry Check Belt",
-                ShortDescription = "Reversible belt in Horseferry check with smooth leather trim",
-                FullDescription = "<p>Reversible belt in Horseferry check with smooth leather trim</p><p>Leather lining, polished metal buckle</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "nike-golf-casual-belt",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Accessories"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productBelt);
-            productBelt.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Belt.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productBelt.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productBelt);
-
-            var productSunglasses = new Product
-            {
-                ProductType = ProductType.SimpleProduct,
-                VisibleIndividually = true,
-                Name = "Ray Ban Aviator Sunglasses",
-                ShortDescription = "Aviator sunglasses are one of the first widely popularized styles of modern day sunwear.",
-                FullDescription = "<p>Since 1937, Ray-Ban can genuinely claim the title as the world's leading sunglasses and optical eyewear brand. Combining the best of fashion and sports performance, the Ray-Ban line of Sunglasses delivers a truly classic style that will have you looking great today and for years to come.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "ray-ban-aviator-sunglasses-rb-3025",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Accessories"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productSunglasses);
-            productSunglasses.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Sunglasses.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productSunglasses.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productSunglasses);
-
-            #endregion
-
-            #region Digital Downloads
-
-            var downloadNightVision1 = new Download
-            {
-                DownloadGuid = Guid.NewGuid(),
-                ContentType = MimeTypes.ApplicationXZipCo,
-                DownloadBinary = File.ReadAllBytes(sampleDownloadsPath + "product_NightVision_1.zip"),
-                Extension = ".zip",
-                Filename = "Night_Vision_1",
-                IsNew = true,
-            };
-            downloadService.InsertDownload(downloadNightVision1);
-            var downloadNightVision2 = new Download
-            {
-                DownloadGuid = Guid.NewGuid(),
-                ContentType = MimeTypes.TextPlain,
-                DownloadBinary = File.ReadAllBytes(sampleDownloadsPath + "product_NightVision_2.txt"),
-                Extension = ".txt",
-                Filename = "Night_Vision_1",
-                IsNew = true,
-            };
-            downloadService.InsertDownload(downloadNightVision2);
-            var productNightVision = new Product
-            {
-                Name = "Night Visions",
-                ShortDescription = "Night Visions is the debut studio album by American rock band Imagine Dragons.",
-                FullDescription = "<p>Original Release Date: September 4, 2012</p><p>Release Date: September 4, 2012</p><p>Genre - Alternative rock, indie rock, electronic rock</p><p>Label - Interscope/KIDinaKORNER</p><p>Copyright: (C) 2011 Interscope Records</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "poker-face",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Digital downloads"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productNightVision);
-            productNightVision.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_NightVisions.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productNightVision.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productNightVision);
-
-            var downloadIfYouWait1 = new Download
-            {
-                DownloadGuid = Guid.NewGuid(),
-                ContentType = MimeTypes.ApplicationXZipCo,
-                DownloadBinary = File.ReadAllBytes(sampleDownloadsPath + "product_IfYouWait_1.zip"),
-                Extension = ".zip",
-                Filename = "If_You_Wait_1",
-                IsNew = true,
-            };
-            downloadService.InsertDownload(downloadIfYouWait1);
-            var downloadIfYouWait2 = new Download
-            {
-                DownloadGuid = Guid.NewGuid(),
-                ContentType = MimeTypes.TextPlain,
-                DownloadBinary = File.ReadAllBytes(sampleDownloadsPath + "product_IfYouWait_2.txt"),
-                Extension = ".txt",
-                Filename = "If_You_Wait_1",
-                IsNew = true,
-            };
-            downloadService.InsertDownload(downloadIfYouWait2);
-            var productIfYouWait = new Product
-            {
-                Name = "If You Wait (donation)",
-                ShortDescription = "If You Wait is the debut studio album by English indie pop band London Grammar",
-                FullDescription = "<p>Original Release Date: September 6, 2013</p><p>Genre - Electronica, dream pop downtempo, pop</p><p>Label - Metal & Dust/Ministry of Sound</p><p>Producer - Tim Bran, Roy Kerr London, Grammar</p><p>Length - 43:22</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "single-ladies-put-a-ring-on-it",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Digital downloads"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productIfYouWait);
-
-            productIfYouWait.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_IfYouWait.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productIfYouWait.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productIfYouWait);
-
-            var downloadScienceAndFaith = new Download
-            {
-                DownloadGuid = Guid.NewGuid(),
-                ContentType = MimeTypes.ApplicationXZipCo,
-                DownloadBinary = File.ReadAllBytes(sampleDownloadsPath + "product_ScienceAndFaith_1.zip"),
-                Extension = ".zip",
-                Filename = "Science_And_Faith",
-                IsNew = true,
-            };
-            downloadService.InsertDownload(downloadScienceAndFaith);
-            var productScienceAndFaith = new Product
-            {
-                Name = "Science & Faith",
-                ShortDescription = "Science & Faith is the second studio album by Irish pop rock band The Script.",
-                FullDescription = "<p># Original Release Date: September 10, 2010<br /># Label: RCA, Epic/Phonogenic(America)<br /># Copyright: 2010 RCA Records.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "the-battle-of-los-angeles",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Digital downloads"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productScienceAndFaith);
-            productScienceAndFaith.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_ScienceAndFaith.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productScienceAndFaith.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productScienceAndFaith);
-
-            #endregion
-
-            #region Books
-
-            var productFahrenheit = new Product
-            {
-                Name = "Fahrenheit 451 by Ray Bradbury",
-                ShortDescription = "Fahrenheit 451 is a dystopian novel by Ray Bradbury published in 1953. It is regarded as one of his best works.",
-                FullDescription = "<p>The novel presents a future American society where books are outlawed and firemen burn any that are found. The title refers to the temperature that Bradbury understood to be the autoignition point of paper.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "best-grilling-recipes",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Books"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productFahrenheit);
-            productFahrenheit.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_Fahrenheit451.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productFahrenheit.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productFahrenheit);
-
-            var productFirstPrizePies = new Product
-            {
-                Name = "First Prize Pies",
-                ShortDescription = "Allison Kave made pies as a hobby, until one day her boyfriend convinced her to enter a Brooklyn pie-making contest. She won. In fact, her pies were such a hit that she turned pro.",
-                FullDescription = "<p>First Prize Pies, a boutique, made-to-order pie business that originated on New York's Lower East Side, has become synonymous with tempting and unusual confections. For the home baker who is passionate about seasonal ingredients and loves a creative approach to recipes, First Prize Pies serves up 52 weeks of seasonal and eclectic pastries in an interesting pie-a-week format. Clear instructions, technical tips and creative encouragement guide novice bakers as well as pie mavens. With its nostalgia-evoking photos of homemade pies fresh out of the oven, First Prize Pies will be as giftable as it is practical.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "eatingwell-in-season",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Books"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productFirstPrizePies);
-            productFirstPrizePies.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_FirstPrizePies.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productFirstPrizePies.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productFirstPrizePies);
-
-            var productPrideAndPrejudice = new Product
-            {
-                Name = "Pride and Prejudice",
-                ShortDescription = "Pride and Prejudice is a novel of manners by Jane Austen, first published in 1813.",
-                FullDescription = "<p>Set in England in the early 19th century, Pride and Prejudice tells the story of Mr and Mrs Bennet's five unmarried daughters after the rich and eligible Mr Bingley and his status-conscious friend, Mr Darcy, have moved into their neighbourhood. While Bingley takes an immediate liking to the eldest Bennet daughter, Jane, Darcy has difficulty adapting to local society and repeatedly clashes with the second-eldest Bennet daughter, Elizabeth.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "the-best-skillet-recipes",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Books"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productPrideAndPrejudice);
-            productPrideAndPrejudice.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_PrideAndPrejudice.jpeg"), MimeTypes.ImageJpeg, pictureService.GetPictureSeName(productPrideAndPrejudice.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productPrideAndPrejudice);
-
-            #endregion
-
-            #region Jewelry
-            
-            var productElegantGemstoneNecklace = new Product
-            {
-                Name = "Elegant Gemstone Necklace (rental)",
-                ShortDescription = "Classic and elegant gemstone necklace now available in our store",
-                FullDescription = "<p>For those who like jewelry, creating their ownelegant jewelry from gemstone beads provides an economical way to incorporate genuine gemstones into your jewelry wardrobe.  create beads from all kinds of precious gemstones and semi-precious gemstones, which are available in bead shops, craft stores, and online marketplaces.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "diamond-pave-earrings",
-                AllowCustomerReviews = true,
-                Published = true,
-                MarkAsNew = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Jewelry"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productElegantGemstoneNecklace);
-            productElegantGemstoneNecklace.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_GemstoneNecklaces.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productElegantGemstoneNecklace.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productElegantGemstoneNecklace);
-
-            var productFlowerGirlBracelet = new Product
-            {
-                Name = "Flower Girl Bracelet",
-                ShortDescription = "Personalised Flower Braceled",
-                FullDescription = "<p>This is a great gift for your flower girl to wear on your wedding day. A delicate bracelet that is made with silver plated soldered cable chain, gives this bracelet a dainty look for young wrist. A Swarovski heart, shown in Rose, hangs off a silver plated flower. Hanging alongside the heart is a silver plated heart charm with Flower Girl engraved on both sides. This is a great style for the younger flower girl.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "diamond-tennis-bracelet",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Jewelry"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productFlowerGirlBracelet);
-            productFlowerGirlBracelet.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_FlowerBracelet.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productFlowerGirlBracelet.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productFlowerGirlBracelet);
-
-            var productEngagementRing = new Product
-            {
-                Name = "Vintage Style Engagement Ring",
-                ShortDescription = "1.24 Carat (ctw) in 14K White Gold (Certified)",
-                FullDescription = "<p>Dazzle her with this gleaming 14 karat white gold vintage proposal. A ravishing collection of 11 decadent diamonds come together to invigorate a superbly ornate gold shank. Total diamond weight on this antique style engagement ring equals 1 1/4 carat (ctw). Item includes diamond certificate.</p>",
-                ProductTemplateId = productTemplateSimple.Id,
-                //SeName = "vintage-style-three-stone-diamond-engagement-ring",
-                AllowCustomerReviews = true,
-                Published = true,
-                CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
-                ProductCategories =
-                {
-                    new ProductCategory
-                    {
-                        Category = _categoryRepository.Table.Single(c => c.Name == "Jewelry"),
-                        DisplayOrder = 1,
-                    }
-                }
-            };
-            allProducts.Add(productEngagementRing);
-            productEngagementRing.ProductPictures.Add(new ProductPicture
-            {
-                Picture = pictureService.InsertPicture(File.ReadAllBytes(sampleImagesPath + "product_EngagementRing_1.jpg"), MimeTypes.ImagePJpeg, pictureService.GetPictureSeName(productEngagementRing.Name)),
-                DisplayOrder = 1,
-            });
-            _productRepository.Insert(productEngagementRing);
-
-            #endregion
+            //related products
+            var relatedProducts = new List<RelatedProduct>();
+
+            //desktops, notebooks, software
+            InstallComputers(productTemplateSimple, allProducts, sampleImagesPath, pictureService, relatedProducts);
+            //camera & photo, cell phones, others
+            InstallElectronics(productTemplateSimple, productTemplateGrouped, allProducts, sampleImagesPath, pictureService, relatedProducts);
+            //shoes, clothing, accessories
+            InstallApparel(productTemplateSimple, allProducts, sampleImagesPath, pictureService, relatedProducts);
+            //books
+            InstallBooks(productTemplateSimple, allProducts, sampleImagesPath, pictureService, relatedProducts);
+            //jewelry
+            InstallJewelry(productTemplateSimple, allProducts, sampleImagesPath, pictureService, relatedProducts);
 
             //search engine names
             foreach (var product in allProducts)
@@ -6417,502 +6984,15 @@ namespace Nop.Services.Installation
                 _urlRecordRepository.Insert(new UrlRecord
                 {
                     EntityId = product.Id,
-                    EntityName = "Product",
+                    EntityName = typeof(Product).Name,
                     LanguageId = 0,
                     IsActive = true,
-                    Slug = product.ValidateSeName("", product.Name, true)
+                    Slug = ValidateSeName(product, product.Name)
                 });
             }
 
-            #region Related Products
-
             //related products
-            var relatedProducts = new List<RelatedProduct>
-            {
-                new RelatedProduct
-                {
-                     ProductId1 = productFlowerGirlBracelet.Id,
-                     ProductId2 = productEngagementRing.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productFlowerGirlBracelet.Id,
-                     ProductId2 = productElegantGemstoneNecklace.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productEngagementRing.Id,
-                     ProductId2 = productFlowerGirlBracelet.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productEngagementRing.Id,
-                     ProductId2 = productElegantGemstoneNecklace.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productElegantGemstoneNecklace.Id,
-                     ProductId2 = productFlowerGirlBracelet.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productElegantGemstoneNecklace.Id,
-                     ProductId2 = productEngagementRing.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productIfYouWait.Id,
-                     ProductId2 = productNightVision.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productIfYouWait.Id,
-                     ProductId2 = productScienceAndFaith.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productNightVision.Id,
-                     ProductId2 = productIfYouWait.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productNightVision.Id,
-                     ProductId2 = productScienceAndFaith.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productPrideAndPrejudice.Id,
-                     ProductId2 = productFirstPrizePies.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productPrideAndPrejudice.Id,
-                     ProductId2 = productFahrenheit.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productFirstPrizePies.Id,
-                     ProductId2 = productPrideAndPrejudice.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productFirstPrizePies.Id,
-                     ProductId2 = productFahrenheit.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productFahrenheit.Id,
-                     ProductId2 = productFirstPrizePies.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productFahrenheit.Id,
-                     ProductId2 = productPrideAndPrejudice.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAsusN551JK.Id,
-                     ProductId2 = productLenovoThinkpad.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAsusN551JK.Id,
-                     ProductId2 = productAppleMacBookPro.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAsusN551JK.Id,
-                     ProductId2 = productSamsungSeries.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAsusN551JK.Id,
-                     ProductId2 = productHpSpectre.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLenovoThinkpad.Id,
-                     ProductId2 = productAsusN551JK.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLenovoThinkpad.Id,
-                     ProductId2 = productAppleMacBookPro.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLenovoThinkpad.Id,
-                     ProductId2 = productSamsungSeries.Id,
-                },
-                 new RelatedProduct
-                {
-                     ProductId1 = productLenovoThinkpad.Id,
-                     ProductId2 = productHpEnvy.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAppleMacBookPro.Id,
-                     ProductId2 = productLenovoThinkpad.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAppleMacBookPro.Id,
-                     ProductId2 = productSamsungSeries.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAppleMacBookPro.Id,
-                     ProductId2 = productAsusN551JK.Id,
-                },
-                 new RelatedProduct
-                {
-                     ProductId1 = productAppleMacBookPro.Id,
-                     ProductId2 = productHpSpectre.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHpSpectre.Id,
-                     ProductId2 = productLenovoThinkpad.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHpSpectre.Id,
-                     ProductId2 = productSamsungSeries.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHpSpectre.Id,
-                     ProductId2 = productAsusN551JK.Id,
-                },
-                 new RelatedProduct
-                {
-                     ProductId1 = productHpSpectre.Id,
-                     ProductId2 = productHpEnvy.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHpEnvy.Id,
-                     ProductId2 = productAsusN551JK.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHpEnvy.Id,
-                     ProductId2 = productAppleMacBookPro.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHpEnvy.Id,
-                     ProductId2 = productHpSpectre.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHpEnvy.Id,
-                     ProductId2 = productSamsungSeries.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productSamsungSeries.Id,
-                     ProductId2 = productAsusN551JK.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productSamsungSeries.Id,
-                     ProductId2 = productAppleMacBookPro.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productSamsungSeries.Id,
-                     ProductId2 = productHpEnvy.Id,
-                },
-                 new RelatedProduct
-                {
-                     ProductId1 = productSamsungSeries.Id,
-                     ProductId2 = productHpSpectre.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeica.Id,
-                     ProductId2 = productHtcOneMini.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeica.Id,
-                     ProductId2 = productNikonD5500DSLR.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeica.Id,
-                     ProductId2 = productAppleICam.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeica.Id,
-                     ProductId2 = productNokiaLumia.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOne.Id,
-                     ProductId2 = productHtcOneMini.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOne.Id,
-                     ProductId2 = productNokiaLumia.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOne.Id,
-                     ProductId2 = productBeatsPill.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOne.Id,
-                     ProductId2 = productPortableSoundSpeakers.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOneMini.Id,
-                     ProductId2 = productHtcOne.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOneMini.Id,
-                     ProductId2 = productNokiaLumia.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOneMini.Id,
-                     ProductId2 = productBeatsPill.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productHtcOneMini.Id,
-                     ProductId2 = productPortableSoundSpeakers.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productNokiaLumia.Id,
-                     ProductId2 = productHtcOne.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productNokiaLumia.Id,
-                     ProductId2 = productHtcOneMini.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productNokiaLumia.Id,
-                     ProductId2 = productBeatsPill.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productNokiaLumia.Id,
-                     ProductId2 = productPortableSoundSpeakers.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAdidas.Id,
-                     ProductId2 = productLeviJeans.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAdidas.Id,
-                     ProductId2 = productNikeFloral.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAdidas.Id,
-                     ProductId2 = productNikeZoom.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productAdidas.Id,
-                     ProductId2 = productNikeTailwind.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeviJeans.Id,
-                     ProductId2 = productAdidas.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeviJeans.Id,
-                     ProductId2 = productNikeFloral.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeviJeans.Id,
-                     ProductId2 = productNikeZoom.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLeviJeans.Id,
-                     ProductId2 = productNikeTailwind.Id,
-                },
-
-                new RelatedProduct
-                {
-                     ProductId1 = productCustomTShirt.Id,
-                     ProductId2 = productLeviJeans.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productCustomTShirt.Id,
-                     ProductId2 = productNikeTailwind.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productCustomTShirt.Id,
-                     ProductId2 = productOversizedWomenTShirt.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productCustomTShirt.Id,
-                     ProductId2 = productObeyHat.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productDigitalStorm.Id,
-                     ProductId2 = productBuildComputer.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productDigitalStorm.Id,
-                     ProductId2 = productLenovoIdeaCentre.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productDigitalStorm.Id,
-                     ProductId2 = productLenovoThinkpad.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productDigitalStorm.Id,
-                     ProductId2 = productAppleMacBookPro.Id,
-                },
-
-
-                new RelatedProduct
-                {
-                     ProductId1 = productLenovoIdeaCentre.Id,
-                     ProductId2 = productBuildComputer.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLenovoIdeaCentre.Id,
-                     ProductId2 = productDigitalStorm.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLenovoIdeaCentre.Id,
-                     ProductId2 = productLenovoThinkpad.Id,
-                },
-                new RelatedProduct
-                {
-                     ProductId1 = productLenovoIdeaCentre.Id,
-                     ProductId2 = productAppleMacBookPro.Id,
-                },
-            };
             _relatedProductRepository.Insert(relatedProducts);
-
-            #endregion
-
-            #region Product Tags
-
-            //product tags
-            AddProductTag(productNikeTailwind, "cool");
-            AddProductTag(productNikeTailwind, "apparel");
-            AddProductTag(productNikeTailwind, "shirt");
-            AddProductTag(productBeatsPill, "computer");
-            AddProductTag(productBeatsPill, "cool");
-            AddProductTag(productNikeFloral, "cool");
-            AddProductTag(productNikeFloral, "shoes");
-            AddProductTag(productNikeFloral, "apparel");
-            AddProductTag(productAdobePhotoshop, "computer");
-            AddProductTag(productAdobePhotoshop, "awesome");
-            AddProductTag(productUniversalTabletCover, "computer");
-            AddProductTag(productUniversalTabletCover, "cool");
-            AddProductTag(productOversizedWomenTShirt, "cool");
-            AddProductTag(productOversizedWomenTShirt, "apparel");
-            AddProductTag(productOversizedWomenTShirt, "shirt");
-            AddProductTag(productAppleMacBookPro, "compact");
-            AddProductTag(productAppleMacBookPro, "awesome");
-            AddProductTag(productAppleMacBookPro, "computer");
-            AddProductTag(productAsusN551JK, "compact");
-            AddProductTag(productAsusN551JK, "awesome");
-            AddProductTag(productAsusN551JK, "computer");
-            AddProductTag(productFahrenheit, "awesome");
-            AddProductTag(productFahrenheit, "book");
-            AddProductTag(productFahrenheit, "nice");
-            AddProductTag(productHtcOne, "cell");
-            AddProductTag(productHtcOne, "compact");
-            AddProductTag(productHtcOne, "awesome");
-            AddProductTag(productBuildComputer, "awesome");
-            AddProductTag(productBuildComputer, "computer");
-            AddProductTag(productNikonD5500DSLR, "cool");
-            AddProductTag(productNikonD5500DSLR, "camera");
-            AddProductTag(productLeica, "camera");
-            AddProductTag(productLeica, "cool");
-            AddProductTag(productDigitalStorm, "cool");
-            AddProductTag(productDigitalStorm, "computer");
-            AddProductTag(productWindows8Pro, "awesome");
-            AddProductTag(productWindows8Pro, "computer");
-            AddProductTag(productCustomTShirt, "cool");
-            AddProductTag(productCustomTShirt, "shirt");
-            AddProductTag(productCustomTShirt, "apparel");
-            AddProductTag(productElegantGemstoneNecklace, "jewelry");
-            AddProductTag(productElegantGemstoneNecklace, "awesome");
-            AddProductTag(productFlowerGirlBracelet, "awesome");
-            AddProductTag(productFlowerGirlBracelet, "jewelry");
-            AddProductTag(productFirstPrizePies, "book");
-            AddProductTag(productAdidas, "cool");
-            AddProductTag(productAdidas, "shoes");
-            AddProductTag(productAdidas, "apparel");
-            AddProductTag(productLenovoIdeaCentre, "awesome");
-            AddProductTag(productLenovoIdeaCentre, "computer");
-            AddProductTag(productSamsungSeries, "nice");
-            AddProductTag(productSamsungSeries, "computer");
-            AddProductTag(productSamsungSeries, "compact");
-            AddProductTag(productHpSpectre, "nice");
-            AddProductTag(productHpSpectre, "computer");
-            AddProductTag(productHpEnvy, "computer");
-            AddProductTag(productHpEnvy, "cool");
-            AddProductTag(productHpEnvy, "compact");
-            AddProductTag(productObeyHat, "apparel");
-            AddProductTag(productObeyHat, "cool");
-            AddProductTag(productLeviJeans, "cool");
-            AddProductTag(productLeviJeans, "jeans");
-            AddProductTag(productLeviJeans, "apparel");
-            AddProductTag(productSoundForge, "game");
-            AddProductTag(productSoundForge, "computer");
-            AddProductTag(productSoundForge, "cool");
-            AddProductTag(productNightVision, "awesome");
-            AddProductTag(productNightVision, "digital");
-            AddProductTag(productSunglasses, "apparel");
-            AddProductTag(productSunglasses, "cool");
-            AddProductTag(productHtcOneMini, "awesome");
-            AddProductTag(productHtcOneMini, "compact");
-            AddProductTag(productHtcOneMini, "cell");
-            AddProductTag(productIfYouWait, "digital");
-            AddProductTag(productIfYouWait, "awesome");
-            AddProductTag(productNokiaLumia, "awesome");
-            AddProductTag(productNokiaLumia, "cool");
-            AddProductTag(productNokiaLumia, "camera");
-            AddProductTag(productScienceAndFaith, "digital");
-            AddProductTag(productScienceAndFaith, "awesome");
-            AddProductTag(productPrideAndPrejudice, "book");
-            AddProductTag(productLenovoThinkpad, "awesome");
-            AddProductTag(productLenovoThinkpad, "computer");
-            AddProductTag(productLenovoThinkpad, "compact");
-            AddProductTag(productNikeZoom, "jeans");
-            AddProductTag(productNikeZoom, "cool");
-            AddProductTag(productNikeZoom, "apparel");
-            AddProductTag(productEngagementRing, "jewelry");
-            AddProductTag(productEngagementRing, "awesome");
-
-            #endregion
-
-            #region  Reviews
 
             //reviews
             var random = new Random();
@@ -6943,11 +7023,9 @@ namespace Nop.Services.Installation
                 });
                 product.ApprovedRatingSum = rating;
                 product.ApprovedTotalReviews = product.ProductReviews.Count;
-
             }
-            _productRepository.Update(allProducts);
 
-            #endregion
+            _productRepository.Update(allProducts);
         }
 
         protected virtual void InstallForums()
@@ -6957,7 +7035,7 @@ namespace Nop.Services.Installation
                 Name = "General",
                 DisplayOrder = 5,
                 CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow
             };
 
             _forumGroupRepository.Insert(forumGroup);
@@ -6973,7 +7051,7 @@ namespace Nop.Services.Installation
                 LastPostTime = null,
                 DisplayOrder = 1,
                 CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow
             };
             _forumRepository.Insert(newProductsForum);
 
@@ -6988,10 +7066,23 @@ namespace Nop.Services.Installation
                 LastPostTime = null,
                 DisplayOrder = 10,
                 CreatedOnUtc = DateTime.UtcNow,
-                UpdatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow
             };
             _forumRepository.Insert(mobileDevicesForum);
 
+            var packagingShippingForum = new Forum
+            {
+                ForumGroup = forumGroup,
+                Name = "Packaging & Shipping",
+                Description = "Discuss packaging & shipping",
+                NumTopics = 0,
+                NumPosts = 0,
+                LastPostTime = null,
+                DisplayOrder = 20,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow
+            };
+            _forumRepository.Insert(packagingShippingForum);
         }
 
         protected virtual void InstallBlogPosts(string defaultUserEmail)
@@ -7008,7 +7099,7 @@ namespace Nop.Services.Installation
                     BodyOverview = "<p>When you start an online business, your main aim is to sell the products, right? As a business owner, you want to showcase your store to more audience. So, you decide to go on social media, why? Because everyone is doing it, then why shouldn&rsquo;t you? It is tempting as everyone is aware of the hype that it is the best way to market your brand.</p><p>Do you know having a blog for your online store can be very helpful? Many businesses do not understand the importance of having a blog because they don&rsquo;t have time to post quality content.</p><p>Today, we will talk about how a blog can play an important role for the growth of your e-Commerce business. Later, we will also discuss some tips that will be helpful to you for writing business related blog posts.</p>",
                     Body = "<p>When you start an online business, your main aim is to sell the products, right? As a business owner, you want to showcase your store to more audience. So, you decide to go on social media, why? Because everyone is doing it, then why shouldn&rsquo;t you? It is tempting as everyone is aware of the hype that it is the best way to market your brand.</p><p>Do you know having a blog for your online store can be very helpful? Many businesses do not understand the importance of having a blog because they don&rsquo;t have time to post quality content.</p><p>Today, we will talk about how a blog can play an important role for the growth of your e-Commerce business. Later, we will also discuss some tips that will be helpful to you for writing business related blog posts.</p><h3>1) Blog is useful in educating your customers</h3><p>Blogging is one of the best way by which you can educate your customers about your products/services that you offer. This helps you as a business owner to bring more value to your brand. When you provide useful information to the customers about your products, they are more likely to buy products from you. You can use your blog for providing tutorials in regard to the use of your products.</p><p><strong>For example:</strong> If you have an online store that offers computer parts. You can write tutorials about how to build a computer or how to make your computer&rsquo;s performance better. While talking about these things, you can mention products in the tutorials and provide link to your products within the blog post from your website. Your potential customers might get different ideas of using your product and will likely to buy products from your online store.</p><h3>2) Blog helps your business in Search Engine Optimization (SEO)</h3><p>Blog posts create more internal links to your website which helps a lot in SEO. Blog is a great way to have quality content on your website related to your products/services which is indexed by all major search engines like Google, Bing and Yahoo. The more original content you write in your blog post, the better ranking you will get in search engines. SEO is an on-going process and posting blog posts regularly keeps your site active all the time which is beneficial when it comes to search engine optimization.</p><p><strong>For example:</strong> Let&rsquo;s say you sell &ldquo;Sony Television Model XYZ&rdquo; and you regularly publish blog posts about your product. Now, whenever someone searches for &ldquo;Sony Television Model XYZ&rdquo;, Google will crawl on your website knowing that you have something to do with this particular product. Hence, your website will show up on the search result page whenever this item is being searched.</p><h3>3) Blog helps in boosting your sales by convincing the potential customers to buy</h3><p>If you own an online business, there are so many ways you can share different stories with your audience in regard your products/services that you offer. Talk about how you started your business, share stories that educate your audience about what&rsquo;s new in your industry, share stories about how your product/service was beneficial to someone or share anything that you think your audience might find interesting (it does not have to be related to your product). This kind of blogging shows that you are an expert in your industry and interested in educating your audience. It sets you apart in the competitive market. This gives you an opportunity to showcase your expertise by educating the visitors and it can turn your audience into buyers.</p><p><strong>Fun Fact:</strong> Did you know that 92% of companies who decided to blog acquired customers through their blog?</p><p><a href=\"https://www.nopcommerce.com/\">nopCommerce</a> is great e-Commerce solution that also offers a variety of CMS features including blog. A store owner has full access for managing the blog posts and related comments.</p>",
                     Tags = "e-commerce, blog, moey",
-                    CreatedOnUtc = DateTime.UtcNow,
+                    CreatedOnUtc = DateTime.UtcNow
                 },
                 new BlogPost
                 {
@@ -7018,8 +7109,8 @@ namespace Nop.Services.Installation
                     BodyOverview = "<p>What comes to your mind, when you hear the term&rdquo; wish list&rdquo;? The application of this feature is exactly how it sounds like: a list of things that you wish to get. As an online store owner, would you like your customers to be able to save products in a wish list so that they review or buy them later? Would you like your customers to be able to share their wish list with friends and family for gift giving?</p><p>Offering your customers a feature of wish list as part of shopping cart is a great way to build loyalty to your store site. Having the feature of wish list on a store site allows online businesses to engage with their customers in a smart way as it allows the shoppers to create a list of what they desire and their preferences for future purchase.</p>",
                     Body = "<p>What comes to your mind, when you hear the term&rdquo; wish list&rdquo;? The application of this feature is exactly how it sounds like: a list of things that you wish to get. As an online store owner, would you like your customers to be able to save products in a wish list so that they review or buy them later? Would you like your customers to be able to share their wish list with friends and family for gift giving?</p><p>Offering your customers a feature of wish list as part of shopping cart is a great way to build loyalty to your store site. Having the feature of wish list on a store site allows online businesses to engage with their customers in a smart way as it allows the shoppers to create a list of what they desire and their preferences for future purchase.</p><p>Does every e-Commerce store needs a wish list? The answer to this question in most cases is yes, because of the following reasons:</p><p><strong>Understanding the needs of your customers</strong> - A wish list is a great way to know what is in your customer&rsquo;s mind. Try to think the purchase history as a small portion of the customer&rsquo;s preferences. But, the wish list is like a wide open door that can give any online business a lot of valuable information about their customer and what they like or desire.</p><p><strong>Shoppers like to share their wish list with friends and family</strong> - Providing your customers a way to email their wish list to their friends and family is a pleasant way to make online shopping enjoyable for the shoppers. It is always a good idea to make the wish list sharable by a unique link so that it can be easily shared though different channels like email or on social media sites.</p><p><strong>Wish list can be a great marketing tool</strong> &ndash; Another way to look at wish list is a great marketing tool because it is extremely targeted and the recipients are always motivated to use it. For example: when your younger brother tells you that his wish list is on a certain e-Commerce store. What is the first thing you are going to do? You are most likely to visit the e-Commerce store, check out the wish list and end up buying something for your younger brother.</p><p>So, how a wish list is a marketing tool? The reason is quite simple, it introduce your online store to new customers just how it is explained in the above example.</p><p><strong>Encourage customers to return to the store site</strong> &ndash; Having a feature of wish list on the store site can increase the return traffic because it encourages customers to come back and buy later. Allowing the customers to save the wish list to their online accounts gives them a reason return to the store site and login to the account at any time to view or edit the wish list items.</p><p><strong>Wish list can be used for gifts for different occasions like weddings or birthdays. So, what kind of benefits a gift-giver gets from a wish list?</strong></p><ul><li>It gives them a surety that they didn&rsquo;t buy a wrong gift</li><li>It guarantees that the recipient will like the gift</li><li>It avoids any awkward moments when the recipient unwraps the gift and as a gift-giver you got something that the recipient do not want</li></ul><p><strong>Wish list is a great feature to have on a store site &ndash; So, what kind of benefits a business owner gets from a wish list</strong></p><ul><li>It is a great way to advertise an online store as many people do prefer to shop where their friend or family shop online</li><li>It allows the current customers to return to the store site and open doors for the new customers</li><li>It allows store admins to track what&rsquo;s in customers wish list and run promotions accordingly to target specific customer segments</li></ul><p><a href=\"https://www.nopcommerce.com/\">nopCommerce</a> offers the feature of wish list that allows customers to create a list of products that they desire or planning to buy in future.</p>",
                     Tags = "e-commerce, nopCommerce, sample tag, money",
-                    CreatedOnUtc = DateTime.UtcNow.AddSeconds(1),
-                },
+                    CreatedOnUtc = DateTime.UtcNow.AddSeconds(1)
+                }
             };
             _blogPostRepository.Insert(blogPosts);
 
@@ -7029,10 +7120,10 @@ namespace Nop.Services.Installation
                 _urlRecordRepository.Insert(new UrlRecord
                 {
                     EntityId = blogPost.Id,
-                    EntityName = "BlogPost",
+                    EntityName = typeof(BlogPost).Name,
                     LanguageId = blogPost.LanguageId,
                     IsActive = true,
-                    Slug = blogPost.ValidateSeName("", blogPost.Title, true)
+                    Slug = ValidateSeName(blogPost, blogPost.Title)
                 });
             }
 
@@ -7058,6 +7149,7 @@ namespace Nop.Services.Installation
                     CreatedOnUtc = DateTime.UtcNow
                 });
             }
+
             _blogPostRepository.Update(blogPosts);
         }
 
@@ -7073,9 +7165,9 @@ namespace Nop.Services.Installation
                     Language = defaultLanguage,
                     Title = "About nopCommerce",
                     Short = "It's stable and highly usable. From downloads to documentation, www.nopCommerce.com offers a comprehensive base of information, resources, and support to the nopCommerce community.",
-                    Full = "<p>For full feature list go to <a href=\"http://www.nopCommerce.com\">nopCommerce.com</a></p><p>Providing outstanding custom search engine optimization, web development services and e-commerce development solutions to our clients at a fair price in a professional manner.</p>",
+                    Full = "<p>For full feature list go to <a href=\"https://www.nopCommerce.com\">nopCommerce.com</a></p><p>Providing outstanding custom search engine optimization, web development services and e-commerce development solutions to our clients at a fair in a professional manner.</p>",
                     Published = true,
-                    CreatedOnUtc = DateTime.UtcNow,
+                    CreatedOnUtc = DateTime.UtcNow
                 },
                 new NewsItem
                 {
@@ -7085,7 +7177,7 @@ namespace Nop.Services.Installation
                     Short = "nopCommerce includes everything you need to begin your e-commerce online store. We have thought of everything and it's all included! nopCommerce is a fully customizable shopping cart",
                     Full = "<p>nopCommerce includes everything you need to begin your e-commerce online store. We have thought of everything and it's all included!</p>",
                     Published = true,
-                    CreatedOnUtc = DateTime.UtcNow.AddSeconds(1),
+                    CreatedOnUtc = DateTime.UtcNow.AddSeconds(1)
                 },
                 new NewsItem
                 {
@@ -7093,10 +7185,10 @@ namespace Nop.Services.Installation
                     Language = defaultLanguage,
                     Title = "New online store is open!",
                     Short = "The new nopCommerce store is open now! We are very excited to offer our new range of products. We will be constantly adding to our range so please register on our site.",
-                    Full = "<p>Our online store is officially up and running. Stock up for the holiday season! We have a great selection of items. We will be constantly adding to our range so please register on our site, this will enable you to keep up to date with any new products.</p><p>All is worldwide and will leave the same day an order is placed! Happy Shopping and spread the word!!</p>",
+                    Full = "<p>Our online store is officially up and running. Stock up for the holiday season! We have a great selection of items. We will be constantly adding to our range so please register on our site, this will enable you to keep up to date with any new products.</p><p>All shipping is worldwide and will leave the same day an order is placed! Happy Shopping and spread the word!!</p>",
                     Published = true,
-                    CreatedOnUtc = DateTime.UtcNow.AddSeconds(2),
-                },
+                    CreatedOnUtc = DateTime.UtcNow.AddSeconds(2)
+                }
             };
             _newsItemRepository.Insert(news);
 
@@ -7106,10 +7198,10 @@ namespace Nop.Services.Installation
                 _urlRecordRepository.Insert(new UrlRecord
                 {
                     EntityId = newsItem.Id,
-                    EntityName = "NewsItem",
+                    EntityName = typeof(NewsItem).Name,
                     LanguageId = newsItem.LanguageId,
                     IsActive = true,
-                    Slug = newsItem.ValidateSeName("", newsItem.Title, true)
+                    Slug = ValidateSeName(newsItem, newsItem.Title)
                 });
             }
 
@@ -7136,6 +7228,7 @@ namespace Nop.Services.Installation
                     CreatedOnUtc = DateTime.UtcNow
                 });
             }
+
             _newsItemRepository.Update(news);
         }
 
@@ -7146,30 +7239,30 @@ namespace Nop.Services.Installation
             {
                 Language = defaultLanguage,
                 Name = "Do you like nopCommerce?",
-                SystemKeyword = "",
+                SystemKeyword = string.Empty,
                 Published = true,
                 ShowOnHomePage = true,
-                DisplayOrder = 1,
+                DisplayOrder = 1
             };
             poll1.PollAnswers.Add(new PollAnswer
             {
                 Name = "Excellent",
-                DisplayOrder = 1,
+                DisplayOrder = 1
             });
             poll1.PollAnswers.Add(new PollAnswer
             {
                 Name = "Good",
-                DisplayOrder = 2,
+                DisplayOrder = 2
             });
             poll1.PollAnswers.Add(new PollAnswer
             {
                 Name = "Poor",
-                DisplayOrder = 3,
+                DisplayOrder = 3
             });
             poll1.PollAnswers.Add(new PollAnswer
             {
                 Name = "Very bad",
-                DisplayOrder = 4,
+                DisplayOrder = 4
             });
             _pollRepository.Insert(poll1);
         }
@@ -7286,6 +7379,30 @@ namespace Nop.Services.Installation
                     SystemKeyword = "AddNewTopic",
                     Enabled = true,
                     Name = "Add a new topic"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "AddNewReviewType",
+                    Enabled = true,
+                    Name = "Add a new review type"
+                },
+                 new ActivityLogType
+                {
+                    SystemKeyword = "AddNewVendor",
+                    Enabled = true,
+                    Name = "Add a new vendor"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "AddNewVendorAttribute",
+                    Enabled = true,
+                    Name = "Add a new vendor attribute"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "AddNewVendorAttributeValue",
+                    Enabled = true,
+                    Name = "Add a new vendor attribute value"
                 },
                 new ActivityLogType
                 {
@@ -7409,6 +7526,12 @@ namespace Nop.Services.Installation
                 },
                 new ActivityLogType
                 {
+                    SystemKeyword = "DeleteReviewType",
+                    Enabled = true,
+                    Name = "Delete a review type"
+                },
+                new ActivityLogType
+                {
                     SystemKeyword = "DeleteSetting",
                     Enabled = true,
                     Name = "Delete a setting"
@@ -7436,6 +7559,24 @@ namespace Nop.Services.Installation
                     SystemKeyword = "DeleteTopic",
                     Enabled = true,
                     Name = "Delete a topic"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "DeleteVendor",
+                    Enabled = true,
+                    Name = "Delete a vendor"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "DeleteVendorAttribute",
+                    Enabled = true,
+                    Name = "Delete a vendor attribute"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "DeleteVendorAttributeValue",
+                    Enabled = true,
+                    Name = "Delete a vendor attribute value"
                 },
                 new ActivityLogType
                 {
@@ -7553,6 +7694,12 @@ namespace Nop.Services.Installation
                 },
                 new ActivityLogType
                 {
+                    SystemKeyword = "EditReviewType",
+                    Enabled = true,
+                    Name = "Edit a review type"
+                },
+                new ActivityLogType
+                {
                     SystemKeyword = "EditSettings",
                     Enabled = true,
                     Name = "Edit setting(s)"
@@ -7574,6 +7721,24 @@ namespace Nop.Services.Installation
                     SystemKeyword = "EditTask",
                     Enabled = true,
                     Name = "Edit a task"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "EditVendor",
+                    Enabled = true,
+                    Name = "Edit a vendor"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "EditVendorAttribute",
+                    Enabled = true,
+                    Name = "Edit a vendor attribute"
+                },
+                new ActivityLogType
+                {
+                    SystemKeyword = "EditVendorAttributeValue",
+                    Enabled = true,
+                    Name = "Edit a vendor attribute value"
                 },
                 new ActivityLogType
                 {
@@ -7739,14 +7904,14 @@ namespace Nop.Services.Installation
                     Name = "Simple product",
                     ViewPath = "ProductTemplate.Simple",
                     DisplayOrder = 10,
-                    IgnoredProductTypes = ((int) ProductType.GroupedProduct).ToString()
+                    IgnoredProductTypes = ((int)ProductType.GroupedProduct).ToString()
                 },
                 new ProductTemplate
                 {
                     Name = "Grouped product (with variants)",
                     ViewPath = "ProductTemplate.Grouped",
                     DisplayOrder = 100,
-                    IgnoredProductTypes = ((int) ProductType.SimpleProduct).ToString()
+                    IgnoredProductTypes = ((int)ProductType.SimpleProduct).ToString()
                 }
             };
             _productTemplateRepository.Insert(productTemplates);
@@ -7761,7 +7926,7 @@ namespace Nop.Services.Installation
                     Name = "Products in Grid or Lines",
                     ViewPath = "CategoryTemplate.ProductsInGridOrLines",
                     DisplayOrder = 1
-                },
+                }
             };
             _categoryTemplateRepository.Insert(categoryTemplates);
         }
@@ -7775,7 +7940,7 @@ namespace Nop.Services.Installation
                     Name = "Default template",
                     ViewPath = "TopicDetails",
                     DisplayOrder = 1
-                },
+                }
             };
             _topicTemplateRepository.Insert(topicTemplates);
         }
@@ -7790,7 +7955,7 @@ namespace Nop.Services.Installation
                     Seconds = 60,
                     Type = "Nop.Services.Messages.QueuedMessagesSendTask, Nop.Services",
                     Enabled = true,
-                    StopOnError = false,
+                    StopOnError = false
                 },
                 new ScheduleTask
                 {
@@ -7798,7 +7963,7 @@ namespace Nop.Services.Installation
                     Seconds = 300,
                     Type = "Nop.Services.Common.KeepAliveTask, Nop.Services",
                     Enabled = true,
-                    StopOnError = false,
+                    StopOnError = false
                 },
                 new ScheduleTask
                 {
@@ -7806,7 +7971,7 @@ namespace Nop.Services.Installation
                     Seconds = 600,
                     Type = "Nop.Services.Customers.DeleteGuestsTask, Nop.Services",
                     Enabled = true,
-                    StopOnError = false,
+                    StopOnError = false
                 },
                 new ScheduleTask
                 {
@@ -7814,7 +7979,7 @@ namespace Nop.Services.Installation
                     Seconds = 600,
                     Type = "Nop.Services.Caching.ClearCacheTask, Nop.Services",
                     Enabled = false,
-                    StopOnError = false,
+                    StopOnError = false
                 },
                 new ScheduleTask
                 {
@@ -7823,25 +7988,80 @@ namespace Nop.Services.Installation
                     Seconds = 3600,
                     Type = "Nop.Services.Logging.ClearLogTask, Nop.Services",
                     Enabled = false,
-                    StopOnError = false,
-                },
+                    StopOnError = false
+                }
             };
 
             _scheduleTaskRepository.Insert(tasks);
         }
 
+        protected virtual void InstallVendors()
+        {
+            var vendors = new List<Vendor>
+            {
+                new Vendor
+                {
+                    Name = "Vendor 1",
+                    Email = "vendor1email@gmail.com",
+                    Description = "Some description...",
+                    AdminComment = string.Empty,
+                    PictureId = 0,
+                    Active = true,
+                    DisplayOrder = 1,
+                    PageSize = 6,
+                    AllowCustomersToSelectPageSize = true,
+                    PageSizeOptions = "6, 3, 9, 18"
+                },
+                new Vendor
+                {
+                    Name = "Vendor 2",
+                    Email = "vendor2email@gmail.com",
+                    Description = "Some description...",
+                    AdminComment = string.Empty,
+                    PictureId = 0,
+                    Active = true,
+                    DisplayOrder = 2,
+                    PageSize = 6,
+                    AllowCustomersToSelectPageSize = true,
+                    PageSizeOptions = "6, 3, 9, 18"
+                }
+            };
+
+            _vendorRepository.Insert(vendors);
+
+            //search engine names
+            foreach (var vendor in vendors)
+            {
+                _urlRecordRepository.Insert(new UrlRecord
+                {
+                    EntityId = vendor.Id,
+                    EntityName = typeof(Vendor).Name,
+                    LanguageId = 0,
+                    IsActive = true,
+                    Slug = ValidateSeName(vendor, vendor.Name)
+                });
+            }
+        }
+
         private void AddProductTag(Product product, string tag)
         {
-            var productTag = _productTagRepository.Table.FirstOrDefault(pt => pt.Name == tag);
-            if (productTag == null)
+            var productTag = _productTagRepository.Table.FirstOrDefault(pt => pt.Name == tag) ?? new ProductTag
             {
-                productTag = new ProductTag
-                {
-                    Name = tag,
-                };
-            }
-            product.ProductTags.Add(productTag);
+                Name = tag
+            };
+            //product.ProductTags.Add(productTag);
+            product.ProductProductTagMappings.Add(new ProductProductTagMapping { ProductTag = productTag });
             _productRepository.Update(product);
+
+            //search engine name
+            _urlRecordRepository.Insert(new UrlRecord
+            {
+                EntityId = productTag.Id,
+                EntityName = typeof(ProductTag).Name,
+                LanguageId = 0,
+                IsActive = true,
+                Slug = ValidateSeName(productTag, productTag.Name)
+            });
         }
 
         #endregion
@@ -7871,18 +8091,19 @@ namespace Nop.Services.Installation
             InstallProductTemplates();
             InstallCategoryTemplates();
             InstallScheduleTasks();
-            
-            if (installSampleData)
-            {
-                InstallCategories();
-                InstallProducts(defaultUserEmail);
-                InstallForums();
-                InstallBlogPosts(defaultUserEmail);
-                InstallNews(defaultUserEmail);
-                InstallPolls();
-                InstallActivityLog(defaultUserEmail);
-                InstallSearchTerms();
-            }
+
+            if (!installSampleData) 
+                return;
+
+            InstallCategories();
+            InstallProducts(defaultUserEmail);
+            InstallForums();
+            InstallBlogPosts(defaultUserEmail);
+            InstallNews(defaultUserEmail);
+            InstallPolls();
+            InstallVendors();
+            InstallActivityLog(defaultUserEmail);
+            InstallSearchTerms();
         }
 
         #endregion

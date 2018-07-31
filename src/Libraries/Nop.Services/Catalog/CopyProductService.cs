@@ -1,10 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Media;
 using Nop.Services.Localization;
 using Nop.Services.Media;
 using Nop.Services.Seo;
 using Nop.Services.Stores;
-using System;
-using System.Collections.Generic;
 
 namespace Nop.Services.Catalog
 {
@@ -15,51 +17,39 @@ namespace Nop.Services.Catalog
     {
         #region Fields
 
-        private readonly IProductService _productService;
-        private readonly ILanguageService _languageService;
-        private readonly ILocalizedEntityService _localizedEntityService;
-        private readonly ILocalizationService _localizationService;
-        private readonly IPictureService _pictureService;
         private readonly ICategoryService _categoryService;
         private readonly IDownloadService _downloadService;
-        private readonly IUrlRecordService _urlRecordService;
+        private readonly ILanguageService _languageService;
+        private readonly ILocalizationService _localizationService;
+        private readonly ILocalizedEntityService _localizedEntityService;
+        private readonly IPictureService _pictureService;
+        private readonly IProductService _productService;
         private readonly IStoreMappingService _storeMappingService;
+        private readonly IUrlRecordService _urlRecordService;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="productService">pProduct service</param>
-        /// <param name="languageService">Language service</param>
-        /// <param name="localizedEntityService">Localized entity service</param>
-        /// <param name="localizationService">Localization service</param>
-        /// <param name="pictureService">Picture service</param>
-        /// <param name="categoryService">Category service</param>
-        /// <param name="downloadService">Download service</param>
-        /// <param name="urlRecordService">URL record service</param>
-        /// <param name="storeMappingService">Store mapping service</param>
-        public CopyProductService(IProductService productService,
-            ILanguageService languageService,
-            ILocalizedEntityService localizedEntityService, 
-            ILocalizationService localizationService,
-            IPictureService pictureService,
-            ICategoryService categoryService, 
+        public CopyProductService(ICategoryService categoryService,
             IDownloadService downloadService,
-            IUrlRecordService urlRecordService, 
-            IStoreMappingService storeMappingService)
+            ILanguageService languageService,
+            ILocalizationService localizationService,
+            ILocalizedEntityService localizedEntityService,
+            IPictureService pictureService,
+            IProductService productService,
+            IStoreMappingService storeMappingService,
+            IUrlRecordService urlRecordService)
         {
-            this._productService = productService;
-            this._languageService = languageService;
-            this._localizedEntityService = localizedEntityService;
-            this._localizationService = localizationService;
-            this._pictureService = pictureService;
             this._categoryService = categoryService;
             this._downloadService = downloadService;
-            this._urlRecordService = urlRecordService;
+            this._languageService = languageService;
+            this._localizationService = localizationService;
+            this._localizedEntityService = localizedEntityService;
+            this._pictureService = pictureService;
+            this._productService = productService;
             this._storeMappingService = storeMappingService;
+            this._urlRecordService = urlRecordService;
         }
 
         #endregion
@@ -82,7 +72,8 @@ namespace Nop.Services.Catalog
             var associatedProducts = _productService.GetAssociatedProducts(product.Id, showHidden: true);
             foreach (var associatedProduct in associatedProducts)
             {
-                var associatedProductCopy = CopyProduct(associatedProduct, $"Copy of {associatedProduct.Name}",
+                var associatedProductCopy = CopyProduct(associatedProduct,
+                    string.Format(NopCatalogDefaults.ProductCopyNameTemplate, associatedProduct.Name),
                     isPublished, copyImages, false);
                 associatedProductCopy.ParentGroupedProductId = productCopy.Id;
                 _productService.UpdateProduct(productCopy);
@@ -141,26 +132,27 @@ namespace Nop.Services.Catalog
         {
             //variable to store original and new picture identifiers
             var originalNewPictureIdentifiers = new Dictionary<int, int>();
-            if (copyImages)
+            if (!copyImages) 
+                return originalNewPictureIdentifiers;
+
+            foreach (var productPicture in product.ProductPictures)
             {
-                foreach (var productPicture in product.ProductPictures)
+                var picture = productPicture.Picture;
+                var pictureCopy = _pictureService.InsertPicture(
+                    _pictureService.LoadPictureBinary(picture),
+                    picture.MimeType,
+                    _pictureService.GetPictureSeName(newName),
+                    picture.AltAttribute,
+                    picture.TitleAttribute);
+                _productService.InsertProductPicture(new ProductPicture
                 {
-                    var picture = productPicture.Picture;
-                    var pictureCopy = _pictureService.InsertPicture(
-                        _pictureService.LoadPictureBinary(picture),
-                        picture.MimeType,
-                        _pictureService.GetPictureSeName(newName),
-                        picture.AltAttribute,
-                        picture.TitleAttribute);
-                    _productService.InsertProductPicture(new ProductPicture
-                    {
-                        ProductId = productCopy.Id,
-                        PictureId = pictureCopy.Id,
-                        DisplayOrder = productPicture.DisplayOrder
-                    });
-                    originalNewPictureIdentifiers.Add(picture.Id, pictureCopy.Id);
-                }
+                    ProductId = productCopy.Id,
+                    PictureId = pictureCopy.Id,
+                    DisplayOrder = productPicture.DisplayOrder
+                });
+                originalNewPictureIdentifiers.Add(picture.Id, pictureCopy.Id);
             }
+
             return originalNewPictureIdentifiers;
         }
 
@@ -176,32 +168,32 @@ namespace Nop.Services.Catalog
             //localization
             foreach (var lang in languages)
             {
-                var name = product.GetLocalized(x => x.Name, lang.Id, false, false);
+                var name = _localizationService.GetLocalized(product, x => x.Name, lang.Id, false, false);
                 if (!string.IsNullOrEmpty(name))
                     _localizedEntityService.SaveLocalizedValue(productCopy, x => x.Name, name, lang.Id);
 
-                var shortDescription = product.GetLocalized(x => x.ShortDescription, lang.Id, false, false);
+                var shortDescription = _localizationService.GetLocalized(product, x => x.ShortDescription, lang.Id, false, false);
                 if (!string.IsNullOrEmpty(shortDescription))
                     _localizedEntityService.SaveLocalizedValue(productCopy, x => x.ShortDescription, shortDescription, lang.Id);
 
-                var fullDescription = product.GetLocalized(x => x.FullDescription, lang.Id, false, false);
+                var fullDescription = _localizationService.GetLocalized(product, x => x.FullDescription, lang.Id, false, false);
                 if (!string.IsNullOrEmpty(fullDescription))
                     _localizedEntityService.SaveLocalizedValue(productCopy, x => x.FullDescription, fullDescription, lang.Id);
 
-                var metaKeywords = product.GetLocalized(x => x.MetaKeywords, lang.Id, false, false);
+                var metaKeywords = _localizationService.GetLocalized(product, x => x.MetaKeywords, lang.Id, false, false);
                 if (!string.IsNullOrEmpty(metaKeywords))
                     _localizedEntityService.SaveLocalizedValue(productCopy, x => x.MetaKeywords, metaKeywords, lang.Id);
 
-                var metaDescription = product.GetLocalized(x => x.MetaDescription, lang.Id, false, false);
+                var metaDescription = _localizationService.GetLocalized(product, x => x.MetaDescription, lang.Id, false, false);
                 if (!string.IsNullOrEmpty(metaDescription))
                     _localizedEntityService.SaveLocalizedValue(productCopy, x => x.MetaDescription, metaDescription, lang.Id);
 
-                var metaTitle = product.GetLocalized(x => x.MetaTitle, lang.Id, false, false);
+                var metaTitle = _localizationService.GetLocalized(product, x => x.MetaTitle, lang.Id, false, false);
                 if (!string.IsNullOrEmpty(metaTitle))
                     _localizedEntityService.SaveLocalizedValue(productCopy, x => x.MetaTitle, metaTitle, lang.Id);
 
                 //search engine name
-                _urlRecordService.SaveSlug(productCopy, productCopy.ValidateSeName("", name, false), lang.Id);
+                _urlRecordService.SaveSlug(productCopy, _urlRecordService.ValidateSeName(productCopy, string.Empty, name, false), lang.Id);
             }
         }
 
@@ -223,6 +215,7 @@ namespace Nop.Services.Catalog
                 Name = newName,
                 ShortDescription = product.ShortDescription,
                 FullDescription = product.FullDescription,
+                VendorId = product.VendorId,
                 ProductTemplateId = product.ProductTemplateId,
                 AdminComment = product.AdminComment,
                 ShowOnHomePage = product.ShowOnHomePage,
@@ -245,7 +238,7 @@ namespace Nop.Services.Catalog
             _productService.InsertProduct(productCopy);
 
             //search engine name
-            _urlRecordService.SaveSlug(productCopy, productCopy.ValidateSeName("", productCopy.Name, true), 0);
+            _urlRecordService.SaveSlug(productCopy, _urlRecordService.ValidateSeName(productCopy, string.Empty, productCopy.Name, true), 0);
             return productCopy;
         }
 
@@ -277,16 +270,18 @@ namespace Nop.Services.Catalog
             CopyLocalizationData(product, productCopy);
 
             //copy product tags
-            foreach (var productTag in product.ProductTags)
+            foreach (var productProductTagMapping in product.ProductProductTagMappings)
             {
-                productCopy.ProductTags.Add(productTag);
+                productCopy.ProductProductTagMappings.Add(new ProductProductTagMapping { ProductTag = productProductTagMapping.ProductTag });
             }
+
             _productService.UpdateProduct(productCopy);
 
             //copy product pictures
             var originalNewPictureIdentifiers = CopyProductPictures(product, newName, copyImages, productCopy);
 
-           
+            //product <-> categories mappings
+            CopyCategoriesMapping(product, productCopy);
             //product <-> related products mappings
             CopyRelatedProductsMapping(product, productCopy);
             //store mapping

@@ -8,7 +8,7 @@
                 <strong>@T("Footer.Information")</strong>
             </div>
             <ul class="list">
-                @if (Model.SitemapEnabled)
+                @if (Model.SitemapEnabled && Model.DisplaySitemapFooterItem)
                 {
                     <li><a href="@Url.RouteUrl("Sitemap")">@T("Sitemap")</a></li>
                 }
@@ -16,7 +16,10 @@
                 {
                     <li><a href="@Url.RouteUrl("Topic", new { SeName = topic.SeName })">@topic.Name</a></li>
                 }
-                <li><a href="@Url.RouteUrl("ContactUs")">@T("ContactUs")</a></li>
+                @if (Model.DisplayContactUsFooterItem)
+                {
+                    <li><a href="@Url.RouteUrl("ContactUs")">@T("ContactUs")</a></li>
+                }
             </ul>
         </div>
         <div class="footer-block customer-service">
@@ -24,30 +27,33 @@
                 <strong>@T("Footer.CustomerService")</strong>
             </div>
             <ul class="list">
-                <li><a href="@Url.RouteUrl("ProductSearch")">@T("Search")</a> </li>
-                @if (Model.NewsEnabled)
+                @if (Model.DisplayProductSearchFooterItem)
+                {
+                    <li><a href="@Url.RouteUrl("ProductSearch")">@T("Search")</a> </li>
+                }
+                @if (Model.NewsEnabled && Model.DisplayNewsFooterItem)
                 {
                     <li><a href="@Url.RouteUrl("NewsArchive")">@T("News")</a></li>
                 }
-                @if (Model.BlogEnabled)
+                @if (Model.BlogEnabled && Model.DisplayBlogFooterItem)
                 {
                     <li><a href="@Url.RouteUrl("Blog")">@T("Blog")</a></li>
                 }
-                @if (Model.ForumEnabled)
+                @if (Model.ForumEnabled && Model.DisplayForumsFooterItem)
                 {
                     <li><a href="@Url.RouteUrl("Boards")">@T("Forum.Forums")</a></li>
                 }
-                @if (Model.RecentlyViewedProductsEnabled)
+                @if (Model.RecentlyViewedProductsEnabled && Model.DisplayRecentlyViewedProductsFooterItem)
                 {
                     <li><a href="@Url.RouteUrl("RecentlyViewedProducts")">@T("Products.RecentlyViewedProducts")</a></li>
                 }
-                @if (Model.NewProductsEnabled)
+                @if (Model.NewProductsEnabled && Model.DisplayNewProductsFooterItem)
                 {
                     <li><a href="@Url.RouteUrl("NewProducts")">@T("Products.NewProducts")</a></li>
                 }
                 @foreach (var topic in Model.Topics.Where(x => x.IncludeInFooterColumn2).ToList())
                 {
-                    <li><a href="@Url.RouteUrl("Topic", new { SeName = topic.SeName })">@topic.Name</a></li>
+                    <li><a href="@Url.RouteUrl("Topic", new {SeName = topic.SeName})">@topic.Name</a></li>
                 }
             </ul>
         </div>
@@ -56,11 +62,21 @@
                 <strong>@T("Footer.MyAccount")</strong>
             </div>
             <ul class="list">
-                <li><a href="@Url.RouteUrl("CustomerInfo")">@T("Account.MyAccount")</a></li>
-                <li><a href="@Url.RouteUrl("CustomerAddresses")">@T("Account.CustomerAddresses")</a></li>
+                @if (Model.DisplayCustomerInfoFooterItem)
+                {
+                    <li><a href="@Url.RouteUrl("CustomerInfo")">@T("Account.MyAccount")</a></li>
+                }
+                @if (Model.DisplayCustomerAddressesFooterItem)
+                {
+                    <li><a href="@Url.RouteUrl("CustomerAddresses")">@T("Account.CustomerAddresses")</a></li>
+                }
+                @if (Model.AllowCustomersToApplyForVendorAccount && Model.DisplayApplyVendorAccountFooterItem)
+                {
+                    <li><a href="@Url.RouteUrl("ApplyVendorAccount")">@T("Vendors.ApplyAccount")</a></li>
+                }
                 @foreach (var topic in Model.Topics.Where(x => x.IncludeInFooterColumn3).ToList())
                 {
-                    <li><a href="@Url.RouteUrl("Topic", new { SeName = topic.SeName })">@topic.Name</a></li>
+                    <li><a href="@Url.RouteUrl("Topic", new {SeName = topic.SeName})">@topic.Name</a></li>
                 }
             </ul>
         </div>
@@ -88,11 +104,11 @@
         }
         @await Component.InvokeAsync("StoreThemeSelector")
     </div>
-    @await Component.InvokeAsync("Widget", new { widgetZone = "footer" })
+    @await Component.InvokeAsync("Widget", new { widgetZone = PublicWidgetZones.Footer })
 </div>
-<script type="text/javascript" asp-location="Footer">
+<script asp-location="Footer">
     $(document).ready(function () {
-        $('.footer-block .title').click(function () {
+        $('.footer-block .title').on('click', function () {
             var e = window, a = 'inner';
             if (!('innerWidth' in window)) {
                 a = 'client';
@@ -105,9 +121,9 @@
         });
     });
 </script>
-<script type="text/javascript" asp-location="Footer">
+<script asp-location="Footer">
     $(document).ready(function () {
-        $('.block .title').click(function () {
+        $('.block .title').on('click', function () {
             var e = window, a = 'inner';
             if (!('innerWidth' in window)) {
                 a = 'client';

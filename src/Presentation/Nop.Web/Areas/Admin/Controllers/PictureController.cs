@@ -1,8 +1,8 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
+using Nop.Core.Infrastructure;
 using Nop.Services.Media;
 using Nop.Web.Framework.Mvc.Filters;
 
@@ -10,16 +10,32 @@ namespace Nop.Web.Areas.Admin.Controllers
 {
     public partial class PictureController : BaseAdminController
     {
+        #region Fields
+
+        private readonly IDownloadService _downloadService;
+        private readonly INopFileProvider _fileProvider;
         private readonly IPictureService _pictureService;
 
-        public PictureController(IPictureService pictureService)
+        #endregion
+
+        #region Ctor
+
+        public PictureController(IDownloadService downloadService,
+            INopFileProvider fileProvider,
+            IPictureService pictureService)
         {
+            this._downloadService = downloadService;
+            this._fileProvider = fileProvider;
             this._pictureService = pictureService;
         }
 
+        #endregion
+
+        #region Methods
+
         [HttpPost]
         //do not validate request token (XSRF)
-        [AdminAntiForgery(true)] 
+        [AdminAntiForgery(true)]
         public virtual IActionResult AsyncUpload()
         {
             //if (!_permissionService.Authorize(StandardPermissionProvider.UploadPictures))
@@ -32,22 +48,22 @@ namespace Nop.Web.Areas.Admin.Controllers
                 {
                     success = false,
                     message = "No file uploaded",
-                    downloadGuid = Guid.Empty,
+                    downloadGuid = Guid.Empty
                 });
             }
 
-            var fileBinary = httpPostedFile.GetDownloadBits();
+            var fileBinary = _downloadService.GetDownloadBits(httpPostedFile);
 
-            var qqFileNameParameter = "qqfilename";
+            const string qqFileNameParameter = "qqfilename";
             var fileName = httpPostedFile.FileName;
             if (string.IsNullOrEmpty(fileName) && Request.Form.ContainsKey(qqFileNameParameter))
                 fileName = Request.Form[qqFileNameParameter].ToString();
             //remove path (passed in IE)
-            fileName = Path.GetFileName(fileName);
+            fileName = _fileProvider.GetFileName(fileName);
 
             var contentType = httpPostedFile.ContentType;
 
-            var fileExtension = Path.GetExtension(fileName);
+            var fileExtension = _fileProvider.GetFileExtension(fileName);
             if (!string.IsNullOrEmpty(fileExtension))
                 fileExtension = fileExtension.ToLowerInvariant();
 
@@ -85,10 +101,12 @@ namespace Nop.Web.Areas.Admin.Controllers
             }
 
             var picture = _pictureService.InsertPicture(fileBinary, contentType, null);
+
             //when returning JSON the mime-type must be set to text/plain
             //otherwise some browsers will pop-up a "Save As" dialog.
-            return Json(new { success = true, pictureId = picture.Id,
-                imageUrl = _pictureService.GetPictureUrl(picture, 100) });
+            return Json(new { success = true, pictureId = picture.Id, imageUrl = _pictureService.GetPictureUrl(picture, 100) });
         }
+
+        #endregion
     }
 }

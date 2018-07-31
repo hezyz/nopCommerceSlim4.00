@@ -46,6 +46,9 @@ namespace Nop.Web.Infrastructure
             routeBuilder.MapLocalizedRoute("CustomerAddresses", "customer/addresses",
 				new { controller = "Customer", action = "Addresses" });
 
+            routeBuilder.MapLocalizedRoute("CustomerOrders", "order/history",
+				new { controller = "Order", action = "CustomerOrders" });
+
             //contact us
             routeBuilder.MapLocalizedRoute("ContactUs", "contactus",
 				new { controller = "Common", action = "ContactUs" });
@@ -56,7 +59,7 @@ namespace Nop.Web.Infrastructure
 
             //product search
             routeBuilder.MapLocalizedRoute("ProductSearch", "search/",
-				new { controller = "Catalog", action = "Search" });
+				new { controller = "Catalog", action = "Search" });                     
 
             routeBuilder.MapLocalizedRoute("ProductSearchAutoComplete", "catalog/searchtermautocomplete",
 				new { controller = "Catalog", action = "SearchTermAutoComplete" });
@@ -64,6 +67,10 @@ namespace Nop.Web.Infrastructure
             //change language (AJAX link)
             routeBuilder.MapLocalizedRoute("ChangeLanguage", "changelanguage/{langid:min(0)}",
 				new { controller = "Common", action = "SetLanguage" });
+
+            //change tax (AJAX link)
+            routeBuilder.MapLocalizedRoute("ChangeTaxType", "changetaxtype/{customertaxtype:min(0)}",
+				new { controller = "Common", action = "SetTaxType" });
 
             //recently viewed products
             routeBuilder.MapLocalizedRoute("RecentlyViewedProducts", "recentlyviewedproducts/",
@@ -89,9 +96,9 @@ namespace Nop.Web.Infrastructure
             routeBuilder.MapLocalizedRoute("ProductTagsAll", "producttag/all/",
 				new { controller = "Catalog", action = "ProductTagsAll" });
 
-            //product tags
-            routeBuilder.MapLocalizedRoute("ProductsByTag", "producttag/{productTagId:min(0)}/{SeName?}",
-				new { controller = "Catalog", action = "ProductsByTag" });
+            //vendors
+            routeBuilder.MapLocalizedRoute("VendorList", "vendor/all/",
+				new { controller = "Catalog", action = "VendorAll" });
 
             //product email a friend
             routeBuilder.MapLocalizedRoute("ProductEmailAFriend", "productemailafriend/{productId:min(0)}",
@@ -111,6 +118,9 @@ namespace Nop.Web.Infrastructure
             routeBuilder.MapLocalizedRoute("SubscribeNewsletter", "subscribenewsletter",
 				new { controller = "Newsletter", action = "SubscribeNewsletter" });
 
+            //login page for checkout as guest
+            routeBuilder.MapLocalizedRoute("LoginCheckoutAsGuest", "login/checkoutasguest",
+				new { controller = "Customer", action = "Login", checkoutAsGuest = true });
 
             //register result page
             routeBuilder.MapLocalizedRoute("RegisterResult", "registerresult/{resultId:min(0)}",
@@ -183,6 +193,22 @@ namespace Nop.Web.Infrastructure
             routeBuilder.MapLocalizedRoute("CustomerProfilePaged", "profile/{id}/page/{pageNumber:min(0)}",
 				new { controller = "Profile", action = "Index" });
 
+            //contact vendor
+            routeBuilder.MapLocalizedRoute("ContactVendor", "contactvendor/{vendorId}",
+				new { controller = "Common", action = "ContactVendor" });
+
+            //apply for vendor account
+            routeBuilder.MapLocalizedRoute("ApplyVendorAccount", "vendor/apply",
+				new { controller = "Vendor", action = "ApplyVendor" });
+
+            //vendor info
+            routeBuilder.MapLocalizedRoute("CustomerVendorInfo", "customer/vendorinfo",
+				new { controller = "Vendor", action = "Info" });
+
+            //customer GDPR
+            routeBuilder.MapLocalizedRoute("GdprTools", "customer/gdpr",
+                new { controller = "Customer", action = "GdprTools" });
+
             //poll vote AJAX link
             routeBuilder.MapLocalizedRoute("PollVote", "poll/vote",
 				new { controller = "Poll", action = "Vote" });
@@ -202,6 +228,11 @@ namespace Nop.Web.Infrastructure
             //authenticate topic AJAX link
             routeBuilder.MapLocalizedRoute("TopicAuthenticate", "topic/authenticate",
 				new { controller = "Topic", action = "Authenticate" });
+
+
+            //return request with "upload file" support
+            routeBuilder.MapLocalizedRoute("UploadFileReturnRequest", "uploadfilereturnrequest",
+				new { controller = "ReturnRequest", action = "UploadFileReturnRequest" });
 
             //forums
             routeBuilder.MapLocalizedRoute("ActiveDiscussions", "boards/activediscussions",

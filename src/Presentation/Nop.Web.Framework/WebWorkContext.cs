@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Localization;
 using Nop.Core;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Localization;
+using Nop.Core.Domain.Vendors;
+using Nop.Core.Http;
 using Nop.Services.Authentication;
 using Nop.Services.Common;
 using Nop.Services.Customers;
@@ -10,6 +12,7 @@ using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Stores;
 using Nop.Services.Tasks;
+using Nop.Services.Vendors;
 using Nop.Web.Framework.Localization;
 using System;
 using System.Linq;
@@ -21,62 +24,49 @@ namespace Nop.Web.Framework
     /// </summary>
     public partial class WebWorkContext : IWorkContext
     {
-        #region Const
-
-        private const string CUSTOMER_COOKIE_NAME = ".Nop.Customer";
-
-        #endregion
-
         #region Fields
 
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthenticationService _authenticationService;
         private readonly ICustomerService _customerService;
         private readonly IGenericAttributeService _genericAttributeService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILanguageService _languageService;
         private readonly IStoreContext _storeContext;
         private readonly IStoreMappingService _storeMappingService;
         private readonly IUserAgentHelper _userAgentHelper;
+        private readonly IVendorService _vendorService;
         private readonly LocalizationSettings _localizationSettings;
-        
+
         private Customer _cachedCustomer;
         private Customer _originalCustomerIfImpersonated;
+        private Vendor _cachedVendor;
         private Language _cachedLanguage;
-        
+
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="httpContextAccessor">HTTP context accessor</param>
-        /// <param name="authenticationService">Authentication service</param>
-        /// <param name="customerService">Customer service</param>
-        /// <param name="genericAttributeService">Generic attribute service</param>
-        /// <param name="languageService">Language service</param>
-        /// <param name="storeContext">Store context</param>
-        /// <param name="storeMappingService">Store mapping service</param>
-        /// <param name="userAgentHelper">User gent helper</param>
-        /// <param name="localizationSettings">Localization settings</param>
-        public WebWorkContext(IHttpContextAccessor httpContextAccessor, 
+        public WebWorkContext(
             IAuthenticationService authenticationService,
             ICustomerService customerService,
             IGenericAttributeService genericAttributeService,
+            IHttpContextAccessor httpContextAccessor,
             ILanguageService languageService,
             IStoreContext storeContext,
             IStoreMappingService storeMappingService,
             IUserAgentHelper userAgentHelper,
+            IVendorService vendorService,
             LocalizationSettings localizationSettings)
         {
-            this._httpContextAccessor = httpContextAccessor;
             this._authenticationService = authenticationService;
             this._customerService = customerService;
             this._genericAttributeService = genericAttributeService;
+            this._httpContextAccessor = httpContextAccessor;
             this._languageService = languageService;
             this._storeContext = storeContext;
             this._storeMappingService = storeMappingService;
             this._userAgentHelper = userAgentHelper;
+            this._vendorService = vendorService;
             this._localizationSettings = localizationSettings;
         }
 
@@ -90,7 +80,8 @@ namespace Nop.Web.Framework
         /// <returns>String value of cookie</returns>
         protected virtual string GetCustomerCookie()
         {
-            return _httpContextAccessor.HttpContext?.Request?.Cookies[CUSTOMER_COOKIE_NAME];
+            var cookieName = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.CustomerCookie}";
+            return _httpContextAccessor.HttpContext?.Request?.Cookies[cookieName];
         }
 
         /// <summary>
@@ -103,7 +94,8 @@ namespace Nop.Web.Framework
                 return;
 
             //delete current cookie value
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete(CUSTOMER_COOKIE_NAME);
+            var cookieName = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.CustomerCookie}";
+            _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
 
             //get date of cookie expiration
             var cookieExpires = 24 * 365; //TODO make configurable
@@ -114,12 +106,12 @@ namespace Nop.Web.Framework
                 cookieExpiresDate = DateTime.Now.AddMonths(-1);
 
             //set new cookie value
-            var options = new Microsoft.AspNetCore.Http.CookieOptions
+            var options = new CookieOptions
             {
                 HttpOnly = true,
                 Expires = cookieExpiresDate
             };
-            _httpContextAccessor.HttpContext.Response.Cookies.Append(CUSTOMER_COOKIE_NAME, customerGuid.ToString(), options);
+            _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, customerGuid.ToString(), options);
         }
 
         /// <summary>
@@ -158,7 +150,7 @@ namespace Nop.Web.Framework
                 return null;
 
             //try to get language by culture name
-            var requestLanguage = _languageService.GetAllLanguages().FirstOrDefault(language => 
+            var requestLanguage = _languageService.GetAllLanguages().FirstOrDefault(language =>
                 language.LanguageCulture.Equals(requestCulture.Culture.Name, StringComparison.InvariantCultureIgnoreCase));
 
             //check language availability
@@ -187,17 +179,17 @@ namespace Nop.Web.Framework
 
                 //check whether request is made by a background (schedule) task
                 if (_httpContextAccessor.HttpContext == null ||
-                    _httpContextAccessor.HttpContext.Request.Path.Equals(new PathString($"/{TaskManager.ScheduleTaskPath}"), StringComparison.InvariantCultureIgnoreCase))
+                    _httpContextAccessor.HttpContext.Request.Path.Equals(new PathString($"/{NopTaskDefaults.ScheduleTaskPath}"), StringComparison.InvariantCultureIgnoreCase))
                 {
                     //in this case return built-in customer record for background task
-                    customer = _customerService.GetCustomerBySystemName(SystemCustomerNames.BackgroundTask);
+                    customer = _customerService.GetCustomerBySystemName(NopCustomerDefaults.BackgroundTaskCustomerName);
                 }
 
                 if (customer == null || customer.Deleted || !customer.Active || customer.RequireReLogin)
                 {
                     //check whether request is made by a search engine, in this case return built-in customer record for search engines
                     if (_userAgentHelper.IsSearchEngine())
-                        customer = _customerService.GetCustomerBySystemName(SystemCustomerNames.SearchEngine);
+                        customer = _customerService.GetCustomerBySystemName(NopCustomerDefaults.SearchEngineCustomerName);
                 }
 
                 if (customer == null || customer.Deleted || !customer.Active || customer.RequireReLogin)
@@ -209,7 +201,8 @@ namespace Nop.Web.Framework
                 if (customer != null && !customer.Deleted && customer.Active && !customer.RequireReLogin)
                 {
                     //get impersonate user if required
-                    var impersonatedCustomerId = customer.GetAttribute<int?>(SystemCustomerAttributeNames.ImpersonatedCustomerId);
+                    var impersonatedCustomerId = _genericAttributeService
+                        .GetAttribute<int?>(customer, NopCustomerDefaults.ImpersonatedCustomerIdAttribute);
                     if (impersonatedCustomerId.HasValue && impersonatedCustomerId.Value > 0)
                     {
                         var impersonatedCustomer = _customerService.GetCustomerById(impersonatedCustomerId.Value);
@@ -271,6 +264,34 @@ namespace Nop.Web.Framework
         }
 
         /// <summary>
+        /// Gets the current vendor (logged-in manager)
+        /// </summary>
+        public virtual Vendor CurrentVendor
+        {
+            get
+            {
+                //whether there is a cached value
+                if (_cachedVendor != null)
+                    return _cachedVendor;
+
+                if (this.CurrentCustomer == null)
+                    return null;
+
+                //try to get vendor
+                var vendor = _vendorService.GetVendorById(this.CurrentCustomer.VendorId);
+
+                //check vendor availability
+                if (vendor == null || vendor.Deleted || !vendor.Active)
+                    return null;
+
+                //cache the found vendor
+                _cachedVendor = vendor;
+
+                return _cachedVendor;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets current user working language
         /// </summary>
         public virtual Language WorkingLanguage
@@ -280,7 +301,7 @@ namespace Nop.Web.Framework
                 //whether there is a cached value
                 if (_cachedLanguage != null)
                     return _cachedLanguage;
-                
+
                 Language detectedLanguage = null;
 
                 //localized URLs are enabled, so try to get language from the requested page URL
@@ -291,8 +312,8 @@ namespace Nop.Web.Framework
                 if (detectedLanguage == null && _localizationSettings.AutomaticallyDetectLanguage)
                 {
                     //whether language already detected by this way
-                    var alreadyDetected = this.CurrentCustomer.GetAttribute<bool>(SystemCustomerAttributeNames.LanguageAutomaticallyDetected,
-                        _genericAttributeService, _storeContext.CurrentStore.Id);
+                    var alreadyDetected = _genericAttributeService.GetAttribute<bool>(this.CurrentCustomer,
+                        NopCustomerDefaults.LanguageAutomaticallyDetectedAttribute, _storeContext.CurrentStore.Id);
 
                     //if not, try to get language from the request
                     if (!alreadyDetected)
@@ -301,8 +322,8 @@ namespace Nop.Web.Framework
                         if (detectedLanguage != null)
                         {
                             //language already detected
-                            _genericAttributeService.SaveAttribute(this.CurrentCustomer, 
-                                SystemCustomerAttributeNames.LanguageAutomaticallyDetected, true, _storeContext.CurrentStore.Id);
+                            _genericAttributeService.SaveAttribute(this.CurrentCustomer,
+                                NopCustomerDefaults.LanguageAutomaticallyDetectedAttribute, true, _storeContext.CurrentStore.Id);
                         }
                     }
                 }
@@ -311,20 +332,20 @@ namespace Nop.Web.Framework
                 if (detectedLanguage != null)
                 {
                     //get current saved language identifier
-                    var currentLanguageId = this.CurrentCustomer.GetAttribute<int>(SystemCustomerAttributeNames.LanguageId,
-                        _genericAttributeService, _storeContext.CurrentStore.Id);
+                    var currentLanguageId = _genericAttributeService.GetAttribute<int>(this.CurrentCustomer,
+                        NopCustomerDefaults.LanguageIdAttribute, _storeContext.CurrentStore.Id);
 
                     //save the detected language identifier if it differs from the current one
                     if (detectedLanguage.Id != currentLanguageId)
                     {
-                        _genericAttributeService.SaveAttribute(this.CurrentCustomer, 
-                            SystemCustomerAttributeNames.LanguageId, detectedLanguage.Id, _storeContext.CurrentStore.Id);
+                        _genericAttributeService.SaveAttribute(this.CurrentCustomer,
+                            NopCustomerDefaults.LanguageIdAttribute, detectedLanguage.Id, _storeContext.CurrentStore.Id);
                     }
                 }
-                
+
                 //get current customer language identifier
-                var customerLanguageId = this.CurrentCustomer.GetAttribute<int>(SystemCustomerAttributeNames.LanguageId,
-                    _genericAttributeService, _storeContext.CurrentStore.Id);
+                var customerLanguageId = _genericAttributeService.GetAttribute<int>(this.CurrentCustomer,
+                    NopCustomerDefaults.LanguageIdAttribute, _storeContext.CurrentStore.Id);
 
                 var allStoreLanguages = _languageService.GetAllLanguages(storeId: _storeContext.CurrentStore.Id);
 
@@ -356,7 +377,7 @@ namespace Nop.Web.Framework
 
                 //and save it
                 _genericAttributeService.SaveAttribute(this.CurrentCustomer,
-                    SystemCustomerAttributeNames.LanguageId, languageId, _storeContext.CurrentStore.Id);
+                    NopCustomerDefaults.LanguageIdAttribute, languageId, _storeContext.CurrentStore.Id);
 
                 //then reset the cached value
                 _cachedLanguage = null;

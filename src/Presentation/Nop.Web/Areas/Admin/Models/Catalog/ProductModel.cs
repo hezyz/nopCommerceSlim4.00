@@ -5,25 +5,32 @@ using FluentValidation.Attributes;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Web.Areas.Admin.Models.Settings;
 using Nop.Web.Areas.Admin.Validators.Catalog;
-using Nop.Web.Framework.Localization;
+using Nop.Web.Framework.Models;
 using Nop.Web.Framework.Mvc.ModelBinding;
-using Nop.Web.Framework.Mvc.Models;
 
 namespace Nop.Web.Areas.Admin.Models.Catalog
 {
+    /// <summary>
+    /// Represents a product model
+    /// </summary>
     [Validator(typeof(ProductValidator))]
-    public partial class ProductModel : BaseNopEntityModel, ILocalizedModel<ProductLocalizedModel>
+    public partial class ProductModel : BaseNopEntityModel, 
+        IAclSupportedModel, ILocalizedModel<ProductLocalizedModel>, IStoreMappingSupportedModel
     {
+        #region Ctor
+
         public ProductModel()
         {
-            Locales = new List<ProductLocalizedModel>();
             ProductPictureModels = new List<ProductPictureModel>();
+            Locales = new List<ProductLocalizedModel>();
             CopyProductModel = new CopyProductModel();
             AddPictureModel = new ProductPictureModel();
             ProductEditorSettingsModel = new ProductEditorSettingsModel();
 
             AvailableProductTemplates = new List<SelectListItem>();
             ProductsTypesSupportedByProductTemplates = new Dictionary<int, IList<SelectListItem>>();
+
+            AvailableVendors = new List<SelectListItem>();
 
             SelectedStoreIds = new List<int>();
             AvailableStores = new List<SelectListItem>();
@@ -33,7 +40,15 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
 
             SelectedCustomerRoleIds = new List<int>();
             AvailableCustomerRoles = new List<SelectListItem>();
+
+            RelatedProductSearchModel = new RelatedProductSearchModel();
+            AssociatedProductSearchModel = new AssociatedProductSearchModel();
+            ProductPictureSearchModel = new ProductPictureSearchModel();
         }
+
+        #endregion
+
+        #region Properties
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.ID")]
         public override int Id { get; set; }
@@ -44,11 +59,13 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.ProductType")]
         public int ProductTypeId { get; set; }
+
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.ProductType")]
         public string ProductTypeName { get; set; }
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.AssociatedToProductName")]
         public int AssociatedToProductId { get; set; }
+
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.AssociatedToProductName")]
         public string AssociatedToProductName { get; set; }
 
@@ -58,6 +75,7 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.ProductTemplate")]
         public int ProductTemplateId { get; set; }
         public IList<SelectListItem> AvailableProductTemplates { get; set; }
+
         //<product type ID, list of supported product template IDs>
         public Dictionary<int, IList<SelectListItem>> ProductsTypesSupportedByProductTemplates { get; set; }
 
@@ -96,9 +114,11 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNew")]
         public bool MarkAsNew { get; set; }
+
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewStartDateTimeUtc")]
         [UIHint("DateTimeNullable")]
         public DateTime? MarkAsNewStartDateTimeUtc { get; set; }
+
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.MarkAsNewEndDateTimeUtc")]
         [UIHint("DateTimeNullable")]
         public DateTime? MarkAsNewEndDateTimeUtc { get; set; }
@@ -111,9 +131,9 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
 
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.CreatedOn")]
         public DateTime? CreatedOn { get; set; }
+
         [NopResourceDisplayName("Admin.Catalog.Products.Fields.UpdatedOn")]
         public DateTime? UpdatedOn { get; set; }
-
 
         public IList<ProductLocalizedModel> Locales { get; set; }
 
@@ -132,6 +152,14 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
         public IList<int> SelectedCategoryIds { get; set; }
         public IList<SelectListItem> AvailableCategories { get; set; }
 
+        //vendors
+        [NopResourceDisplayName("Admin.Catalog.Products.Fields.Vendor")]
+        public int VendorId { get; set; }
+        public IList<SelectListItem> AvailableVendors { get; set; }
+
+        //vendor
+        public bool IsLoggedInAsVendor { get; set; }
+
         //pictures
         public ProductPictureModel AddPictureModel { get; set; }
         public IList<ProductPictureModel> ProductPictureModels { get; set; }
@@ -142,109 +170,16 @@ namespace Nop.Web.Areas.Admin.Models.Catalog
         //editor settings
         public ProductEditorSettingsModel ProductEditorSettingsModel { get; set; }
 
+        public RelatedProductSearchModel RelatedProductSearchModel { get; set; }
 
-        #region Nested classes
+        public AssociatedProductSearchModel AssociatedProductSearchModel { get; set; }
 
-        public partial class ProductPictureModel : BaseNopEntityModel
-        {
-            public int ProductId { get; set; }
-
-            [UIHint("Picture")]
-            [NopResourceDisplayName("Admin.Catalog.Products.Pictures.Fields.Picture")]
-            public int PictureId { get; set; }
-
-            [NopResourceDisplayName("Admin.Catalog.Products.Pictures.Fields.Picture")]
-            public string PictureUrl { get; set; }
-
-            [NopResourceDisplayName("Admin.Catalog.Products.Pictures.Fields.DisplayOrder")]
-            public int DisplayOrder { get; set; }
-
-            [NopResourceDisplayName("Admin.Catalog.Products.Pictures.Fields.OverrideAltAttribute")]
-            public string OverrideAltAttribute { get; set; }
-
-            [NopResourceDisplayName("Admin.Catalog.Products.Pictures.Fields.OverrideTitleAttribute")]
-            public string OverrideTitleAttribute { get; set; }
-        }
-
-        public partial class RelatedProductModel : BaseNopEntityModel
-        {
-            public int ProductId2 { get; set; }
-
-            [NopResourceDisplayName("Admin.Catalog.Products.RelatedProducts.Fields.Product")]
-            public string Product2Name { get; set; }
-            
-            [NopResourceDisplayName("Admin.Catalog.Products.RelatedProducts.Fields.DisplayOrder")]
-            public int DisplayOrder { get; set; }
-        }
-
-        public partial class AddRelatedProductModel : BaseNopModel
-        {
-            public AddRelatedProductModel()
-            {
-                AvailableCategories = new List<SelectListItem>();
-                AvailableStores = new List<SelectListItem>();
-                AvailableProductTypes = new List<SelectListItem>();
-            }
-
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchProductName")]
-            public string SearchProductName { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchCategory")]
-            public int SearchCategoryId { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchStore")]
-            public int SearchStoreId { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchProductType")]
-            public int SearchProductTypeId { get; set; }
-
-            public IList<SelectListItem> AvailableCategories { get; set; }
-            public IList<SelectListItem> AvailableStores { get; set; }
-            public IList<SelectListItem> AvailableProductTypes { get; set; }
-
-            public int ProductId { get; set; }
-
-            public int[] SelectedProductIds { get; set; }
-
-        }
-
-        public partial class AssociatedProductModel : BaseNopEntityModel
-        {
-            [NopResourceDisplayName("Admin.Catalog.Products.AssociatedProducts.Fields.Product")]
-            public string ProductName { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.AssociatedProducts.Fields.DisplayOrder")]
-            public int DisplayOrder { get; set; }
-        }
-
-        public partial class AddAssociatedProductModel : BaseNopModel
-        {
-            public AddAssociatedProductModel()
-            {
-                AvailableCategories = new List<SelectListItem>();
-                AvailableStores = new List<SelectListItem>();
-                AvailableProductTypes = new List<SelectListItem>();
-            }
-
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchProductName")]
-            public string SearchProductName { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchCategory")]
-            public int SearchCategoryId { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchStore")]
-            public int SearchStoreId { get; set; }
-            [NopResourceDisplayName("Admin.Catalog.Products.List.SearchProductType")]
-            public int SearchProductTypeId { get; set; }
-
-            public IList<SelectListItem> AvailableCategories { get; set; }
-            public IList<SelectListItem> AvailableStores { get; set; }
-            public IList<SelectListItem> AvailableProductTypes { get; set; }
-
-            public int ProductId { get; set; }
-
-            public int[] SelectedProductIds { get; set; }
-        }
-
+        public ProductPictureSearchModel ProductPictureSearchModel { get; set; }
 
         #endregion
     }
 
-    public partial class ProductLocalizedModel : ILocalizedModelLocal
+    public partial class ProductLocalizedModel : ILocalizedLocaleModel
     {
         public int LanguageId { get; set; }
 

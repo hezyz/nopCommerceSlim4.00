@@ -1,4 +1,5 @@
 ﻿@model ProductModel
+
 @inject IStoreService storeService
 @inject IProductTagService productTagService
 
@@ -18,13 +19,19 @@
     Html.AppendScriptParts("~/lib/tagEditor/jquery.caret.min.js");
 }
 
-<script type="text/javascript">
+<script>
     $(document).ready(function() {
-        $("#@Html.IdFor(model => model.ShowOnHomePage)").click(toggleShowOnHomePage);</text >
+        @if (!Model.IsLoggedInAsVendor)
+        {
+            <text>$("#@Html.IdFor(model => model.ShowOnHomePage)").click(toggleShowOnHomePage);</text>
+        }
         $("#@Html.IdFor(model => model.ProductTypeId)").change(toggleProductType);
         $("#@Html.IdFor(model => model.MarkAsNew)").click(toggleMarkAsNew);
 
-        toggleShowOnHomePage();
+        @if (!Model.IsLoggedInAsVendor)
+        {
+            <text>toggleShowOnHomePage();</text>
+        }
         toggleProductType();
         toggleMarkAsNew();
     });
@@ -37,16 +44,18 @@
         }
     }
 
-     function toggleProductType() {
+    function toggleProductType() {
         var simpleProductId = "@((int)ProductType.SimpleProduct)";
         var groupedProductId = "@((int)ProductType.GroupedProduct)";
 
 
         var selectedProductTypeId = $("#@Html.IdFor(model => model.ProductTypeId)").val();
         if (!selectedProductTypeId || selectedProductTypeId == simpleProductId) {
-
+            $('#group-visible-individually').show();
+            $('#group-associated-products').hide();
         } else if (selectedProductTypeId == groupedProductId) {
-   
+            $('#group-visible-individually').hide();
+            $('#group-associated-products').show();
         }
 
         //templates
@@ -126,8 +135,8 @@
 
 <div class="raw clearfix">
     <div class="@(Model.ProductEditorSettingsModel.OneColumnProductPage ? "col-md-12" : "col-md-7")">
-        <div class="panel-group">            
-            @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_details_info_column_left_top", additionalData = Model.Id })
+        <div class="panel-group">
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsInfoColumnLeftTop, additionalData = Model })
             <div class="panel panel-default">
                 <div class="panel-heading">
                     @T("Admin.Catalog.Products.CommonInfo")
@@ -153,6 +162,17 @@
                             <span asp-validation-for="ProductTypeId"></span>
                         </div>
                     </div>
+                    @if (Model.Id > 0 && Model.AssociatedToProductId > 0)
+                    {
+                        <div class="form-group @(Model.ProductEditorSettingsModel.ProductType ? null : "advanced-setting")">
+                            <div class="col-md-3">
+                                <nop-label asp-for="AssociatedToProductId" />
+                            </div>
+                            <div class="col-md-9">
+                                <a asp-controller="Product" asp-action="Edit" asp-route-id="@Model.AssociatedToProductId">@Model.AssociatedToProductName</a>
+                            </div>
+                        </div>
+                    }
                     <div class="form-group @(Model.ProductEditorSettingsModel.ProductTemplate ? null : "advanced-setting")" @(Model.AvailableProductTemplates.SelectionIsNotPossible() ? Html.Raw("style=\"display:none\"") : null) id="pnlProductTemplateId">
                         <div class="col-md-3">
                             <nop-label asp-for="ProductTemplateId" />
@@ -201,10 +221,10 @@
                                 <span asp-validation-for="@Model.Locales[item].FullDescription"></span>
                             </div>
                         </div>
-                        
+
                         <input type="hidden" asp-for="@Model.Locales[item].LanguageId" />
                     </div>
-                            ,@<div>
+                    ,@<div>
                         <div class="form-group">
                             <div class="col-md-3">
                                 <nop-label asp-for="Name" />
@@ -233,64 +253,61 @@
                             </div>
                         </div>
                     </div>
-                            ))
-               
+                    ))
                     <div class="form-group @(Model.ProductEditorSettingsModel.Published ? null : "advanced-setting")">
                         <div class="col-md-3">
-							<nop-label asp-for="Published" />
+                            <nop-label asp-for="Published" />
                         </div>
                         <div class="col-md-9">
-							<nop-editor asp-for="Published" />
-							<span asp-validation-for="Published"></span>
+                            <nop-editor asp-for="Published" />
+                            <span asp-validation-for="Published"></span>
                         </div>
                     </div>
                     <div class="form-group @(Model.ProductEditorSettingsModel.ProductTags ? null : "advanced-setting")">
                         <div class="col-md-3">
-							<nop-label asp-for="ProductTags" />
+                            <nop-label asp-for="ProductTags" />
                         </div>
                         <div class="col-md-9">
-							<nop-editor asp-for="ProductTags" />
-							<span asp-validation-for="ProductTags"></span>
+                            <nop-editor asp-for="ProductTags" />
+                            <span asp-validation-for="ProductTags"></span>
                         </div>
                     </div>
-                   
-                    <div class="form-group @(Model.ProductEditorSettingsModel.ShowOnHomePage ? null : "advanced-setting")">
+                    <div class="form-group @(Model.ProductEditorSettingsModel.ShowOnHomePage ? null : "advanced-setting")" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
                         <div class="col-md-3">
-							<nop-label asp-for="ShowOnHomePage" />
+                            <nop-label asp-for="ShowOnHomePage" />
                         </div>
                         <div class="col-md-9">
-							<nop-editor asp-for="ShowOnHomePage" />
-							<span asp-validation-for="ShowOnHomePage"></span>
+                            <nop-editor asp-for="ShowOnHomePage" />
+                            <span asp-validation-for="ShowOnHomePage"></span>
                         </div>
                     </div>
                     <nop-nested-setting asp-for="ShowOnHomePage">
-                        <div class="form-group @(Model.ProductEditorSettingsModel.DisplayOrder ? null : "advanced-setting")" id="pnlDisplayOrder">
-                        <div class="col-md-3">
-							<nop-label asp-for="DisplayOrder" />
+                        <div class="form-group @(Model.ProductEditorSettingsModel.DisplayOrder ? null : "advanced-setting")" id="pnlDisplayOrder" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+                            <div class="col-md-3">
+                                <nop-label asp-for="DisplayOrder" />
+                            </div>
+                            <div class="col-md-9">
+                                <nop-editor asp-for="DisplayOrder" />
+                                <span asp-validation-for="DisplayOrder"></span>
+                            </div>
                         </div>
-                        <div class="col-md-9">
-							<nop-editor asp-for="DisplayOrder" />
-							<span asp-validation-for="DisplayOrder"></span>
-                        </div>
-                    </div>
                     </nop-nested-setting>
                     <div class="form-group @(Model.ProductEditorSettingsModel.AllowCustomerReviews ? null : "advanced-setting")">
                         <div class="col-md-3">
-							<nop-label asp-for="AllowCustomerReviews" />
+                            <nop-label asp-for="AllowCustomerReviews" />
                         </div>
                         <div class="col-md-9">
-							<nop-editor asp-for="AllowCustomerReviews" />
-							<span asp-validation-for="AllowCustomerReviews"></span>
+                            <nop-editor asp-for="AllowCustomerReviews" />
+                            <span asp-validation-for="AllowCustomerReviews"></span>
                         </div>
                     </div>
-              
                     <div class="form-group @(Model.ProductEditorSettingsModel.MarkAsNew ? null : "advanced-setting")">
                         <div class="col-md-3">
-							<nop-label asp-for="MarkAsNew" />
+                            <nop-label asp-for="MarkAsNew" />
                         </div>
                         <div class="col-md-9">
-							<nop-editor asp-for="MarkAsNew" />
-							<span asp-validation-for="MarkAsNew"></span>
+                            <nop-editor asp-for="MarkAsNew" />
+                            <span asp-validation-for="MarkAsNew"></span>
                         </div>
                     </div>
                     <nop-nested-setting asp-for="MarkAsNew">
@@ -315,18 +332,18 @@
                     </nop-nested-setting>
                     <div class="form-group @(Model.ProductEditorSettingsModel.AdminComment ? null : "advanced-setting")">
                         <div class="col-md-3">
-							<nop-label asp-for="AdminComment" />
+                            <nop-label asp-for="AdminComment" />
                         </div>
                         <div class="col-md-9">
-							<nop-textarea asp-for="AdminComment" />
-							<span asp-validation-for="AdminComment"></span>
+                            <nop-textarea asp-for="AdminComment" />
+                            <span asp-validation-for="AdminComment"></span>
                         </div>
                     </div>
                     @if (Model.CreatedOn.HasValue)
                     {
                         <div class="form-group @(Model.ProductEditorSettingsModel.CreatedOn ? null : "advanced-setting")">
                             <div class="col-md-3">
-								<nop-label asp-for="CreatedOn" />
+                                <nop-label asp-for="CreatedOn" />
                             </div>
                             <div class="col-md-9">
                                 <div class="form-text-row">@Model.CreatedOn.Value.ToString("F")</div>
@@ -337,7 +354,7 @@
                     {
                         <div class="form-group @(Model.ProductEditorSettingsModel.UpdatedOn ? null : "advanced-setting")">
                             <div class="col-md-3">
-								<nop-label asp-for="UpdatedOn" />
+                                <nop-label asp-for="UpdatedOn" />
                             </div>
                             <div class="col-md-9">
                                 <div class="form-text-row">@Model.UpdatedOn.Value.ToString("F")</div>
@@ -346,7 +363,7 @@
                     }
                 </div>
             </div>
-            @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_details_info_column_left_bottom", additionalData = Model.Id })
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsInfoColumnLeftBottom, additionalData = Model })
         </div>
     </div>
     <div class="@(Model.ProductEditorSettingsModel.OneColumnProductPage ? "col-md-12" : "col-md-5")">
@@ -355,7 +372,7 @@
                 var leftColumnClass = Model.ProductEditorSettingsModel.OneColumnProductPage ? "col-md-3" : "col-md-4";
                 var rightColumnClass = Model.ProductEditorSettingsModel.OneColumnProductPage ? "col-md-9" : "col-md-8";
             }
-            @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_details_info_column_right_top", additionalData = Model.Id })
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsInfoColumnRightTop, additionalData = Model })
             <div class="panel panel-default margin-bottom" id="group-associated-products">
                 <div class="panel-heading">
                     @T("Admin.Catalog.Products.AssociatedProducts")
@@ -374,17 +391,23 @@
 
                         <div id="associatedproducts-grid"></div>
 
-                        <script type="text/javascript">
+                        <script>
                             $(document).ready(function() {
                                 $("#associatedproducts-grid").kendoGrid({
                                     dataSource: {
                                         type: "json",
                                         transport: {
                                             read: {
-                                                url: "@Html.Raw(Url.Action("AssociatedProductList", "Product", new {productId = Model.Id}))",
+                                                url: "@Html.Raw(Url.Action("AssociatedProductList", "Product"))",
                                                 type: "POST",
                                                 dataType: "json",
-                                                data: addAntiForgeryToken
+                                                data: function additionalData() {
+                                                    var data = {
+                                                        ProductId: '@(Model.Id)'
+                                                    };
+                                                    addAntiForgeryToken(data);
+                                                    return data;
+                                                }
                                             },
                                             update: {
                                                 url: "@Html.Raw(Url.Action("AssociatedProductUpdate", "Product"))",
@@ -422,15 +445,14 @@
                                             // Cancel the changes
                                             this.cancelChanges();
                                         },
+                                        pageSize: @(Model.AssociatedProductSearchModel.PageSize),
                                         serverPaging: true,
                                         serverFiltering: true,
                                         serverSorting: true
                                     },
                                     pageable: {
                                         refresh: true,
-                                        numeric: false,
-                                        previousNext: false,
-                                        info: false,
+                                        pageSizes: [@(Model.AssociatedProductSearchModel.AvailablePageSizes)],
                                         @await Html.PartialAsync("_GridPagerMessages")
                                     },
                                     editable: {
@@ -476,7 +498,7 @@
                             @T("Admin.Catalog.Products.AssociatedProducts.AddNew")
                         </button>
                         <input type="submit" id="btnRefreshAssociatedProducts" style="display: none" />
-                        <script type="text/javascript">
+                        <script>
                             $(document).ready(function() {
                                 $('#btnRefreshAssociatedProducts').click(function() {
                                     //refresh grid
@@ -504,11 +526,11 @@
                 <div class="panel-body">
                     <div class="form-group">
                         <div class="@leftColumnClass">
-							<nop-label asp-for="SelectedCategoryIds" />
+                            <nop-label asp-for="SelectedCategoryIds" />
                         </div>
                         <div class="@rightColumnClass">
-							<nop-select asp-for="SelectedCategoryIds" asp-items="Model.AvailableCategories" asp-multiple="true" />
-                            <script type="text/javascript">
+                            <nop-select asp-for="SelectedCategoryIds" asp-items="Model.AvailableCategories" asp-multiple="true" />
+                            <script>
                                 $(document).ready(function() {
                                     var categoryIdsInput = $('#@Html.IdFor(model => model.SelectedCategoryIds)').data("kendoMultiSelect");
                                     categoryIdsInput.setOptions({
@@ -533,11 +555,11 @@
                     </div>
                     <div class="form-group @(Model.ProductEditorSettingsModel.Stores ? null : "advanced-setting")">
                         <div class="@leftColumnClass">
-							<nop-label asp-for="SelectedStoreIds" />
+                            <nop-label asp-for="SelectedStoreIds" />
                         </div>
                         <div class="@rightColumnClass">
-							<nop-select asp-for="SelectedStoreIds" asp-items="Model.AvailableStores" asp-multiple="true" />
-                            <script type="text/javascript">
+                            <nop-select asp-for="SelectedStoreIds" asp-items="Model.AvailableStores" asp-multiple="true" />
+                            <script>
                                 $(document).ready(function() {
                                     var storesIdsInput = $('#@Html.IdFor(model => model.SelectedStoreIds)').data("kendoMultiSelect");
                                     storesIdsInput.setOptions({
@@ -560,6 +582,15 @@
                             </script>
                         </div>
                     </div>
+                    <div class="form-group @(Model.ProductEditorSettingsModel.Vendor ? null : "advanced-setting")" @(Model.IsLoggedInAsVendor ? Html.Raw("style='display: none;'") : null)>
+                        <div class="@leftColumnClass">
+                            <nop-label asp-for="VendorId" />
+                        </div>
+                        <div class="@rightColumnClass">
+                            <nop-select asp-for="VendorId" asp-items="Model.AvailableVendors" />
+                            <span asp-validation-for="VendorId"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="panel panel-default @(Model.ProductEditorSettingsModel.ACL ? null : "advanced-setting")">
@@ -569,11 +600,11 @@
                 <div class="panel-body">
                     <div class="form-group">
                         <div class="@leftColumnClass">
-							<nop-label asp-for="SelectedCustomerRoleIds" />
+                            <nop-label asp-for="SelectedCustomerRoleIds" />
                         </div>
                         <div class="@rightColumnClass">
-							<nop-select asp-for="SelectedCustomerRoleIds" asp-items="Model.AvailableCustomerRoles" asp-multiple="true" />
-                            <script type="text/javascript">
+                            <nop-select asp-for="SelectedCustomerRoleIds" asp-items="Model.AvailableCustomerRoles" asp-multiple="true" />
+                            <script>
                                 $(document).ready(function() {
                                     var rolesIdsInput = $('#@Html.IdFor(model => model.SelectedCustomerRoleIds)').data("kendoMultiSelect");
                                     rolesIdsInput.setOptions({
@@ -610,17 +641,23 @@
                         </p>
                         <div id="relatedproducts-grid"></div>
 
-                        <script type="text/javascript">
+                        <script>
                             $(document).ready(function() {
                                 $("#relatedproducts-grid").kendoGrid({
                                     dataSource: {
                                         type: "json",
                                         transport: {
                                             read: {
-                                                url: "@Html.Raw(Url.Action("RelatedProductList", "Product", new {productId = Model.Id}))",
+                                                url: "@Html.Raw(Url.Action("RelatedProductList", "Product"))",
                                                 type: "POST",
                                                 dataType: "json",
-                                                data: addAntiForgeryToken
+                                                data: function additionalData() {
+                                                    var data = {
+                                                        ProductId: '@(Model.Id)'
+                                                    };
+                                                    addAntiForgeryToken(data);
+                                                    return data;
+                                                }
                                             },
                                             update: {
                                                 url: "@Html.Raw(Url.Action("RelatedProductUpdate", "Product"))",
@@ -658,15 +695,14 @@
                                             // Cancel the changes
                                             this.cancelChanges();
                                         },
+                                        pageSize: @(Model.RelatedProductSearchModel.PageSize),
                                         serverPaging: true,
                                         serverFiltering: true,
                                         serverSorting: true
                                     },
                                     pageable: {
                                         refresh: true,
-                                        numeric: false,
-                                        previousNext: false,
-                                        info: false,
+                                        pageSizes: [@(Model.RelatedProductSearchModel.AvailablePageSizes)],
                                         @await Html.PartialAsync("_GridPagerMessages")
                                     },
                                     editable: {
@@ -712,7 +748,7 @@
                             @T("Admin.Catalog.Products.RelatedProducts.AddNew")
                         </button>
                         <input type="submit" id="btnRefreshRelatedProducts" style="display: none" />
-                        <script type="text/javascript">
+                        <script>
                             $(document).ready(function() {
                                 $('#btnRefreshRelatedProducts').click(function() {
                                     //refresh grid
@@ -733,7 +769,7 @@
                     </div>
                 }
             </div>
-            @await Component.InvokeAsync("AdminWidget", new { widgetZone = "admin_product_details_info_column_right_bottom", additionalData = Model.Id })        
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsInfoColumnRightBottom, additionalData = Model })
         </div>
     </div>
 </div>

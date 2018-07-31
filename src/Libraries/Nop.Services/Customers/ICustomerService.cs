@@ -1,4 +1,5 @@
 using Nop.Core;
+using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,7 @@ namespace Nop.Services.Customers
         /// <param name="createdFromUtc">Created date from (UTC); null to load all records</param>
         /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
         /// <param name="customerRoleIds">A list of customer role identifiers to filter by (at least one match); pass null or empty list in order to load all customers; </param>
+        /// <param name="vendorId">Vendor identifier</param>
         /// <param name="email">Email; null to load all customers</param>
         /// <param name="username">Username; null to load all customers</param>
         /// <param name="firstName">First name; null to load all customers</param>
@@ -30,15 +32,16 @@ namespace Nop.Services.Customers
         /// <param name="ipAddress">IP address; null to load all customers</param>
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
+        /// <param name="getOnlyTotalCount">A value in indicating whether you want to load only total number of records. Set to "true" if you don't want to load data from database</param>
         /// <returns>Customers</returns>
         IPagedList<Customer> GetAllCustomers(DateTime? createdFromUtc = null,
-            DateTime? createdToUtc = null, 
+            DateTime? createdToUtc = null, int vendorId = 0,
             int[] customerRoleIds = null, string email = null, string username = null,
             string firstName = null, string lastName = null,
             int dayOfBirth = 0, int monthOfBirth = 0,
             string company = null, string phone = null, string zipPostalCode = null,
-            string ipAddress = null,
-            int pageIndex = 0, int pageSize = int.MaxValue);
+            string ipAddress = null, 
+            int pageIndex = 0, int pageSize = int.MaxValue, bool getOnlyTotalCount = false);
 
         /// <summary>
         /// Gets online customers
@@ -70,7 +73,7 @@ namespace Nop.Services.Customers
         /// <param name="customerIds">Customer identifiers</param>
         /// <returns>Customers</returns>
         IList<Customer> GetCustomersByIds(int[] customerIds);
-        
+
         /// <summary>
         /// Gets a customer by GUID
         /// </summary>
@@ -84,7 +87,7 @@ namespace Nop.Services.Customers
         /// <param name="email">Email</param>
         /// <returns>Customer</returns>
         Customer GetCustomerByEmail(string email);
-        
+
         /// <summary>
         /// Get customer by system role
         /// </summary>
@@ -116,7 +119,6 @@ namespace Nop.Services.Customers
         /// </summary>
         /// <param name="customer">Customer</param>
         void UpdateCustomer(Customer customer);
-        
 
         /// <summary>
         /// Delete guest customer records
@@ -125,6 +127,29 @@ namespace Nop.Services.Customers
         /// <param name="createdToUtc">Created date to (UTC); null to load all records</param>
         /// <returns>Number of deleted customers</returns>
         int DeleteGuestCustomers(DateTime? createdFromUtc, DateTime? createdToUtc);
+
+        /// <summary>
+        /// Remove address
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <param name="address">Address</param>
+        void RemoveCustomerAddress(Customer customer, Address address);
+
+        /// <summary>
+        /// Get full name
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <returns>Customer full name</returns>
+        string GetCustomerFullName(Customer customer);
+
+        /// <summary>
+        /// Formats the customer name
+        /// </summary>
+        /// <param name="customer">Source</param>
+        /// <param name="stripTooLong">Strip too long customer name</param>
+        /// <param name="maxLength">Maximum customer name length</param>
+        /// <returns>Formatted text</returns>
+        string FormatUserName(Customer customer, bool stripTooLong = false, int maxLength = 0);
 
         #endregion
 
@@ -201,6 +226,28 @@ namespace Nop.Services.Customers
         /// </summary>
         /// <param name="customerPassword">Customer password</param>
         void UpdateCustomerPassword(CustomerPassword customerPassword);
+
+        /// <summary>
+        /// Check whether password recovery token is valid
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <param name="token">Token to validate</param>
+        /// <returns>Result</returns>
+        bool IsPasswordRecoveryTokenValid(Customer customer, string token);
+
+        /// <summary>
+        /// Check whether password recovery link is expired
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <returns>Result</returns>
+        bool IsPasswordRecoveryLinkExpired(Customer customer);
+
+        /// <summary>
+        /// Check whether customer password is expired 
+        /// </summary>
+        /// <param name="customer">Customer</param>
+        /// <returns>True if password is expired; otherwise false</returns>
+        bool PasswordIsExpired(Customer customer);
 
         #endregion
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Primitives;
@@ -10,16 +11,11 @@ namespace Nop.Core.Caching
     /// <summary>
     /// Represents a memory cache manager 
     /// </summary>
-    public partial class MemoryCacheManager : IStaticCacheManager
+    public partial class MemoryCacheManager : ILocker, IStaticCacheManager
     {
         #region Fields
 
         private readonly IMemoryCache _cache;
-
-        /// <summary>
-        /// Cancellation token for clear cache
-        /// </summary>
-        protected CancellationTokenSource _cancellationTokenSource;
 
         /// <summary>
         /// All keys of cache
@@ -27,22 +23,20 @@ namespace Nop.Core.Caching
         /// <remarks>Dictionary value indicating whether a key still exists in cache</remarks> 
         protected static readonly ConcurrentDictionary<string, bool> _allKeys;
 
+        /// <summary>
+        /// Cancellation token for clear cache
+        /// </summary>
+        protected CancellationTokenSource _cancellationTokenSource;
+
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
         static MemoryCacheManager()
         {
             _allKeys = new ConcurrentDictionary<string, bool>();
         }
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="cache">Cache</param>
         public MemoryCacheManager(IMemoryCache cache)
         {
             _cache = cache;
@@ -54,11 +48,10 @@ namespace Nop.Core.Caching
         #region Utilities
 
         /// <summary>
-        /// Create entry options to item of memory cache 
+        /// Create entry options to item of memory cache
         /// </summary>
-        /// <param name="cacheTime">Cache time in minutes</param>
-        /// <returns></returns>
-        protected MemoryCacheEntryOptions GetMemoryCacheEntryOptions(int cacheTime)
+        /// <param name="cacheTime">Cache time</param>
+        protected MemoryCacheEntryOptions GetMemoryCacheEntryOptions(TimeSpan cacheTime)
         {
             var options = new MemoryCacheEntryOptions()
                 // add cancellation token for clear cache
@@ -67,7 +60,7 @@ namespace Nop.Core.Caching
                 .RegisterPostEvictionCallback(PostEviction);
 
             //set cache time
-            options.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(cacheTime);
+            options.AbsoluteExpirationRelativeToNow = cacheTime;
 
             return options;
         }
@@ -101,9 +94,9 @@ namespace Nop.Core.Caching
         protected void TryRemoveKey(string key)
         {
             //try to remove key from dictionary
-            if (!_allKeys.TryRemove(key, out bool _))
+            if (!_allKeys.TryRemove(key, out _))
                 //if not possible to remove key from dictionary, then try to mark key as not existing in cache
-                _allKeys.TryUpdate(key, false, false);
+                _allKeys.TryUpdate(key, false, true);
         }
 
         /// <summary>
@@ -142,14 +135,27 @@ namespace Nop.Core.Caching
         #region Methods
 
         /// <summary>
-        /// Gets or sets the value associated with the specified key.
+        /// Get a cached item. If it's not in the cache yet, then load and cache it
         /// </summary>
         /// <typeparam name="T">Type of cached item</typeparam>
-        /// <param name="key">Key of cached item</param>
+        /// <param name="key">Cache key</param>
+        /// <param name="acquire">Function to load item if it's not in the cache yet</param>
+        /// <param name="cacheTime">Cache time in minutes; pass 0 to do not cache; pass null to use the default time</param>
         /// <returns>The cached value associated with the specified key</returns>
-        public virtual T Get<T>(string key)
+        public virtual T Get<T>(string key, Func<T> acquire, int? cacheTime = null)
         {
-            return _cache.Get<T>(key);
+            //item already is in cache, so return it
+            if (_cache.TryGetValue(key, out T value))
+                return value;
+
+            //or create it using passed function
+            var result = acquire();
+
+            //and set in cache (if cache time is defined)
+            if ((cacheTime ?? NopCachingDefaults.CacheTime) > 0)
+                Set(key, result, cacheTime ?? NopCachingDefaults.CacheTime);
+
+            return result;
         }
 
         /// <summary>
@@ -162,7 +168,7 @@ namespace Nop.Core.Caching
         {
             if (data != null)
             {
-                _cache.Set(AddKey(key), data, GetMemoryCacheEntryOptions(cacheTime));
+                _cache.Set(AddKey(key), data, GetMemoryCacheEntryOptions(TimeSpan.FromMinutes(cacheTime)));
             }
         }
 
@@ -174,6 +180,35 @@ namespace Nop.Core.Caching
         public virtual bool IsSet(string key)
         {
             return _cache.TryGetValue(key, out object _);
+        }
+
+        /// <summary>
+        /// Perform some action with exclusive in-memory lock
+        /// </summary>
+        /// <param name="key">The key we are locking on</param>
+        /// <param name="expirationTime">The time after which the lock will automatically be expired</param>
+        /// <param name="action">Action to be performed with locking</param>
+        /// <returns>True if lock was acquired and action was performed; otherwise false</returns>
+        public bool PerformActionWithLock(string key, TimeSpan expirationTime, Action action)
+        {
+            //ensure that lock is acquired
+            if (!_allKeys.TryAdd(key, true))
+                return false;
+
+            try
+            {
+                _cache.Set(key, key, GetMemoryCacheEntryOptions(expirationTime));
+
+                //perform action
+                action();
+
+                return true;
+            }
+            finally
+            {
+                //release lock even if action fails
+                Remove(key);
+            }
         }
 
         /// <summary>
@@ -191,7 +226,15 @@ namespace Nop.Core.Caching
         /// <param name="pattern">String key pattern</param>
         public virtual void RemoveByPattern(string pattern)
         {
-            this.RemoveByPattern(pattern, _allKeys.Where(p => p.Value).Select(p => p.Key));
+            //get cache keys that matches pattern
+            var regex = new Regex(pattern, RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var matchesKeys = _allKeys.Where(p => p.Value).Select(p => p.Key).Where(key => regex.IsMatch(key)).ToList();
+
+            //remove matching values
+            foreach (var key in matchesKeys)
+            {
+                _cache.Remove(RemoveKey(key));
+            }
         }
 
         /// <summary>

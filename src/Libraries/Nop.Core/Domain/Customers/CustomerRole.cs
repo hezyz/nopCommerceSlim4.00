@@ -8,7 +8,7 @@ namespace Nop.Core.Domain.Customers
     /// </summary>
     public partial class CustomerRole : BaseEntity
     {
-        private ICollection<PermissionRecord> _permissionRecords;
+        private ICollection<PermissionRecordCustomerRoleMapping> _permissionRecordCustomerRoleMappings;
 
         /// <summary>
         /// Gets or sets the customer role name
@@ -34,14 +34,14 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets a value indicating whether the customers must change passwords after a specified time
         /// </summary>
         public bool EnablePasswordLifetime { get; set; }
-        
+
         /// <summary>
-        /// Gets or sets the permission records
+        /// Gets or sets the permission record-customer role mappings
         /// </summary>
-        public virtual ICollection<PermissionRecord> PermissionRecords
+        public virtual ICollection<PermissionRecordCustomerRoleMapping> PermissionRecordCustomerRoleMappings
         {
-            get { return _permissionRecords ?? (_permissionRecords = new List<PermissionRecord>()); }
-            protected set { _permissionRecords = value; }
+            get => _permissionRecordCustomerRoleMappings ?? (_permissionRecordCustomerRoleMappings = new List<PermissionRecordCustomerRoleMapping>());
+            protected set => _permissionRecordCustomerRoleMappings = value;
         }
     }
 }

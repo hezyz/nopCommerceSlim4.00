@@ -1,154 +1,93 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Nop.Web.Areas.Admin.Extensions;
-using Nop.Web.Areas.Admin.Models.Messages;
 using Nop.Core;
-using Nop.Services.Customers;
-using Nop.Services.ExportImport;
 using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
 using Nop.Services.Security;
-using Nop.Services.Stores;
+using Nop.Web.Areas.Admin.Factories;
+using Nop.Web.Areas.Admin.Models.Messages;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Kendoui;
 using Nop.Web.Framework.Mvc;
+using System;
+using System.Text;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
-	public partial class NewsLetterSubscriptionController : BaseAdminController
-	{
-	    #region Fields
+    public partial class NewsLetterSubscriptionController : BaseAdminController
+    {
+        #region Fields
 
-        private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
-		private readonly IDateTimeHelper _dateTimeHelper;
+        private readonly IDateTimeHelper _dateTimeHelper;
+        //private readonly IExportManager _exportManager;
+        //private readonly IImportManager _importManager;
         private readonly ILocalizationService _localizationService;
+        private readonly INewsletterSubscriptionModelFactory _newsletterSubscriptionModelFactory;
+        private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
         private readonly IPermissionService _permissionService;
-        private readonly IStoreService _storeService;
-        private readonly ICustomerService _customerService;
-        private readonly IExportManager _exportManager;
-        private readonly IImportManager _importManager;
 
         #endregion
 
-	    #region Ctor
+        #region Ctor
 
-        public NewsLetterSubscriptionController(INewsLetterSubscriptionService newsLetterSubscriptionService,
-			IDateTimeHelper dateTimeHelper,
+        public NewsLetterSubscriptionController(IDateTimeHelper dateTimeHelper,
+            //IExportManager exportManager,
+            //IImportManager importManager,
             ILocalizationService localizationService,
-            IPermissionService permissionService,
-            IStoreService storeService,
-            ICustomerService customerService,
-            IExportManager exportManager,
-            IImportManager importManager)
-		{
-			this._newsLetterSubscriptionService = newsLetterSubscriptionService;
-			this._dateTimeHelper = dateTimeHelper;
+            INewsletterSubscriptionModelFactory newsletterSubscriptionModelFactory,
+            INewsLetterSubscriptionService newsLetterSubscriptionService,
+            IPermissionService permissionService)
+        {
+            this._dateTimeHelper = dateTimeHelper;
+            //this._exportManager = exportManager;
+            //this._importManager = importManager;
             this._localizationService = localizationService;
+            this._newsletterSubscriptionModelFactory = newsletterSubscriptionModelFactory;
+            this._newsLetterSubscriptionService = newsLetterSubscriptionService;
             this._permissionService = permissionService;
-            this._storeService = storeService;
-            this._customerService = customerService;
-            this._exportManager = exportManager;
-            this._importManager = importManager;
-		}
+        }
 
         #endregion
 
-	    #region Methods
+        #region Methods
 
         public virtual IActionResult Index()
-		{
-			return RedirectToAction("List");
-		}
+        {
+            return RedirectToAction("List");
+        }
 
-		public virtual IActionResult List()
+        public virtual IActionResult List()
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
                 return AccessDeniedView();
 
-            var model = new NewsLetterSubscriptionListModel();
+            //prepare model
+            var model = _newsletterSubscriptionModelFactory.PrepareNewsletterSubscriptionSearchModel(new NewsletterSubscriptionSearchModel());
 
-            //stores
-            model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            foreach (var s in _storeService.GetAllStores())
-                model.AvailableStores.Add(new SelectListItem { Text = s.Name, Value = s.Id.ToString() });
+            return View(model);
+        }
 
-            //active
-            model.ActiveList.Add(new SelectListItem
-            {
-                Value = "0",
-                Text = _localizationService.GetResource("Admin.Promotions.NewsLetterSubscriptions.List.SearchActive.All")
-            });
-            model.ActiveList.Add(new SelectListItem
-            {
-                Value = "1",
-                Text = _localizationService.GetResource("Admin.Promotions.NewsLetterSubscriptions.List.SearchActive.ActiveOnly")
-            });
-            model.ActiveList.Add(new SelectListItem
-            {
-                Value = "2",
-                Text = _localizationService.GetResource("Admin.Promotions.NewsLetterSubscriptions.List.SearchActive.NotActiveOnly")
-            });
-
-            //customer roles
-            model.AvailableCustomerRoles.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
-            foreach (var cr in _customerService.GetAllCustomerRoles(true))
-                model.AvailableCustomerRoles.Add(new SelectListItem { Text = cr.Name, Value = cr.Id.ToString() });
-
-			return View(model);
-		}
-
-		[HttpPost]
-		public virtual IActionResult SubscriptionList(DataSourceRequest command, NewsLetterSubscriptionListModel model)
+        [HttpPost]
+        public virtual IActionResult SubscriptionList(NewsletterSubscriptionSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
                 return AccessDeniedKendoGridJson();
 
-            bool? isActive = null;
-            if (model.ActiveId == 1)
-                isActive = true;
-            else if (model.ActiveId == 2)
-                isActive = false;
+            //prepare model
+            var model = _newsletterSubscriptionModelFactory.PrepareNewsletterSubscriptionListModel(searchModel);
 
-            var startDateValue = (model.StartDate == null) ? null
-                : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.StartDate.Value, _dateTimeHelper.CurrentTimeZone);
-            var endDateValue = (model.EndDate == null) ? null
-                : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.EndDate.Value, _dateTimeHelper.CurrentTimeZone).AddDays(1);
-
-            var newsletterSubscriptions = _newsLetterSubscriptionService.GetAllNewsLetterSubscriptions(model.SearchEmail,
-                startDateValue, endDateValue, model.StoreId, isActive, model.CustomerRoleId,
-                command.Page - 1, command.PageSize);
-
-            var gridModel = new DataSourceResult
-            {
-                Data = newsletterSubscriptions.Select(x =>
-				{
-					var m = x.ToModel();
-				    var store = _storeService.GetStoreById(x.StoreId);
-				    m.StoreName = store != null ? store.Name : "Unknown store";
-					m.CreatedOn = _dateTimeHelper.ConvertToUserTime(x.CreatedOnUtc, DateTimeKind.Utc).ToLongTimeString();
-					return m;
-				}),
-                Total = newsletterSubscriptions.TotalCount
-            };
-
-            return Json(gridModel);
-		}
+            return Json(model);
+        }
 
         [HttpPost]
-        public virtual IActionResult SubscriptionUpdate(NewsLetterSubscriptionModel model)
+        public virtual IActionResult SubscriptionUpdate(NewsletterSubscriptionModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
                 return AccessDeniedView();
 
             if (!ModelState.IsValid)
-            {
                 return Json(new DataSourceResult { Errors = ModelState.SerializeErrors() });
-            }
 
             var subscription = _newsLetterSubscriptionService.GetNewsLetterSubscriptionById(model.Id);
             subscription.Email = model.Email;
@@ -164,65 +103,69 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
                 return AccessDeniedView();
 
-            var subscription = _newsLetterSubscriptionService.GetNewsLetterSubscriptionById(id);
-            if (subscription == null)
-                throw new ArgumentException("No subscription found with the specified id");
+            var subscription = _newsLetterSubscriptionService.GetNewsLetterSubscriptionById(id)
+                ?? throw new ArgumentException("No subscription found with the specified id", nameof(id));
+
             _newsLetterSubscriptionService.DeleteNewsLetterSubscription(subscription);
 
             return new NullJsonResult();
         }
 
-        [HttpPost, ActionName("List")]
-        [FormValueRequired("exportcsv")]
-		public virtual IActionResult ExportCsv(NewsLetterSubscriptionListModel model)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
-                return AccessDeniedView();
+        //[HttpPost, ActionName("List")]
+        //[FormValueRequired("exportcsv")]
+        //public virtual IActionResult ExportCsv(NewsletterSubscriptionSearchModel model)
+        //{
+        //    if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
+        //        return AccessDeniedView();
 
-            bool? isActive = null;
-            if (model.ActiveId == 1)
-                isActive = true;
-            else if (model.ActiveId == 2)
-                isActive = false;
+        //    bool? isActive = null;
+        //    if (model.ActiveId == 1)
+        //        isActive = true;
+        //    else if (model.ActiveId == 2)
+        //        isActive = false;
 
-            var startDateValue = (model.StartDate == null) ? null
-                : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.StartDate.Value, _dateTimeHelper.CurrentTimeZone);
-            var endDateValue = (model.EndDate == null) ? null
-                : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.EndDate.Value, _dateTimeHelper.CurrentTimeZone).AddDays(1);
+        //    var startDateValue = model.StartDate == null ? null
+        //        : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.StartDate.Value, _dateTimeHelper.CurrentTimeZone);
+        //    var endDateValue = model.EndDate == null ? null
+        //        : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.EndDate.Value, _dateTimeHelper.CurrentTimeZone).AddDays(1);
 
-            var subscriptions = _newsLetterSubscriptionService.GetAllNewsLetterSubscriptions(model.SearchEmail,
-                startDateValue, endDateValue, model.StoreId, isActive, model.CustomerRoleId);
+        //    var subscriptions = _newsLetterSubscriptionService.GetAllNewsLetterSubscriptions(model.SearchEmail,
+        //        startDateValue, endDateValue, model.StoreId, isActive, model.CustomerRoleId);
 
-		    var result = _exportManager.ExportNewsletterSubscribersToTxt(subscriptions);
+        //    var result = _exportManager.ExportNewsletterSubscribersToTxt(subscriptions);
 
-            var fileName = $"newsletter_emails_{DateTime.Now:yyyy-MM-dd-HH-mm-ss}_{CommonHelper.GenerateRandomDigitCode(4)}.txt";
-			return File(Encoding.UTF8.GetBytes(result), MimeTypes.TextCsv, fileName);
-		}
+        //    var fileName = $"newsletter_emails_{DateTime.Now:yyyy-MM-dd-HH-mm-ss}_{CommonHelper.GenerateRandomDigitCode(4)}.txt";
 
-        [HttpPost]
-        public virtual IActionResult ImportCsv(IFormFile importcsvfile)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
-                return AccessDeniedView();
+        //    return File(Encoding.UTF8.GetBytes(result), MimeTypes.TextCsv, fileName);
+        //}
 
-            try
-            {
-                if (importcsvfile != null && importcsvfile.Length > 0)
-                {
-                    var count = _importManager.ImportNewsletterSubscribersFromTxt(importcsvfile.OpenReadStream());
-                    SuccessNotification(string.Format(_localizationService.GetResource("Admin.Promotions.NewsLetterSubscriptions.ImportEmailsSuccess"), count));
-                    return RedirectToAction("List");
-                }
-                ErrorNotification(_localizationService.GetResource("Admin.Common.UploadFile"));
-                return RedirectToAction("List");
-            }
-            catch (Exception exc)
-            {
-                ErrorNotification(exc);
-                return RedirectToAction("List");
-            }
-        }
+        //[HttpPost]
+        //public virtual IActionResult ImportCsv(IFormFile importcsvfile)
+        //{
+        //    if (!_permissionService.Authorize(StandardPermissionProvider.ManageNewsletterSubscribers))
+        //        return AccessDeniedView();
 
-	    #endregion
+        //    try
+        //    {
+        //        if (importcsvfile != null && importcsvfile.Length > 0)
+        //        {
+        //            var count = _importManager.ImportNewsletterSubscribersFromTxt(importcsvfile.OpenReadStream());
+
+        //            SuccessNotification(string.Format(_localizationService.GetResource("Admin.Promotions.NewsLetterSubscriptions.ImportEmailsSuccess"), count));
+
+        //            return RedirectToAction("List");
+        //        }
+
+        //        ErrorNotification(_localizationService.GetResource("Admin.Common.UploadFile"));
+        //        return RedirectToAction("List");
+        //    }
+        //    catch (Exception exc)
+        //    {
+        //        ErrorNotification(exc);
+        //        return RedirectToAction("List");
+        //    }
+        //}
+
+        #endregion
     }
 }

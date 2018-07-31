@@ -1,4 +1,5 @@
 using Nop.Core;
+using Nop.Core.Domain.Customers;
 using System;
 
 namespace Nop.Services.Customers
@@ -7,7 +8,7 @@ namespace Nop.Services.Customers
     /// Customer report service interface
     /// </summary>
     public partial interface ICustomerReportService
-    {
+    {      
         /// <summary>
         /// Gets a report of customers registered in the last days
         /// </summary>

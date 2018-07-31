@@ -1,113 +1,93 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using System;
+using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
-using Nop.Core.Caching;
-using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
-using Nop.Services;
 using Nop.Services.Catalog;
 using Nop.Services.Customers;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Security;
-using Nop.Services.Stores;
-using Nop.Web.Areas.Admin.Extensions;
-using Nop.Web.Areas.Admin.Helpers;
+using Nop.Web.Areas.Admin.Factories;
+using Nop.Web.Areas.Admin.Infrastructure.Mapper.Extensions;
 using Nop.Web.Areas.Admin.Models.Customers;
 using Nop.Web.Framework.Controllers;
-using Nop.Web.Framework.Kendoui;
 using Nop.Web.Framework.Mvc.Filters;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
     public partial class CustomerRoleController : BaseAdminController
-	{
-		#region Fields
+    {
+        #region Fields
 
-		private readonly ICustomerService _customerService;
-        private readonly ILocalizationService _localizationService;
         private readonly ICustomerActivityService _customerActivityService;
+        private readonly ICustomerRoleModelFactory _customerRoleModelFactory;
+        private readonly ICustomerService _customerService;
+        private readonly ILocalizationService _localizationService;
         private readonly IPermissionService _permissionService;
         private readonly IProductService _productService;
-        private readonly ICategoryService _categoryService;
-        private readonly IStoreService _storeService;
         private readonly IWorkContext _workContext;
-	    private readonly IStaticCacheManager _cacheManager;
 
         #endregion
 
         #region Ctor
 
-        public CustomerRoleController(ICustomerService customerService,
-            ILocalizationService localizationService, 
-            ICustomerActivityService customerActivityService,
+        public CustomerRoleController(ICustomerActivityService customerActivityService,
+            ICustomerRoleModelFactory customerRoleModelFactory,
+            ICustomerService customerService,
+            ILocalizationService localizationService,
             IPermissionService permissionService,
             IProductService productService,
-            ICategoryService categoryService,
-            IStoreService storeService,
-            IWorkContext workContext,
-            IStaticCacheManager cacheManager)
-		{
+            IWorkContext workContext)
+        {
+            this._customerActivityService = customerActivityService;
+            this._customerRoleModelFactory = customerRoleModelFactory;
             this._customerService = customerService;
             this._localizationService = localizationService;
-            this._customerActivityService = customerActivityService;
             this._permissionService = permissionService;
             this._productService = productService;
-            this._categoryService = categoryService;
-            this._storeService = storeService;
             this._workContext = workContext;
-		    this._cacheManager = cacheManager;
-		}
+        }
 
-		#endregion 
+        #endregion
 
-
-        #region Customer roles
+        #region Methods
 
         public virtual IActionResult Index()
         {
             return RedirectToAction("List");
         }
 
-		public virtual IActionResult List()
+        public virtual IActionResult List()
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
-            
-			return View();
-		}
 
-		[HttpPost]
-		public virtual IActionResult List(DataSourceRequest command)
+            //prepare model
+            var model = _customerRoleModelFactory.PrepareCustomerRoleSearchModel(new CustomerRoleSearchModel());
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public virtual IActionResult List(CustomerRoleSearchModel searchModel)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedKendoGridJson();
-            
-            var customerRoles = _customerService.GetAllCustomerRoles(true);
-            var gridModel = new DataSourceResult
-			{
-                Data = customerRoles.Select(cr =>
-                {
-                    var model = cr.ToModel();
-                    return model;
-                }),
-                Total = customerRoles.Count
-			};
 
-            return Json(gridModel);
+            //prepare model
+            var model = _customerRoleModelFactory.PrepareCustomerRoleListModel(searchModel);
+
+            return Json(model);
         }
 
         public virtual IActionResult Create()
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
-            
-            var model = new CustomerRoleModel();
-            //default values
-            model.Active = true;
+
+            //prepare model
+            var model = _customerRoleModelFactory.PrepareCustomerRoleModel(new CustomerRoleModel(), null);
+
             return View(model);
         }
 
@@ -116,45 +96,53 @@ namespace Nop.Web.Areas.Admin.Controllers
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
-            
+
             if (ModelState.IsValid)
             {
-                var customerRole = model.ToEntity();
+                var customerRole = model.ToEntity<CustomerRole>();
                 _customerService.InsertCustomerRole(customerRole);
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewCustomerRole", _localizationService.GetResource("ActivityLog.AddNewCustomerRole"), customerRole.Name);
+                _customerActivityService.InsertActivity("AddNewCustomerRole",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewCustomerRole"), customerRole.Name), customerRole);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Customers.CustomerRoles.Added"));
+
                 return continueEditing ? RedirectToAction("Edit", new { id = customerRole.Id }) : RedirectToAction("List");
             }
 
+            //prepare model
+            model = _customerRoleModelFactory.PrepareCustomerRoleModel(model, null, true);
+
+            //if we got this far, something failed, redisplay form
             return View(model);
         }
 
-		public virtual IActionResult Edit(int id)
+        public virtual IActionResult Edit(int id)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
-            
+
+            //try to get a customer role with the specified id
             var customerRole = _customerService.GetCustomerRoleById(id);
             if (customerRole == null)
-                //No customer role found with the specified id
                 return RedirectToAction("List");
 
-            var model = customerRole.ToModel();
+            //prepare model
+            var model = _customerRoleModelFactory.PrepareCustomerRoleModel(null, customerRole);
+
             return View(model);
-		}
+        }
 
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public virtual IActionResult Edit(CustomerRoleModel model, bool continueEditing)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
-            
+
+            //try to get a customer role with the specified id
             var customerRole = _customerService.GetCustomerRoleById(model.Id);
             if (customerRole == null)
-                //No customer role found with the specified id
                 return RedirectToAction("List");
 
             try
@@ -167,16 +155,23 @@ namespace Nop.Web.Areas.Admin.Controllers
                     if (customerRole.IsSystemRole && !customerRole.SystemName.Equals(model.SystemName, StringComparison.InvariantCultureIgnoreCase))
                         throw new NopException(_localizationService.GetResource("Admin.Customers.CustomerRoles.Fields.SystemName.CantEditSystem"));
 
+
                     customerRole = model.ToEntity(customerRole);
                     _customerService.UpdateCustomerRole(customerRole);
 
                     //activity log
-                    _customerActivityService.InsertActivity("EditCustomerRole", _localizationService.GetResource("ActivityLog.EditCustomerRole"), customerRole.Name);
+                    _customerActivityService.InsertActivity("EditCustomerRole",
+                        string.Format(_localizationService.GetResource("ActivityLog.EditCustomerRole"), customerRole.Name), customerRole);
 
                     SuccessNotification(_localizationService.GetResource("Admin.Customers.CustomerRoles.Updated"));
-                    return continueEditing ? RedirectToAction("Edit", new { id = customerRole.Id}) : RedirectToAction("List");
+
+                    return continueEditing ? RedirectToAction("Edit", new { id = customerRole.Id }) : RedirectToAction("List");
                 }
 
+                //prepare model
+                model = _customerRoleModelFactory.PrepareCustomerRoleModel(model, customerRole, true);
+
+                //if we got this far, something failed, redisplay form
                 return View(model);
             }
             catch (Exception exc)
@@ -191,10 +186,10 @@ namespace Nop.Web.Areas.Admin.Controllers
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
-            
+
+            //try to get a customer role with the specified id
             var customerRole = _customerService.GetCustomerRoleById(id);
             if (customerRole == null)
-                //No customer role found with the specified id
                 return RedirectToAction("List");
 
             try
@@ -202,9 +197,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _customerService.DeleteCustomerRole(customerRole);
 
                 //activity log
-                _customerActivityService.InsertActivity("DeleteCustomerRole", _localizationService.GetResource("ActivityLog.DeleteCustomerRole"), customerRole.Name);
+                _customerActivityService.InsertActivity("DeleteCustomerRole",
+                    string.Format(_localizationService.GetResource("ActivityLog.DeleteCustomerRole"), customerRole.Name), customerRole);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Customers.CustomerRoles.Deleted"));
+
                 return RedirectToAction("List");
             }
             catch (Exception exc)
@@ -212,7 +209,54 @@ namespace Nop.Web.Areas.Admin.Controllers
                 ErrorNotification(exc.Message);
                 return RedirectToAction("Edit", new { id = customerRole.Id });
             }
-		}
-		#endregion
+        }
+
+        public virtual IActionResult AssociateProductToCustomerRolePopup()
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
+                return AccessDeniedView();
+
+            //prepare model
+            var model = _customerRoleModelFactory.PrepareCustomerRoleProductSearchModel(new CustomerRoleProductSearchModel());
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public virtual IActionResult AssociateProductToCustomerRolePopupList(CustomerRoleProductSearchModel searchModel)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
+                return AccessDeniedKendoGridJson();
+
+            //prepare model
+            var model = _customerRoleModelFactory.PrepareCustomerRoleProductListModel(searchModel);
+
+            return Json(model);
+        }
+
+        [HttpPost]
+        [FormValueRequired("save")]
+        public virtual IActionResult AssociateProductToCustomerRolePopup([Bind(Prefix = nameof(AddProductToCustomerRoleModel))] AddProductToCustomerRoleModel model)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
+                return AccessDeniedView();
+
+            //try to get a product with the specified id
+            var associatedProduct = _productService.GetProductById(model.AssociatedToProductId);
+            if (associatedProduct == null)
+                return Content("Cannot load a product");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && associatedProduct.VendorId != _workContext.CurrentVendor.Id)
+                return Content("This is not your product");
+
+            ViewBag.RefreshPage = true;
+            ViewBag.productId = associatedProduct.Id;
+            ViewBag.productName = associatedProduct.Name;
+
+            return View(new CustomerRoleProductSearchModel());
+        }
+
+        #endregion
     }
 }

@@ -1,9 +1,9 @@
-using System;
-using System.Collections.Generic;
 using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.Security;
 using Nop.Core.Domain.Seo;
 using Nop.Core.Domain.Stores;
+using System;
+using System.Collections.Generic;
 
 namespace Nop.Core.Domain.Catalog
 {
@@ -15,7 +15,7 @@ namespace Nop.Core.Domain.Catalog
         private ICollection<ProductCategory> _productCategories;
         private ICollection<ProductPicture> _productPictures;
         private ICollection<ProductReview> _productReviews;
-        private ICollection<ProductTag> _productTags;
+        private ICollection<ProductProductTagMapping> _productProductTagMappings;
 
         /// <summary>
         /// Gets or sets the product type identifier
@@ -58,6 +58,11 @@ namespace Nop.Core.Domain.Catalog
         /// Gets or sets a value of used product template identifier
         /// </summary>
         public int ProductTemplateId { get; set; }
+
+        /// <summary>
+        /// Gets or sets a vendor identifier
+        /// </summary>
+        public int VendorId { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to show the product on home page
@@ -131,6 +136,7 @@ namespace Nop.Core.Domain.Catalog
 
         /// <summary>
         /// Gets or sets a display order.
+        /// This value is used when sorting associated products (used with "grouped" products)
         /// This value is used when sorting home page products
         /// </summary>
         public int DisplayOrder { get; set; }
@@ -160,14 +166,8 @@ namespace Nop.Core.Domain.Catalog
         /// </summary>
         public ProductType ProductType
         {
-            get
-            {
-                return (ProductType)ProductTypeId;
-            }
-            set
-            {
-                ProductTypeId = (int)value;
-            }
+            get => (ProductType)ProductTypeId;
+            set => ProductTypeId = (int)value;
         }
 
         /// <summary>
@@ -184,8 +184,8 @@ namespace Nop.Core.Domain.Catalog
         /// </summary>
         public virtual ICollection<ProductPicture> ProductPictures
         {
-            get { return _productPictures ?? (_productPictures = new List<ProductPicture>()); }
-            protected set { _productPictures = value; }
+            get => _productPictures ?? (_productPictures = new List<ProductPicture>());
+            protected set => _productPictures = value;
         }
 
         /// <summary>
@@ -193,17 +193,17 @@ namespace Nop.Core.Domain.Catalog
         /// </summary>
         public virtual ICollection<ProductReview> ProductReviews
         {
-            get { return _productReviews ?? (_productReviews = new List<ProductReview>()); }
-            protected set { _productReviews = value; }
+            get => _productReviews ?? (_productReviews = new List<ProductReview>());
+            protected set => _productReviews = value;
         }
 
         /// <summary>
-        /// Gets or sets the product tags
+        /// Gets or sets product-product tag mappings
         /// </summary>
-        public virtual ICollection<ProductTag> ProductTags
+        public virtual ICollection<ProductProductTagMapping> ProductProductTagMappings
         {
-            get { return _productTags ?? (_productTags = new List<ProductTag>()); }
-            protected set { _productTags = value; }
+            get => _productProductTagMappings ?? (_productProductTagMappings = new List<ProductProductTagMapping>());
+            protected set => _productProductTagMappings = value;
         }
     }
 }

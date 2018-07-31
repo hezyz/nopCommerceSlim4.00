@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
-using Nop.Core.Domain.Catalog;
-using Nop.Web.Framework.Mvc.ModelBinding;
-using Nop.Web.Framework.Mvc.Models;
+﻿using Nop.Core.Domain.Catalog;
+using Nop.Web.Framework.Models;
 using Nop.Web.Models.Media;
-using System;
 using System.Collections.Generic;
 
 namespace Nop.Web.Models.Catalog
@@ -15,6 +12,7 @@ namespace Nop.Web.Models.Catalog
             DefaultPictureModel = new PictureModel();
             PictureModels = new List<PictureModel>();
             AssociatedProducts = new List<ProductDetailsModel>();
+            VendorModel = new VendorBriefInfoModel();
             Breadcrumb = new ProductBreadcrumbModel();
             ProductTags = new List<ProductTagModel>();
             ProductReviewOverview = new ProductReviewOverviewModel();
@@ -35,10 +33,12 @@ namespace Nop.Web.Models.Catalog
 
         public ProductType ProductType { get; set; }
 
+        public bool ShowVendor { get; set; }
+        public VendorBriefInfoModel VendorModel { get; set; }
+
         public bool EmailAFriendEnabled { get; set; }
 
         public string PageShareCode { get; set; }
-
 
         public ProductBreadcrumbModel Breadcrumb { get; set; }
 
@@ -68,7 +68,6 @@ namespace Nop.Web.Models.Catalog
             public string ProductSeName { get; set; }
             public IList<CategorySimpleModel> CategoryBreadcrumb { get; set; }
         }
-
 
         #endregion
     }

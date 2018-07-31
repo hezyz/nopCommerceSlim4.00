@@ -13,7 +13,7 @@ namespace Nop.Core.Domain.Customers
         public bool UsernamesEnabled { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether users can check the availability of usernames (when registering or changing in 'My Account')
+        /// Gets or sets a value indicating whether users can check the availability of usernames (when registering or changing on the 'My Account' page)
         /// </summary>
         public bool CheckUsernameAvailabilityEnabled { get; set; }
 
@@ -21,6 +21,21 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets a value indicating whether users are allowed to change their usernames
         /// </summary>
         public bool AllowUsersToChangeUsernames { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether username will be validated (when registering or changing on the 'My Account' page)
+        /// </summary>
+        public bool UsernameValidationEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether username will be validated using regex (when registering or changing on the 'My Account' page)
+        /// </summary>
+        public bool UsernameValidationUseRegex { get; set; }
+
+        /// <summary>
+        /// Gets or sets a username validation rule
+        /// </summary>
+        public string UsernameValidationRule { get; set; }
 
         /// <summary>
         /// Default password format for customers
@@ -153,6 +168,11 @@ namespace Nop.Core.Domain.Customers
         public bool EnteringEmailTwice { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether registration is required for downloadable products
+        /// </summary>
+        public bool RequireRegistrationForDownloadableProducts { get; set; }
+
+        /// <summary>
         /// Gets or sets interval (in minutes) with which the Delete Guest Task runs
         /// </summary>
         public int DeleteGuestTaskOlderThanMinutes { get; set; }
@@ -230,6 +250,16 @@ namespace Nop.Core.Domain.Customers
         public bool CityRequired { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether 'County' is enabled
+        /// </summary>
+        public bool CountyEnabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether 'County' is required
+        /// </summary>
+        public bool CountyRequired { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether 'Country' is enabled
         /// </summary>
         public bool CountryEnabled { get; set; }
@@ -263,6 +293,7 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets a value indicating whether 'Fax number' is enabled
         /// </summary>
         public bool FaxEnabled { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether 'Fax number' is required
         /// </summary>
@@ -272,7 +303,7 @@ namespace Nop.Core.Domain.Customers
         /// Gets or sets a value indicating whether privacy policy should accepted during registration
         /// </summary>
         public bool AcceptPrivacyPolicyEnabled { get; set; }
-
+        
         #endregion
     }
 }

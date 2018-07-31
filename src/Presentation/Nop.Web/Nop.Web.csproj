@@ -1,24 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net461</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <Copyright>Copyright © Nop Solutions, Ltd</Copyright>
     <Company>Nop Solutions, Ltd</Company>
     <Authors>Nop Solutions, Ltd</Authors>
-    <Version>4.0.0.0</Version>
+    <Version>4.1.0.0</Version>
     <Description>Nop.Web is also an MVC web application project, a presentation layer for public store and admin area.</Description>
     <PackageLicenseUrl>http://www.nopcommerce.com/licensev3.aspx</PackageLicenseUrl>
     <PackageProjectUrl>http://www.nopcommerce.com/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/nopSolutions/nopCommerce</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Abstractions" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Composite" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="2.0.0" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Libraries\Nop.Core\Nop.Core.csproj" />
@@ -45,6 +38,8 @@
 
     <!-- We copy the \Logs directory -->
     <Content Include="Logs\**" CopyToPublishDirectory="PreserveNewest" />
+    <None Remove="App_Data\Install\SqlServer.Indexes.sql" />
+    <None Remove="App_Data\Install\SqlServer.StoredProcedures.sql" />
 
     <None Update="Areas\Admin\sitemap.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -52,24 +47,276 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="App_Data\Localization\" />
     <Folder Include="Plugins\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Areas\Admin\sitemap.config" />
+    <None Include="Areas\Admin\Views\ActivityLog\List.cshtml" />
+    <None Include="Areas\Admin\Views\ActivityLog\_List.Logs.cshtml" />
+    <None Include="Areas\Admin\Views\ActivityLog\_List.LogTypes.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\Create.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\ListBlock.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\ValueCreatePopup.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\ValueEditPopup.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\_CreateOrUpdate.Values.cshtml" />
+    <None Include="Areas\Admin\Views\AddressAttribute\_CreateOrUpdateValue.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\BlogPostCreate.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\BlogPostEdit.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\List.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\_CreateOrUpdate.SEO.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\_List.BlogPosts.cshtml" />
+    <None Include="Areas\Admin\Views\Blog\_List.Comments.cshtml" />
+    <None Include="Areas\Admin\Views\Campaign\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Campaign\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Campaign\List.cshtml" />
+    <None Include="Areas\Admin\Views\Campaign\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Category\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Category\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Category\List.cshtml" />
+    <None Include="Areas\Admin\Views\Category\ProductAddPopup.cshtml" />
+    <None Include="Areas\Admin\Views\Category\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Category\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Category\_CreateOrUpdate.Products.cshtml" />
+    <None Include="Areas\Admin\Views\Category\_CreateOrUpdate.SEO.cshtml" />
+    <None Include="Areas\Admin\Views\Common\Maintenance.cshtml" />
+    <None Include="Areas\Admin\Views\Common\SeNames.cshtml" />
+    <None Include="Areas\Admin\Views\Common\SystemInfo.cshtml" />
+    <None Include="Areas\Admin\Views\Common\Warnings.cshtml" />
+    <None Include="Areas\Admin\Views\Country\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Country\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Country\List.cshtml" />
+    <None Include="Areas\Admin\Views\Country\StateCreatePopup.cshtml" />
+    <None Include="Areas\Admin\Views\Country\StateEditPopup.cshtml" />
+    <None Include="Areas\Admin\Views\Country\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Country\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Country\_CreateOrUpdate.States.cshtml" />
+    <None Include="Areas\Admin\Views\Country\_CreateOrUpdateState.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\Create.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\ListBlock.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\ValueCreatePopup.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\ValueEditPopup.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\_CreateOrUpdate.Values.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerAttribute\_CreateOrUpdateValue.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerRole\AssociateProductToCustomerRolePopup.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerRole\Create.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerRole\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\CustomerRole\List.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\AddressCreate.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\AddressEdit.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\GdprLog.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\List.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\_CreateOrUpdate.ActivityLog.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\_CreateOrUpdate.Addresses.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\_CreateOrUpdateAddress.cshtml" />
+    <None Include="Areas\Admin\Views\Customer\_CustomerAttributes.cshtml" />
+    <None Include="Areas\Admin\Views\EmailAccount\Create.cshtml" />
+    <None Include="Areas\Admin\Views\EmailAccount\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\EmailAccount\List.cshtml" />
+    <None Include="Areas\Admin\Views\EmailAccount\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\ExternalAuthentication\Methods.cshtml" />
+    <None Include="Areas\Admin\Views\Forum\CreateForum.cshtml" />
+    <None Include="Areas\Admin\Views\Forum\CreateForumGroup.cshtml" />
+    <None Include="Areas\Admin\Views\Forum\EditForum.cshtml" />
+    <None Include="Areas\Admin\Views\Forum\EditForumGroup.cshtml" />
+    <None Include="Areas\Admin\Views\Forum\List.cshtml" />
+    <None Include="Areas\Admin\Views\Forum\_CreateOrUpdateForum.cshtml" />
+    <None Include="Areas\Admin\Views\Forum\_CreateOrUpdateForumGroup.cshtml" />
+    <None Include="Areas\Admin\Views\Home\Index.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_BestsellersBriefReportByAmount.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_BestsellersBriefReportByQuantity.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_CustomerStatistics.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_LatestOrders.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_OrderAverageReport.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_OrderIncompleteReport.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_OrderStatistics.cshtml" />
+    <None Include="Areas\Admin\Views\Home\_PopularSearchTermsReport.cshtml" />
+    <None Include="Areas\Admin\Views\Jbimages\Upload.cshtml" />
+    <None Include="Areas\Admin\Views\Language\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Language\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Language\List.cshtml" />
+    <None Include="Areas\Admin\Views\Language\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Language\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Language\_CreateOrUpdate.Resources.cshtml" />
+    <None Include="Areas\Admin\Views\Log\List.cshtml" />
+    <None Include="Areas\Admin\Views\Log\View.cshtml" />
+    <None Include="Areas\Admin\Views\MessageTemplate\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\MessageTemplate\List.cshtml" />
+    <None Include="Areas\Admin\Views\MessageTemplate\TestTemplate.cshtml" />
+    <None Include="Areas\Admin\Views\MessageTemplate\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\NewsLetterSubscription\List.cshtml" />
+    <None Include="Areas\Admin\Views\News\List.cshtml" />
+    <None Include="Areas\Admin\Views\News\NewsItemCreate.cshtml" />
+    <None Include="Areas\Admin\Views\News\NewsItemEdit.cshtml" />
+    <None Include="Areas\Admin\Views\News\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\News\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\News\_CreateOrUpdate.Seo.cshtml" />
+    <None Include="Areas\Admin\Views\News\_List.Comments.cshtml" />
+    <None Include="Areas\Admin\Views\News\_List.NewsItems.cshtml" />
+    <None Include="Areas\Admin\Views\OnlineCustomer\List.cshtml" />
+    <None Include="Areas\Admin\Views\Plugin\EditPopup.cshtml" />
+    <None Include="Areas\Admin\Views\Plugin\List.cshtml" />
+    <None Include="Areas\Admin\Views\Plugin\_CreateOrUpdatePlugin.cshtml" />
+    <None Include="Areas\Admin\Views\Plugin\_List.OfficialFeed.cshtml" />
+    <None Include="Areas\Admin\Views\Plugin\_List.Plugins.cshtml" />
+    <None Include="Areas\Admin\Views\Poll\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Poll\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Poll\List.cshtml" />
+    <None Include="Areas\Admin\Views\Poll\_CreateOrUpdate.Answers.cshtml" />
+    <None Include="Areas\Admin\Views\Poll\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Poll\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\ProductReview\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\ProductReview\List.cshtml" />
+    <None Include="Areas\Admin\Views\ProductReview\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\ProductReview\_ProductReviewReviewTypeMappingList.cshtml" />
+    <None Include="Areas\Admin\Views\Product\AssociatedProductAddPopup.cshtml" />
+    <None Include="Areas\Admin\Views\Product\BulkEdit.cshtml" />
+    <None Include="Areas\Admin\Views\Product\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Product\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Product\EditProductTag.cshtml" />
+    <None Include="Areas\Admin\Views\Product\List.cshtml" />
+    <None Include="Areas\Admin\Views\Product\ProductTags.cshtml" />
+    <None Include="Areas\Admin\Views\Product\RelatedProductAddPopup.cshtml" />
+    <None Include="Areas\Admin\Views\Product\RequiredProductAddPopup.cshtml" />
+    <None Include="Areas\Admin\Views\Product\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Product\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Product\_CreateOrUpdate.Pictures.cshtml" />
+    <None Include="Areas\Admin\Views\Product\_CreateOrUpdate.SEO.cshtml" />
+    <None Include="Areas\Admin\Views\Product\_CreateOrUpdateProductTag.cshtml" />
+    <None Include="Areas\Admin\Views\Product\_ProductAttributes.cshtml" />
+    <None Include="Areas\Admin\Views\Product\_ProductEditorSettingsModal.cshtml" />
+    <None Include="Areas\Admin\Views\QueuedEmail\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\QueuedEmail\List.cshtml" />
+    <None Include="Areas\Admin\Views\QueuedEmail\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Report\Customers.cshtml" />
+    <None Include="Areas\Admin\Views\ReviewType\Create.cshtml" />
+    <None Include="Areas\Admin\Views\ReviewType\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\ReviewType\List.cshtml" />
+    <None Include="Areas\Admin\Views\ReviewType\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\ScheduleTask\List.cshtml" />
+    <None Include="Areas\Admin\Views\Security\AccessDenied.cshtml" />
+    <None Include="Areas\Admin\Views\Security\Permissions.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\AllSettings.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\Blog.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\Catalog.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\CreateGdprConsent.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\CustomerUser.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\EditGdprConsent.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\Forum.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\Gdpr.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\GeneralCommon.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\Media.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\News.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\Vendor.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\_CreateOrUpdateGdprConsent.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\_CustomerUser.AddressFormFields.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\_CustomerUser.CustomerFormFields.cshtml" />
+    <None Include="Areas\Admin\Views\Setting\_CustomerUser.Settings.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\AclDisabledWarning\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\AdminLanguageSelector\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\AdminWidget\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\CommonStatistics\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\MultistoreDisabledWarning\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\NopCommerceNews\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\SettingMode\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Components\StoreScopeConfiguration\Default.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Confirm.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Delete.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Address.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Date.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\DateNullable.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\DateTime.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\DateTimeNullable.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Decimal.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\DecimalNullable.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Double.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Download.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Int32.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Int32Nullable.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\MultiSelect.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\Picture.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\EditorTemplates\RichEditor.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Menu.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\Notifications.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\_AddressAttributes.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\_AdminLayout.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\_AdminPopupLayout.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\_ConfigurePlugin.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\_GridPagerMessages.cshtml" />
+    <None Include="Areas\Admin\Views\Shared\_MenuItem.cshtml" />
+    <None Include="Areas\Admin\Views\Store\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Store\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Store\List.cshtml" />
+    <None Include="Areas\Admin\Views\Store\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Template\List.cshtml" />
+    <None Include="Areas\Admin\Views\Template\_List.Category.cshtml" />
+    <None Include="Areas\Admin\Views\Template\_List.Product.cshtml" />
+    <None Include="Areas\Admin\Views\Template\_List.Topic.cshtml" />
+    <None Include="Areas\Admin\Views\Topic\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Topic\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Topic\List.cshtml" />
+    <None Include="Areas\Admin\Views\Topic\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Topic\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Topic\_CreateOrUpdate.Seo.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\Create.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\ListBlock.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\ValueCreatePopup.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\ValueEditPopup.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\_CreateOrUpdate.Values.cshtml" />
+    <None Include="Areas\Admin\Views\VendorAttribute\_CreateOrUpdateValue.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\Create.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\Edit.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\List.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\_CreateOrUpdate.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\_CreateOrUpdate.Info.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\_CreateOrUpdate.Notes.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\_CreateOrUpdate.Seo.cshtml" />
+    <None Include="Areas\Admin\Views\Vendor\_VendorAttributes.cshtml" />
+    <None Include="Areas\Admin\Views\Widget\List.cshtml" />
+    <None Include="Areas\Admin\Views\_ViewImports.cshtml" />
+    <None Include="Areas\Admin\Views\_ViewStart.cshtml" />
+    <None Include="Views\Shared\Components\RecentlyViewedProductsBlock\Default.cshtml" />
   </ItemGroup>
 
   <!-- This target execute after "Build" target.
     We use it to clean up folder with plugins from unnecessary and obsolete libraries. -->
   <Target Name="NopTarget" AfterTargets="Build">
     <ItemGroup>
+      <!-- Get plugin description files to get plugin paths -->
+      <PluginsDescription Include="$(MSBuildProjectDirectory)\Plugins\**\plugin.json;" />      
+      <!-- Get paths for all plugins -->
+      <PluginsFolders Include="@(PluginsDescription->'%(relativedir)')" />
+
       <!-- Get all the libraries from the shadow copy folder to remove them,
         because depending on the settings, this may not happen when the application is starting,
         but this can lead to unpredictable results during debugging of the project. -->
       <ShadowCopiesLibraries Include="$(MSBuildProjectDirectory)\Plugins\bin\*.*" Exclude="$(MSBuildProjectDirectory)\Plugins\bin\placeholder.txt" />
     </ItemGroup>
+    <PropertyGroup>
+      <PluginsFolders>@(PluginsFolders)</PluginsFolders>
+    </PropertyGroup>
     <!-- Delete libraries from the shadow copy folder -->
     <Delete Files="@(ShadowCopiesLibraries)" />
     <!-- When .NET Core builds a project, it copies all referenced libraries to the output folder.
       For plugins it creates too many unnecessary files that just take up space.
       At the moment you can't disable this behavior. That's why we have to manually delete all unnecessary libraries from plugin output directories. -->
-    <MSBuild Projects="$(MSBuildProjectDirectory)\..\..\Build\ClearPluginAssemblies.proj" Targets="NopClear" />
+    <MSBuild Projects="$(MSBuildProjectDirectory)\..\..\Build\ClearPluginAssemblies.proj" Properties="PluginPath=$(PluginsFolders)" Targets="NopClear" />
   </Target>
 
 </Project>

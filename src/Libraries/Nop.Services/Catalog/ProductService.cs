@@ -1,17 +1,16 @@
 using Nop.Core;
 using Nop.Core.Caching;
 using Nop.Core.Data;
+using Nop.Core.Data.Extensions;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
+using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Localization;
 using Nop.Core.Domain.Security;
 using Nop.Core.Domain.Stores;
-using Nop.Core.Extensions;
 using Nop.Data;
-using Nop.Services.Customers;
 using Nop.Services.Events;
 using Nop.Services.Localization;
-using Nop.Services.Messages;
 using Nop.Services.Security;
 using Nop.Services.Stores;
 using System;
@@ -25,405 +24,70 @@ namespace Nop.Services.Catalog
     /// </summary>
     public partial class ProductService : IProductService
     {
-        #region Constants
-
-        /// <summary>
-        /// Key for caching
-        /// </summary>
-        /// <remarks>
-        /// {0} : product ID
-        /// </remarks>
-        private const string PRODUCTS_BY_ID_KEY = "Nop.product.id-{0}";
-        /// <summary>
-        /// Key pattern to clear cache
-        /// </summary>
-        private const string PRODUCTS_PATTERN_KEY = "Nop.product.";
-
-        #endregion
-
         #region Fields
 
-        private readonly IRepository<Product> _productRepository;
-        private readonly IRepository<RelatedProduct> _relatedProductRepository;
-        private readonly IRepository<LocalizedProperty> _localizedPropertyRepository;
-        private readonly IRepository<AclRecord> _aclRepository;
-        private readonly IRepository<StoreMapping> _storeMappingRepository;
-        private readonly IRepository<ProductPicture> _productPictureRepository;
-        private readonly IRepository<ProductReview> _productReviewRepository;
-        private readonly ILanguageService _languageService;
-        private readonly IWorkflowMessageService _workflowMessageService;
+        private readonly CatalogSettings _catalogSettings;
+        private readonly CommonSettings _commonSettings;
+        private readonly IAclService _aclService;
+        private readonly ICacheManager _cacheManager;
         private readonly IDataProvider _dataProvider;
         private readonly IDbContext _dbContext;
-        private readonly ICacheManager _cacheManager;
+        private readonly IEventPublisher _eventPublisher;
+        private readonly ILanguageService _languageService;
+        private readonly ILocalizationService _localizationService;
+        private readonly IRepository<AclRecord> _aclRepository;
+        private readonly IRepository<Product> _productRepository;
+        private readonly IRepository<ProductPicture> _productPictureRepository;
+        private readonly IRepository<ProductReview> _productReviewRepository;
+        private readonly IRepository<RelatedProduct> _relatedProductRepository;
+        private readonly IRepository<StoreMapping> _storeMappingRepository;
+        private readonly IStoreMappingService _storeMappingService;
         private readonly IWorkContext _workContext;
         private readonly LocalizationSettings _localizationSettings;
-        private readonly CommonSettings _commonSettings;
-        private readonly CatalogSettings _catalogSettings;
-        private readonly IEventPublisher _eventPublisher;
-        private readonly IAclService _aclService;
-        private readonly IStoreMappingService _storeMappingService;
+        private readonly string _entityName;
 
         #endregion
 
         #region Ctor
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="cacheManager">Cache manager</param>
-        /// <param name="productRepository">Product repository</param>
-        /// <param name="relatedProductRepository">Related product repository</param>
-        /// <param name="localizedPropertyRepository">Localized property repository</param>
-        /// <param name="aclRepository">ACL record repository</param>
-        /// <param name="storeMappingRepository">Store mapping repository</param>
-        /// <param name="productPictureRepository">Product picture repository</param>
-        /// <param name="productReviewRepository">Product review repository</param>
-        /// <param name="languageService">Language service</param>
-        /// <param name="workflowMessageService">Workflow message service</param>
-        /// <param name="dataProvider">Data provider</param>
-        /// <param name="dbContext">Database Context</param>
-        /// <param name="workContext">Work context</param>
-        /// <param name="localizationSettings">Localization settings</param>
-        /// <param name="commonSettings">Common settings</param>
-        /// <param name="catalogSettings">Catalog settings</param>
-        /// <param name="eventPublisher">Event published</param>
-        /// <param name="aclService">ACL service</param>
-        /// <param name="storeMappingService">Store mapping service</param>
-        public ProductService(ICacheManager cacheManager,
-            IRepository<Product> productRepository,
-            IRepository<RelatedProduct> relatedProductRepository,
-            IRepository<ProductPicture> productPictureRepository,
-            IRepository<LocalizedProperty> localizedPropertyRepository,
-            IRepository<AclRecord> aclRepository,
-            IRepository<StoreMapping> storeMappingRepository,
-            IRepository<ProductReview>  productReviewRepository,
-            ILanguageService languageService,
-            IWorkflowMessageService workflowMessageService,
-            IDataProvider dataProvider, 
-            IDbContext dbContext,
-            IWorkContext workContext,
-            LocalizationSettings localizationSettings, 
+        public ProductService(CatalogSettings catalogSettings,
             CommonSettings commonSettings,
-            CatalogSettings catalogSettings,
-            IEventPublisher eventPublisher,
             IAclService aclService,
-            IStoreMappingService storeMappingService)
+            ICacheManager cacheManager,
+            IDataProvider dataProvider,
+            IDbContext dbContext,
+            IEventPublisher eventPublisher,
+            ILanguageService languageService,
+            ILocalizationService localizationService,
+            IRepository<AclRecord> aclRepository,
+            IRepository<Product> productRepository,
+            IRepository<ProductPicture> productPictureRepository,
+            IRepository<ProductReview> productReviewRepository,
+            IRepository<RelatedProduct> relatedProductRepository,
+            IRepository<StoreMapping> storeMappingRepository,
+            IStoreMappingService storeMappingService,
+            IWorkContext workContext,
+            LocalizationSettings localizationSettings)
         {
+            this._catalogSettings = catalogSettings;
+            this._commonSettings = commonSettings;
+            this._aclService = aclService;
             this._cacheManager = cacheManager;
-            this._productRepository = productRepository;
-            this._relatedProductRepository = relatedProductRepository;
-            this._productPictureRepository = productPictureRepository;
-            this._localizedPropertyRepository = localizedPropertyRepository;
-            this._aclRepository = aclRepository;
-            this._storeMappingRepository = storeMappingRepository;
-            this._productReviewRepository = productReviewRepository;
-            this._languageService = languageService;
-            this._workflowMessageService = workflowMessageService;
             this._dataProvider = dataProvider;
             this._dbContext = dbContext;
+            this._eventPublisher = eventPublisher;
+            this._languageService = languageService;
+            this._localizationService = localizationService;
+            this._aclRepository = aclRepository;
+            this._productRepository = productRepository;
+            this._productPictureRepository = productPictureRepository;
+            this._productReviewRepository = productReviewRepository;
+            this._relatedProductRepository = relatedProductRepository;
+            this._storeMappingRepository = storeMappingRepository;
+            this._storeMappingService = storeMappingService;
             this._workContext = workContext;
             this._localizationSettings = localizationSettings;
-            this._commonSettings = commonSettings;
-            this._catalogSettings = catalogSettings;
-            this._eventPublisher = eventPublisher;
-            this._aclService = aclService;
-            this._storeMappingService = storeMappingService;
-        }
-
-        #endregion
-
-        #region Utilities
-
-        /// <summary>
-        /// Search products using LINQ
-        /// </summary>
-        /// <param name="pageIndex">Page index</param>
-        /// <param name="pageSize">Page size</param>
-        /// <param name="categoryIds">Category identifiers</param>
-        /// <param name="storeId">Store identifier; 0 to load all records</param>
-        /// <param name="productType">Product type; 0 to load all records</param>
-        /// <param name="visibleIndividuallyOnly">A values indicating whether to load only products marked as "visible individually"; "false" to load all records; "true" to load "visible individually" only</param>
-        /// <param name="markedAsNewOnly">A values indicating whether to load only products marked as "new"; "false" to load all records; "true" to load "marked as new" only</param>
-        /// <param name="featuredProducts">A value indicating whether loaded products are marked as featured (relates only to categories). 0 to load featured products only, 1 to load not featured products only, null to load all products</param>
-        /// <param name="productTagId">Product tag identifier; 0 to load all records</param>
-        /// <param name="keywords">Keywords</param>
-        /// <param name="searchDescriptions">A value indicating whether to search by a specified "keyword" in product descriptions</param>
-        /// <param name="searchProductTags">A value indicating whether to search by a specified "keyword" in product tags</param>
-        /// <param name="searchLocalizedValue">A value indicating whether to search in localizable values</param>
-        /// <param name="allowedCustomerRolesIds">A list of allowed customer role identifiers (ACL)</param>
-        /// <param name="languageId">Language identifier (search for text searching)</param>
-        /// <param name="orderBy">Order by</param>
-        /// <param name="showHidden">A value indicating whether to show hidden records</param>
-        /// <param name="overridePublished">
-        /// null - process "Published" property according to "showHidden" parameter
-        /// true - load only "Published" products
-        /// false - load only "Unpublished" products
-        /// </param>
-        /// <returns>Products</returns>
-        protected virtual IPagedList<Product> SearchProductsUseLinq(int pageIndex, int pageSize, IList<int> categoryIds,
-            int storeId, ProductType? productType,
-            bool visibleIndividuallyOnly,
-            bool markedAsNewOnly, bool? featuredProducts, 
-            int productTagId, string keywords, bool searchDescriptions,
-            bool searchProductTags, bool searchLocalizedValue, int[] allowedCustomerRolesIds, int languageId,
-            ProductSortingEnum orderBy, bool showHidden, bool? overridePublished)
-        {
-            //products
-            var query = _productRepository.Table;
-            query = query.Where(p => !p.Deleted);
-            if (!overridePublished.HasValue)
-            {
-                //process according to "showHidden"
-                if (!showHidden)
-                {
-                    query = query.Where(p => p.Published);
-                }
-            }
-            else if (overridePublished.Value)
-            {
-                //published only
-                query = query.Where(p => p.Published);
-            }
-            else if (!overridePublished.Value)
-            {
-                //unpublished only
-                query = query.Where(p => !p.Published);
-            }
-            if (visibleIndividuallyOnly)
-            {
-                query = query.Where(p => p.VisibleIndividually);
-            }
-            //The function 'CurrentUtcDateTime' is not supported by SQL Server Compact. 
-            //That's why we pass the date value
-            var nowUtc = DateTime.UtcNow;
-            if (markedAsNewOnly)
-            {
-                query = query.Where(p => p.MarkAsNew);
-                query = query.Where(p =>
-                    (!p.MarkAsNewStartDateTimeUtc.HasValue || p.MarkAsNewStartDateTimeUtc.Value < nowUtc) &&
-                    (!p.MarkAsNewEndDateTimeUtc.HasValue || p.MarkAsNewEndDateTimeUtc.Value > nowUtc));
-            }
-
-            if (productType.HasValue)
-            {
-                var productTypeId = (int)productType.Value;
-                query = query.Where(p => p.ProductTypeId == productTypeId);
-            }
-
-            //searching by keyword
-            if (!string.IsNullOrWhiteSpace(keywords))
-            {
-                query = from p in query
-                        join lp in _localizedPropertyRepository.Table on p.Id equals lp.EntityId into p_lp
-                        from lp in p_lp.DefaultIfEmpty()
-                        from pt in p.ProductTags.DefaultIfEmpty()
-                        where (p.Name.Contains(keywords)) ||
-                              (searchDescriptions && p.ShortDescription.Contains(keywords)) ||
-                              (searchDescriptions && p.FullDescription.Contains(keywords)) ||
-                              //product tags (exact match)
-                              (searchProductTags && pt.Name == keywords) ||
-                              //localized values
-                              (searchLocalizedValue && lp.LanguageId == languageId && lp.LocaleKeyGroup == "Product" &&
-                               lp.LocaleKey == "Name" && lp.LocaleValue.Contains(keywords)) ||
-                              (searchDescriptions && searchLocalizedValue && lp.LanguageId == languageId &&
-                               lp.LocaleKeyGroup == "Product" && lp.LocaleKey == "ShortDescription" &&
-                               lp.LocaleValue.Contains(keywords)) ||
-                              (searchDescriptions && searchLocalizedValue && lp.LanguageId == languageId &&
-                               lp.LocaleKeyGroup == "Product" && lp.LocaleKey == "FullDescription" &&
-                               lp.LocaleValue.Contains(keywords))
-                        select p;
-            }
-
-            if (!showHidden && !_catalogSettings.IgnoreAcl)
-            {
-                //ACL (access control list)
-                query = from p in query
-                        join acl in _aclRepository.Table
-                            on new { c1 = p.Id, c2 = "Product" } equals new { c1 = acl.EntityId, c2 = acl.EntityName } into p_acl
-                        from acl in p_acl.DefaultIfEmpty()
-                        where !p.SubjectToAcl || allowedCustomerRolesIds.Contains(acl.CustomerRoleId)
-                        select p;
-            }
-
-            if (storeId > 0 && !_catalogSettings.IgnoreStoreLimitations)
-            {
-                //Store mapping
-                query = from p in query
-                        join sm in _storeMappingRepository.Table
-                            on new { c1 = p.Id, c2 = "Product" } equals new { c1 = sm.EntityId, c2 = sm.EntityName } into p_sm
-                        from sm in p_sm.DefaultIfEmpty()
-                        where !p.LimitedToStores || storeId == sm.StoreId
-                        select p;
-            }
-
-            //category filtering
-            if (categoryIds != null && categoryIds.Any())
-            {
-                query = from p in query
-                        from pc in p.ProductCategories.Where(pc => categoryIds.Contains(pc.CategoryId))
-                        where (!featuredProducts.HasValue || featuredProducts.Value == pc.IsFeaturedProduct)
-                        select p;
-            }
-
-            //related products filtering
-            //if (relatedToProductId > 0)
-            //{
-            //    query = from p in query
-            //            join rp in _relatedProductRepository.Table on p.Id equals rp.ProductId2
-            //            where (relatedToProductId == rp.ProductId1)
-            //            select p;
-            //}
-
-            //tag filtering
-            if (productTagId > 0)
-            {
-                query = from p in query
-                        from pt in p.ProductTags.Where(pt => pt.Id == productTagId)
-                        select p;
-            }
-
-            //only distinct products (group by ID)
-            //if we use standard Distinct() method, then all fields will be compared (low performance)
-            //it'll not work in SQL Server Compact when searching products by a keyword)
-            query = from p in query
-                    group p by p.Id
-                into pGroup
-                    orderby pGroup.Key
-                    select pGroup.FirstOrDefault();
-
-            //sort products
-            if (orderBy == ProductSortingEnum.Position && categoryIds != null && categoryIds.Any())
-            {
-                //category position
-                var firstCategoryId = categoryIds[0];
-                query = query.OrderBy(p =>
-                    p.ProductCategories.FirstOrDefault(pc => pc.CategoryId == firstCategoryId).DisplayOrder);
-            }
-            else if (orderBy == ProductSortingEnum.Position)
-            {
-                //otherwise sort by name
-                query = query.OrderBy(p => p.Name);
-            }
-            else if (orderBy == ProductSortingEnum.NameAsc)
-            {
-                //Name: A to Z
-                query = query.OrderBy(p => p.Name);
-            }
-            else if (orderBy == ProductSortingEnum.NameDesc)
-            {
-                //Name: Z to A
-                query = query.OrderByDescending(p => p.Name);
-            }
-            else if (orderBy == ProductSortingEnum.CreatedOn)
-            {
-                //creation date
-                query = query.OrderByDescending(p => p.CreatedOnUtc);
-            }
-            else
-            {
-                //actually this code is not reachable
-                query = query.OrderBy(p => p.Name);
-            }
-
-            var products = new PagedList<Product>(query, pageIndex, pageSize);
-
-            //return products
-            return products;
-        }
-
-        /// <summary>
-        /// Search products using a stored procedure
-        /// </summary>
-        /// <param name="pageIndex">Page index</param>
-        /// <param name="pageSize">Page size</param>
-        /// <param name="categoryIds">Category identifiers</param>
-        /// <param name="storeId">Store identifier; 0 to load all records</param>
-        /// <param name="productType">Product type; 0 to load all records</param>
-        /// <param name="visibleIndividuallyOnly">A values indicating whether to load only products marked as "visible individually"; "false" to load all records; "true" to load "visible individually" only</param>
-        /// <param name="markedAsNewOnly">A values indicating whether to load only products marked as "new"; "false" to load all records; "true" to load "marked as new" only</param>
-        /// <param name="featuredProducts">A value indicating whether loaded products are marked as featured (relates only to categories). 0 to load featured products only, 1 to load not featured products only, null to load all products</param>
-        /// <param name="productTagId">Product tag identifier; 0 to load all records</param>
-        /// <param name="keywords">Keywords</param>
-        /// <param name="searchDescriptions">A value indicating whether to search by a specified "keyword" in product descriptions</param>
-        /// <param name="searchProductTags">A value indicating whether to search by a specified "keyword" in product tags</param>
-        /// <param name="searchLocalizedValue">A value indicating whether to search in localizable values</param>
-        /// <param name="allowedCustomerRolesIds">A list of allowed customer role identifiers (ACL)</param>
-        /// <param name="languageId">Language identifier (search for text searching)</param>
-        /// <param name="orderBy">Order by</param>
-        /// <param name="showHidden">A value indicating whether to show hidden records</param>
-        /// <param name="overridePublished">
-        /// null - process "Published" property according to "showHidden" parameter
-        /// true - load only "Published" products
-        /// false - load only "Unpublished" products
-        /// </param>
-        /// <returns>Products</returns>
-        protected virtual IPagedList<Product> SearchProductsUseStoredProcedure( int pageIndex, int pageSize, IList<int> categoryIds,
-           int storeId, ProductType? productType,
-            bool visibleIndividuallyOnly,
-           bool markedAsNewOnly, bool? featuredProducts,
-            int productTagId, string keywords, bool searchDescriptions, 
-            int[] allowedCustomerRolesIds, bool searchProductTags, bool searchLocalizedValue, int languageId,
-             ProductSortingEnum orderBy, bool showHidden, bool? overridePublished)
-        {
-            //pass category identifiers as comma-delimited string
-            var commaSeparatedCategoryIds = categoryIds == null ? "" : string.Join(",", categoryIds);
-
-            //pass customer role identifiers as comma-delimited string
-            var commaSeparatedAllowedCustomerRoleIds = string.Join(",", allowedCustomerRolesIds);
-
-            //some databases don't support int.MaxValue
-            if (pageSize == int.MaxValue)
-                pageSize = int.MaxValue - 1;
-
-            //prepare input parameters
-            var pCategoryIds = _dataProvider.GetStringParameter("CategoryIds", commaSeparatedCategoryIds);
-            var pStoreId = _dataProvider.GetInt32Parameter("StoreId", !_catalogSettings.IgnoreStoreLimitations ? storeId : 0);
-            var pProductTypeId = _dataProvider.GetInt32Parameter("ProductTypeId", (int?)productType);
-            var pVisibleIndividuallyOnly = _dataProvider.GetBooleanParameter("VisibleIndividuallyOnly", visibleIndividuallyOnly);
-            var pMarkedAsNewOnly = _dataProvider.GetBooleanParameter("MarkedAsNewOnly", markedAsNewOnly);
-            var pProductTagId = _dataProvider.GetInt32Parameter("ProductTagId", productTagId);
-            var pFeaturedProducts = _dataProvider.GetBooleanParameter("FeaturedProducts", featuredProducts);
-            var pKeywords = _dataProvider.GetStringParameter("Keywords", keywords);
-            var pSearchDescriptions = _dataProvider.GetBooleanParameter("SearchDescriptions", searchDescriptions);
-            var pSearchProductTags = _dataProvider.GetBooleanParameter("SearchProductTags", searchProductTags);
-            var pUseFullTextSearch = _dataProvider.GetBooleanParameter("UseFullTextSearch", _commonSettings.UseFullTextSearch);
-            var pFullTextMode = _dataProvider.GetInt32Parameter("FullTextMode", (int)_commonSettings.FullTextMode);
-            var pLanguageId = _dataProvider.GetInt32Parameter("LanguageId", searchLocalizedValue ? languageId : 0);
-            var pOrderBy = _dataProvider.GetInt32Parameter("OrderBy", (int)orderBy);
-            var pAllowedCustomerRoleIds = _dataProvider.GetStringParameter("AllowedCustomerRoleIds", !_catalogSettings.IgnoreAcl ? commaSeparatedAllowedCustomerRoleIds : "");
-            var pPageIndex = _dataProvider.GetInt32Parameter("PageIndex", pageIndex);
-            var pPageSize = _dataProvider.GetInt32Parameter("PageSize", pageSize);
-            var pShowHidden = _dataProvider.GetBooleanParameter("ShowHidden", showHidden);
-            var pOverridePublished = _dataProvider.GetBooleanParameter("OverridePublished", overridePublished);
-            var pTotalRecords = _dataProvider.GetOutputInt32Parameter("TotalRecords");
-
-            //invoke stored procedure
-            var products = _dbContext.ExecuteStoredProcedureList<Product>(
-                "ProductLoadAllPaged",
-                pCategoryIds,
-                pStoreId,
-                pProductTypeId,
-                pVisibleIndividuallyOnly,
-                pMarkedAsNewOnly,
-                pProductTagId,
-                pFeaturedProducts,
-                pKeywords,
-                pSearchDescriptions,
-                pSearchProductTags,
-                pUseFullTextSearch,
-                pFullTextMode,
-                pLanguageId,
-                pOrderBy,
-                pAllowedCustomerRoleIds,
-                pPageIndex,
-                pPageSize,
-                pShowHidden,
-                pOverridePublished,
-                pTotalRecords);
-           
-            //return products
-            var totalRecords = pTotalRecords.Value != DBNull.Value ? Convert.ToInt32(pTotalRecords.Value) : 0;
-            return new PagedList<Product>(products, pageIndex, pageSize, totalRecords);
+            this._entityName = typeof(Product).Name;
         }
 
         #endregion
@@ -488,7 +152,7 @@ namespace Nop.Services.Catalog
             var products = query.ToList();
             return products;
         }
-        
+
         /// <summary>
         /// Gets product
         /// </summary>
@@ -498,8 +162,8 @@ namespace Nop.Services.Catalog
         {
             if (productId == 0)
                 return null;
-            
-            var key = string.Format(PRODUCTS_BY_ID_KEY, productId);
+
+            var key = string.Format(NopCatalogDefaults.ProductsByIdCacheKey, productId);
             return _cacheManager.Get(key, () => _productRepository.GetById(productId));
         }
 
@@ -525,6 +189,7 @@ namespace Nop.Services.Catalog
                 if (product != null)
                     sortedProducts.Add(product);
             }
+
             return sortedProducts;
         }
 
@@ -541,8 +206,8 @@ namespace Nop.Services.Catalog
             _productRepository.Insert(product);
 
             //clear cache
-            _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
-            
+            _cacheManager.RemoveByPattern(NopCatalogDefaults.ProductsPatternCacheKey);
+
             //event notification
             _eventPublisher.EntityInserted(product);
         }
@@ -560,7 +225,7 @@ namespace Nop.Services.Catalog
             _productRepository.Update(product);
 
             //cache
-            _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopCatalogDefaults.ProductsPatternCacheKey);
 
             //event notification
             _eventPublisher.EntityUpdated(product);
@@ -579,7 +244,7 @@ namespace Nop.Services.Catalog
             _productRepository.Update(products);
 
             //cache
-            _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopCatalogDefaults.ProductsPatternCacheKey);
 
             //event notification
             foreach (var product in products)
@@ -618,7 +283,7 @@ namespace Nop.Services.Catalog
 
                 query = from p in query
                         join acl in _aclRepository.Table
-                        on new { c1 = p.Id, c2 = "Product" } equals new { c1 = acl.EntityId, c2 = acl.EntityName } into p_acl
+                        on new { c1 = p.Id, c2 = _entityName } equals new { c1 = acl.EntityId, c2 = acl.EntityName } into p_acl
                         from acl in p_acl.DefaultIfEmpty()
                         where !p.SubjectToAcl || allowedCustomerRolesIds.Contains(acl.CustomerRoleId)
                         select p;
@@ -628,7 +293,7 @@ namespace Nop.Services.Catalog
             {
                 query = from p in query
                         join sm in _storeMappingRepository.Table
-                        on new { c1 = p.Id, c2 = "Product" } equals new { c1 = sm.EntityId, c2 = sm.EntityName } into p_sm
+                        on new { c1 = p.Id, c2 = _entityName } equals new { c1 = sm.EntityId, c2 = sm.EntityName } into p_sm
                         from sm in p_sm.DefaultIfEmpty()
                         where !p.LimitedToStores || storeId == sm.StoreId
                         select p;
@@ -646,6 +311,7 @@ namespace Nop.Services.Catalog
         /// <param name="pageSize">Page size</param>
         /// <param name="categoryIds">Category identifiers</param>
         /// <param name="storeId">Store identifier; 0 to load all records</param>
+        /// <param name="vendorId">Vendor identifier; 0 to load all records</param>
         /// <param name="productType">Product type; 0 to load all records</param>
         /// <param name="visibleIndividuallyOnly">A values indicating whether to load only products marked as "visible individually"; "false" to load all records; "true" to load "visible individually" only</param>
         /// <param name="markedAsNewOnly">A values indicating whether to load only products marked as "new"; "false" to load all records; "true" to load "marked as new" only</param>
@@ -655,6 +321,7 @@ namespace Nop.Services.Catalog
         /// <param name="searchDescriptions">A value indicating whether to search by a specified "keyword" in product descriptions</param>
         /// <param name="searchProductTags">A value indicating whether to search by a specified "keyword" in product tags</param>
         /// <param name="languageId">Language identifier (search for text searching)</param>
+        /// <param name="filteredSpecs">Filtered product specification identifiers</param>
         /// <param name="orderBy">Order by</param>
         /// <param name="showHidden">A value indicating whether to show hidden records</param>
         /// <param name="overridePublished">
@@ -668,6 +335,7 @@ namespace Nop.Services.Catalog
             int pageSize = int.MaxValue,
             IList<int> categoryIds = null,
             int storeId = 0,
+            int vendorId = 0,
             ProductType? productType = null,
             bool visibleIndividuallyOnly = false,
             bool markedAsNewOnly = false,
@@ -698,41 +366,100 @@ namespace Nop.Services.Catalog
             }
 
             //validate "categoryIds" parameter
-            if (categoryIds !=null && categoryIds.Contains(0))
+            if (categoryIds != null && categoryIds.Contains(0))
                 categoryIds.Remove(0);
 
             //Access control list. Allowed customer roles
             var allowedCustomerRolesIds = _workContext.CurrentCustomer.GetCustomerRoleIds();
 
-            IPagedList<Product> products;
+            //pass category identifiers as comma-delimited string
+            var commaSeparatedCategoryIds = categoryIds == null ? string.Empty : string.Join(",", categoryIds);
 
-            if (_commonSettings.UseStoredProceduresIfSupported && _dataProvider.StoredProceduredSupported)
-            {
-                //stored procedures are enabled and supported by the database. 
-                //It's much faster than the LINQ implementation below 
-                products = SearchProductsUseStoredProcedure(pageIndex, pageSize, categoryIds, storeId, productType, visibleIndividuallyOnly, markedAsNewOnly, featuredProducts, productTagId, keywords, searchDescriptions, allowedCustomerRolesIds, searchProductTags, searchLocalizedValue, languageId, orderBy, showHidden, overridePublished);
-            }
-            else
-            {
-                //stored procedures aren't supported. Use LINQ
-                return SearchProductsUseLinq(pageIndex, pageSize, categoryIds, storeId, productType, visibleIndividuallyOnly, markedAsNewOnly, featuredProducts, productTagId, keywords, searchDescriptions, searchProductTags, searchLocalizedValue, allowedCustomerRolesIds, languageId, orderBy, showHidden, overridePublished);
-            }
+            //pass customer role identifiers as comma-delimited string
+            var commaSeparatedAllowedCustomerRoleIds = string.Join(",", allowedCustomerRolesIds);
 
-            return products;
+            //some databases don't support int.MaxValue
+            if (pageSize == int.MaxValue)
+                pageSize = int.MaxValue - 1;
+
+            //prepare input parameters
+            var pCategoryIds = _dataProvider.GetStringParameter("CategoryIds", commaSeparatedCategoryIds);
+            var pStoreId = _dataProvider.GetInt32Parameter("StoreId", !_catalogSettings.IgnoreStoreLimitations ? storeId : 0);
+            var pVendorId = _dataProvider.GetInt32Parameter("VendorId", vendorId);
+            var pProductTypeId = _dataProvider.GetInt32Parameter("ProductTypeId", (int?)productType);
+            var pVisibleIndividuallyOnly = _dataProvider.GetBooleanParameter("VisibleIndividuallyOnly", visibleIndividuallyOnly);
+            var pMarkedAsNewOnly = _dataProvider.GetBooleanParameter("MarkedAsNewOnly", markedAsNewOnly);
+            var pProductTagId = _dataProvider.GetInt32Parameter("ProductTagId", productTagId);
+            var pFeaturedProducts = _dataProvider.GetBooleanParameter("FeaturedProducts", featuredProducts);
+            var pKeywords = _dataProvider.GetStringParameter("Keywords", keywords);
+            var pSearchDescriptions = _dataProvider.GetBooleanParameter("SearchDescriptions", searchDescriptions);
+            var pSearchProductTags = _dataProvider.GetBooleanParameter("SearchProductTags", searchProductTags);
+            var pUseFullTextSearch = _dataProvider.GetBooleanParameter("UseFullTextSearch", _commonSettings.UseFullTextSearch);
+            var pFullTextMode = _dataProvider.GetInt32Parameter("FullTextMode", (int)_commonSettings.FullTextMode);
+            var pLanguageId = _dataProvider.GetInt32Parameter("LanguageId", searchLocalizedValue ? languageId : 0);
+            var pOrderBy = _dataProvider.GetInt32Parameter("OrderBy", (int)orderBy);
+            var pAllowedCustomerRoleIds = _dataProvider.GetStringParameter("AllowedCustomerRoleIds", !_catalogSettings.IgnoreAcl ? commaSeparatedAllowedCustomerRoleIds : string.Empty);
+            var pPageIndex = _dataProvider.GetInt32Parameter("PageIndex", pageIndex);
+            var pPageSize = _dataProvider.GetInt32Parameter("PageSize", pageSize);
+            var pShowHidden = _dataProvider.GetBooleanParameter("ShowHidden", showHidden);
+            var pOverridePublished = _dataProvider.GetBooleanParameter("OverridePublished", overridePublished);
+          
+            //prepare output parameters
+            var pTotalRecords = _dataProvider.GetOutputInt32Parameter("TotalRecords");
+
+            //invoke stored procedure
+            var products = _dbContext.EntityFromSql<Product>("ProductLoadAllPaged",
+                pCategoryIds,
+                pStoreId,
+                pVendorId,
+                pProductTypeId,
+                pVisibleIndividuallyOnly,
+                pMarkedAsNewOnly,
+                pProductTagId,
+                pFeaturedProducts,
+                pKeywords,
+                pSearchDescriptions,
+                pSearchProductTags,
+                pUseFullTextSearch,
+                pFullTextMode,
+                pLanguageId,
+                pOrderBy,
+                pAllowedCustomerRoleIds,
+                pPageIndex,
+                pPageSize,
+                pShowHidden,
+                pOverridePublished,
+                pTotalRecords).ToList();
+
+            //return products
+            var totalRecords = pTotalRecords.Value != DBNull.Value ? Convert.ToInt32(pTotalRecords.Value) : 0;
+            return new PagedList<Product>(products, pageIndex, pageSize, totalRecords);
         }
+
 
         /// <summary>
         /// Gets associated products
         /// </summary>
         /// <param name="parentGroupedProductId">Parent product identifier (used with grouped products)</param>
         /// <param name="storeId">Store identifier; 0 to load all records</param>
+        /// <param name="vendorId">Vendor identifier; 0 to load all records</param>
         /// <param name="showHidden">A value indicating whether to show hidden records</param>
         /// <returns>Products</returns>
         public virtual IList<Product> GetAssociatedProducts(int parentGroupedProductId,
-            int storeId = 0, bool showHidden = false)
+            int storeId = 0,int vendorId = 0, bool showHidden = false)
         {
             var query = _productRepository.Table;
             query = query.Where(x => x.ParentGroupedProductId == parentGroupedProductId);
+            if (!showHidden)
+            {
+                query = query.Where(x => x.Published);
+            }
+
+            //vendor filtering
+            if (vendorId > 0)
+            {
+                query = query.Where(p => p.VendorId == vendorId);
+            }
 
             query = query.Where(x => !x.Deleted);
             query = query.OrderBy(x => x.DisplayOrder).ThenBy(x => x.Id);
@@ -744,6 +471,7 @@ namespace Nop.Services.Catalog
             {
                 products = products.Where(x => _aclService.Authorize(x)).ToList();
             }
+
             //Store mapping
             if (!showHidden && storeId > 0)
             {
@@ -763,7 +491,7 @@ namespace Nop.Services.Catalog
                 throw new ArgumentNullException(nameof(product));
 
             var approvedRatingSum = 0;
-            var notApprovedRatingSum = 0; 
+            var notApprovedRatingSum = 0;
             var approvedTotalReviews = 0;
             var notApprovedTotalReviews = 0;
             var reviews = product.ProductReviews;
@@ -772,7 +500,7 @@ namespace Nop.Services.Catalog
                 if (pr.IsApproved)
                 {
                     approvedRatingSum += pr.Rating;
-                    approvedTotalReviews ++;
+                    approvedTotalReviews++;
                 }
                 else
                 {
@@ -787,6 +515,35 @@ namespace Nop.Services.Catalog
             product.NotApprovedTotalReviews = notApprovedTotalReviews;
             UpdateProduct(product);
         }
+
+        /// <summary>
+        /// Gets number of products by vendor identifier
+        /// </summary>
+        /// <param name="vendorId">Vendor identifier</param>
+        /// <returns>Number of products</returns>
+        public int GetNumberOfProductsByVendorId(int vendorId)
+        {
+            if (vendorId == 0)
+                return 0;
+
+            return _productRepository.Table.Count(p => p.VendorId == vendorId && !p.Deleted);
+        }
+
+        /// <summary>
+        /// Indicates whether a product tag exists
+        /// </summary>
+        /// <param name="product">Product</param>
+        /// <param name="productTagId">Product tag identifier</param>
+        /// <returns>Result</returns>
+        public virtual bool ProductTagExists(Product product, int productTagId)
+        {
+            if (product == null)
+                throw new ArgumentNullException(nameof(product));
+
+            var result = product.ProductProductTagMappings.Any(pt => pt.ProductTagId == productTagId);
+            return result;
+        }
+
 
         #endregion
 
@@ -836,7 +593,7 @@ namespace Nop.Services.Catalog
         {
             if (relatedProductId == 0)
                 return null;
-            
+
             return _relatedProductRepository.GetById(relatedProductId);
         }
 
@@ -868,6 +625,21 @@ namespace Nop.Services.Catalog
 
             //event notification
             _eventPublisher.EntityUpdated(relatedProduct);
+        }
+
+        /// <summary>
+        /// Finds a related product item by specified identifiers
+        /// </summary>
+        /// <param name="source">Source</param>
+        /// <param name="productId1">The first product identifier</param>
+        /// <param name="productId2">The second product identifier</param>
+        /// <returns>Related product</returns>
+        public virtual RelatedProduct FindRelatedProduct(IList<RelatedProduct> source, int productId1, int productId2)
+        {
+            foreach (var relatedProduct in source)
+                if (relatedProduct.ProductId1 == productId1 && relatedProduct.ProductId2 == productId2)
+                    return relatedProduct;
+            return null;
         }
 
         #endregion
@@ -952,10 +724,11 @@ namespace Nop.Services.Catalog
         /// </summary>
         /// <param name="productsIds">Products IDs</param>
         /// <returns>All picture identifiers grouped by product ID</returns>
-        public IDictionary<int, int[]> GetProductsImagesIds(int [] productsIds)
+        public IDictionary<int, int[]> GetProductsImagesIds(int[] productsIds)
         {
-            return _productPictureRepository.Table.Where(p => productsIds.Contains(p.ProductId))
-                .GroupBy(p => p.ProductId).ToDictionary(p => p.Key, p => p.Select(p1 => p1.PictureId).ToArray());
+            var productPictures = _productPictureRepository.Table.Where(p => productsIds.Contains(p.ProductId)).ToList();
+
+            return productPictures.GroupBy(p => p.ProductId).ToDictionary(p => p.Key, p => p.Select(p1 => p1.PictureId).ToArray());
         }
 
         #endregion
@@ -972,12 +745,14 @@ namespace Nop.Services.Catalog
         /// <param name="message">Search title or review text; null to load all records</param>
         /// <param name="storeId">The store identifier; pass 0 to load all records</param>
         /// <param name="productId">The product identifier; pass 0 to load all records</param>
+        /// <param name="vendorId">The vendor identifier (limit to products of this vendor); pass 0 to load all records</param>
+        /// <param name="showHidden">A value indicating whether to show hidden records</param>
         /// <param name="pageIndex">Page index</param>
         /// <param name="pageSize">Page size</param>
         /// <returns>Reviews</returns>
         public virtual IPagedList<ProductReview> GetAllProductReviews(int customerId, bool? approved,
             DateTime? fromUtc = null, DateTime? toUtc = null,
-            string message = null, int storeId = 0, int productId = 0,
+            string message = null, int storeId = 0, int productId = 0, int vendorId = 0, bool showHidden = false,
             int pageIndex = 0, int pageSize = int.MaxValue)
         {
             var query = _productReviewRepository.Table;
@@ -991,12 +766,31 @@ namespace Nop.Services.Catalog
                 query = query.Where(pr => toUtc.Value >= pr.CreatedOnUtc);
             if (!string.IsNullOrEmpty(message))
                 query = query.Where(pr => pr.Title.Contains(message) || pr.ReviewText.Contains(message));
-            if (storeId > 0)
+            if (storeId > 0 && (showHidden || _catalogSettings.ShowProductReviewsPerStore))
                 query = query.Where(pr => pr.StoreId == storeId);
             if (productId > 0)
                 query = query.Where(pr => pr.ProductId == productId);
+            if (vendorId > 0)
+                query = query.Where(pr => pr.Product.VendorId == vendorId);
 
-            query = query.OrderBy(pr => pr.CreatedOnUtc).ThenBy(pr => pr.Id);
+            //ignore deleted products
+            query = query.Where(pr => !pr.Product.Deleted);
+
+            //filter by limited to store products
+            if (storeId > 0 && !showHidden && !_catalogSettings.IgnoreStoreLimitations)
+            {
+                query = from productReview in query
+                        join storeMapping in _storeMappingRepository.Table
+                            on new { Id = productReview.ProductId, Name = nameof(Product) }
+                            equals new { Id = storeMapping.EntityId, Name = storeMapping.EntityName } into storeMappingsWithNulls
+                        from storeMapping in storeMappingsWithNulls.DefaultIfEmpty()
+                        where !productReview.Product.LimitedToStores || storeMapping.StoreId == storeId
+                        select productReview;
+            }
+
+            query = _catalogSettings.ProductReviewsSortByCreatedDateAscending
+                ? query.OrderBy(pr => pr.CreatedOnUtc).ThenBy(pr => pr.Id)
+                : query.OrderByDescending(pr => pr.CreatedOnUtc).ThenBy(pr => pr.Id);
 
             var productReviews = new PagedList<ProductReview>(query, pageIndex, pageSize);
 
@@ -1038,6 +832,7 @@ namespace Nop.Services.Catalog
                 if (productReview != null)
                     sortedProductReviews.Add(productReview);
             }
+
             return sortedProductReviews;
         }
 
@@ -1052,7 +847,7 @@ namespace Nop.Services.Catalog
 
             _productReviewRepository.Delete(productReview);
 
-            _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopCatalogDefaults.ProductsPatternCacheKey);
             //event notification
             _eventPublisher.EntityDeleted(productReview);
         }
@@ -1068,7 +863,7 @@ namespace Nop.Services.Catalog
 
             _productReviewRepository.Delete(productReviews);
 
-            _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
+            _cacheManager.RemoveByPattern(NopCatalogDefaults.ProductsPatternCacheKey);
             //event notification
             foreach (var productReview in productReviews)
             {
